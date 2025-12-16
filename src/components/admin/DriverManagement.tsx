@@ -73,6 +73,12 @@ export function DriverManagement() {
     toast({ title: "Exported", description: `${drivers.length} drivers exported to CSV` });
   };
 
+  const handleDownloadTemplate = () => {
+    const template = "Name,Phone,Vehicle,Status\nJohn Doe,555-0123,V-101,available";
+    downloadCSV(template, "drivers-template.csv");
+    toast({ title: "Template Downloaded", description: "CSV template with example row" });
+  };
+
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -189,6 +195,10 @@ export function DriverManagement() {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Manage Drivers</h2>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-2" onClick={handleDownloadTemplate}>
+            <Download className="h-4 w-4" />
+            Template
+          </Button>
           <Button size="sm" variant="outline" className="gap-2" onClick={handleExport}>
             <Download className="h-4 w-4" />
             Export
