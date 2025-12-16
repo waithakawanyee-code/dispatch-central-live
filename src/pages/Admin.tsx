@@ -1,10 +1,11 @@
 import { Link, Navigate } from "react-router-dom";
-import { ArrowLeft, Users, Truck, History, ShieldAlert, UserCog } from "lucide-react";
+import { ArrowLeft, Users, Truck, History, ShieldAlert, UserCog, Calendar } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DriverManagement } from "@/components/admin/DriverManagement";
 import { VehicleManagement } from "@/components/admin/VehicleManagement";
 import { HistoryLog } from "@/components/admin/HistoryLog";
 import { UserManagement } from "@/components/admin/UserManagement";
+import { ScheduleManagement } from "@/components/admin/ScheduleManagement";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 
@@ -65,6 +66,10 @@ const Admin = () => {
               <Truck className="h-4 w-4" />
               Vehicles
             </TabsTrigger>
+            <TabsTrigger value="schedules" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Schedules
+            </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <UserCog className="h-4 w-4" />
               Users
@@ -81,6 +86,10 @@ const Admin = () => {
 
           <TabsContent value="vehicles">
             <VehicleManagement />
+          </TabsContent>
+
+          <TabsContent value="schedules">
+            <ScheduleManagement />
           </TabsContent>
 
           <TabsContent value="users">
