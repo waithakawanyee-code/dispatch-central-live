@@ -17,6 +17,7 @@ interface DriverRowProps {
   onStatusChange?: (newStatus: DriverStatus) => void;
   canEdit?: boolean;
   isUpdated?: boolean;
+  compact?: boolean;
 }
 
 const statusOptions: { value: DriverStatus; label: string }[] = [
@@ -26,7 +27,32 @@ const statusOptions: { value: DriverStatus; label: string }[] = [
   { value: "offline", label: "Offline" },
 ];
 
-export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false }: DriverRowProps) {
+export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false }: DriverRowProps) {
+  if (compact) {
+    return (
+      <div
+        className={cn(
+          "flex items-center gap-2 rounded border border-border bg-card px-2 py-1 text-xs transition-all duration-200",
+          "hover:border-primary/30",
+          driver.status === "available" && "border-l-2 border-l-status-available",
+          driver.status === "on-route" && "border-l-2 border-l-status-on-route",
+          driver.status === "break" && "border-l-2 border-l-status-break",
+          driver.status === "offline" && "border-l-2 border-l-status-offline opacity-60",
+          driver.status === "off" && "border-l-2 border-l-status-offline opacity-60",
+          driver.status === "scheduled" && "border-l-2 border-l-status-break",
+          driver.status === "assigned" && "border-l-2 border-l-status-on-route",
+          driver.status === "working" && "border-l-2 border-l-status-available",
+          isUpdated && "animate-row-flash"
+        )}
+      >
+        <span className="font-mono font-semibold text-foreground">{driver.name}</span>
+        {driver.vehicle && (
+          <span className="font-mono text-muted-foreground">{driver.vehicle}</span>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
