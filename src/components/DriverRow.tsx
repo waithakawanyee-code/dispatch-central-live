@@ -48,9 +48,19 @@ const statusOptions: { value: DriverStatus; label: string }[] = [
   { value: "punched-out", label: "Punched Out" },
 ];
 
+const assignedStatusOptions: { value: DriverStatus; label: string }[] = [
+  { value: "working", label: "Punch In" },
+  { value: "unassigned", label: "Unassign" },
+];
+
 const compactStatusOptions: { value: DriverStatus; label: string }[] = [
   { value: "unassigned", label: "Unassigned" },
   { value: "assigned", label: "Assigned" },
+];
+
+const compactAssignedOptions: { value: DriverStatus; label: string }[] = [
+  { value: "working", label: "Punch In" },
+  { value: "unassigned", label: "Unassign" },
 ];
 
 export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, availableVehicles = [] }: DriverRowProps) {
@@ -128,7 +138,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               {content}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[120px]">
-              {compactStatusOptions.map((option) => (
+              {(driver.status === "assigned" ? compactAssignedOptions : compactStatusOptions).map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
@@ -246,7 +256,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[120px]">
-              {statusOptions.map((option) => (
+              {(driver.status === "assigned" ? assignedStatusOptions : statusOptions).map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
