@@ -13,6 +13,8 @@ const Index = () => {
     drivers,
     vehicles,
     loading,
+    recentlyUpdatedDrivers,
+    recentlyUpdatedVehicles,
     updateDriverStatus,
     updateVehicleStatus,
     updateVehicleCleanStatus,
@@ -63,6 +65,7 @@ const Index = () => {
                   key={driver.id}
                   driver={driver}
                   canEdit={isAdmin}
+                  isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                   onStatusChange={(newStatus) => updateDriverStatus(driver.id, newStatus)}
                 />
               ))}
@@ -86,6 +89,7 @@ const Index = () => {
                   key={vehicle.id}
                   vehicle={vehicle}
                   canEdit={isAdmin}
+                  isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
                   onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
                   onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
                 />
