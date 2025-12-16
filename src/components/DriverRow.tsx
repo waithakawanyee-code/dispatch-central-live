@@ -15,6 +15,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,13 +29,15 @@ import type { Database } from "@/integrations/supabase/types";
 
 type DriverStatus = Database["public"]["Enums"]["driver_status"];
 type DriverRowType = Database["public"]["Tables"]["drivers"]["Row"];
+type VehicleRowType = Database["public"]["Tables"]["vehicles"]["Row"];
 
 interface DriverRowProps {
   driver: DriverRowType;
-  onStatusChange?: (newStatus: DriverStatus, reportTime?: string) => void;
+  onStatusChange?: (newStatus: DriverStatus, reportTime?: string, vehicle?: string) => void;
   canEdit?: boolean;
   isUpdated?: boolean;
   compact?: boolean;
+  availableVehicles?: VehicleRowType[];
 }
 
 // Workflow: Unassigned → Assigned → Working → Punched Out
@@ -44,21 +53,24 @@ const compactStatusOptions: { value: DriverStatus; label: string }[] = [
   { value: "assigned", label: "Assigned" },
 ];
 
-export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false }: DriverRowProps) {
-  const [showTimeDialog, setShowTimeDialog] = useState(false);
-  const [reportTime, setReportTime] = useState(driver.report_time?.slice(0, 5) || "08:00");
+export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, availableVehicles = [] }: DriverRowProps) {
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [reportTime, setReportTime] = useState(driver.report_time?.slice(0, 5) || "");
+  const [selectedVehicle, setSelectedVehicle] = useState(driver.vehicle || "");
 
   const handleStatusSelect = (status: DriverStatus) => {
     if (status === "assigned") {
-      setShowTimeDialog(true);
+      setReportTime(driver.report_time?.slice(0, 5) || "");
+      setSelectedVehicle(driver.vehicle || "");
+      setShowAssignDialog(true);
     } else {
       onStatusChange?.(status);
     }
   };
 
-  const handleAssignWithTime = () => {
-    onStatusChange?.("assigned", reportTime);
-    setShowTimeDialog(false);
+  const handleAssign = () => {
+    onStatusChange?.("assigned", reportTime || undefined, selectedVehicle || undefined);
+    setShowAssignDialog(false);
   };
 
   if (compact) {
@@ -124,27 +136,46 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Dialog open={showTimeDialog} onOpenChange={setShowTimeDialog}>
-            <DialogContent className="sm:max-w-[300px]">
+          <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+            <DialogContent className="sm:max-w-[350px]">
               <DialogHeader>
-                <DialogTitle>Set Report Time</DialogTitle>
+                <DialogTitle>Assign {driver.name}</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="report-time">Report Time for {driver.name}</Label>
+                  <Label htmlFor="report-time-compact">Report Time (optional)</Label>
                   <Input
-                    id="report-time"
+                    id="report-time-compact"
                     type="time"
                     value={reportTime}
                     onChange={(e) => setReportTime(e.target.value)}
+                    placeholder="Leave empty if not set"
                   />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="vehicle-compact">Vehicle (optional)</Label>
+                  <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select vehicle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No vehicle</SelectItem>
+                      {availableVehicles
+                        .filter((v) => v.status === "active")
+                        .map((vehicle) => (
+                          <SelectItem key={vehicle.id} value={vehicle.unit}>
+                            {vehicle.unit} {vehicle.driver && vehicle.driver !== driver.name ? `(${vehicle.driver})` : ""}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setShowTimeDialog(false)}>
+                <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleAssignWithTime}>
+                <Button onClick={handleAssign}>
                   Assign
                 </Button>
               </DialogFooter>
@@ -223,14 +254,14 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
         )}
       </div>
 
-      <Dialog open={showTimeDialog} onOpenChange={setShowTimeDialog}>
-        <DialogContent className="sm:max-w-[300px]">
+      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+        <DialogContent className="sm:max-w-[350px]">
           <DialogHeader>
-            <DialogTitle>Set Report Time</DialogTitle>
+            <DialogTitle>Assign {driver.name}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="report-time-full">Report Time for {driver.name}</Label>
+              <Label htmlFor="report-time-full">Report Time (optional)</Label>
               <Input
                 id="report-time-full"
                 type="time"
@@ -238,12 +269,30 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                 onChange={(e) => setReportTime(e.target.value)}
               />
             </div>
+            <div className="grid gap-2">
+              <Label htmlFor="vehicle-full">Vehicle (optional)</Label>
+              <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select vehicle" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No vehicle</SelectItem>
+                  {availableVehicles
+                    .filter((v) => v.status === "active")
+                    .map((vehicle) => (
+                      <SelectItem key={vehicle.id} value={vehicle.unit}>
+                        {vehicle.unit} {vehicle.driver && vehicle.driver !== driver.name ? `(${vehicle.driver})` : ""}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowTimeDialog(false)}>
+            <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAssignWithTime}>
+            <Button onClick={handleAssign}>
               Assign
             </Button>
           </DialogFooter>
