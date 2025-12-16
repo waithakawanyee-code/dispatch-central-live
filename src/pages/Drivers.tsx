@@ -276,33 +276,33 @@ const Drivers = () => {
         </section>
 
         {/* Driver Status */}
-        <section className="rounded-lg border border-border bg-card/50 p-3 mb-6">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Users className="h-4 w-4 text-primary" />
+        <section className="rounded-xl border border-border bg-card/50 p-6 mb-6 min-h-[500px]">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+              <Users className="h-5 w-5 text-primary" />
               Driver Status
             </h2>
-            <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+            <span className="rounded bg-secondary px-2 py-1 font-mono text-xs text-muted-foreground">
               {displayDrivers.length} TOTAL
             </span>
           </div>
           
           {/* Color Legend */}
-          <div className="mb-3 flex flex-wrap gap-3 text-[10px] text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-slate-500" />
+          <div className="mb-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-slate-500" />
               <span>Unassigned</span>
             </div>
-            <div className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            <div className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
               <span>Assigned</span>
             </div>
-            <div className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-status-on-route" />
+            <div className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-status-on-route" />
               <span>Working</span>
             </div>
-            <div className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-status-offline" />
+            <div className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-status-offline" />
               <span>Punched Out</span>
             </div>
           </div>
@@ -343,18 +343,18 @@ const Drivers = () => {
             </div>
           ) : (
             /* Today View - Full Status Grid */
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-6">
               {/* Left Column */}
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-5">
                 {/* Assigned */}
-                <div className="space-y-1">
-                  <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                <div className="space-y-2">
+                  <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
                     <span>Assigned</span>
-                    <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                    <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
                       {assignedDrivers}
                     </span>
                   </h3>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-2">
                     {displayDrivers
                       .filter((d) => d.status === "assigned")
                       .map((driver) => (
@@ -369,20 +369,20 @@ const Drivers = () => {
                         />
                       ))}
                     {assignedDrivers === 0 && (
-                      <p className="text-xs text-muted-foreground italic py-2">No assigned drivers</p>
+                      <p className="text-sm text-muted-foreground italic py-3">No assigned drivers</p>
                     )}
                   </div>
                 </div>
 
                 {/* Unassigned */}
-                <div className="space-y-1">
-                  <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                <div className="space-y-2">
+                  <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
                     <span>Unassigned</span>
-                    <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                    <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
                       {unassignedDrivers}
                     </span>
                   </h3>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-2">
                     {displayDrivers
                       .filter((d) => d.status === "unassigned" || d.status === "scheduled")
                       .map((driver) => (
@@ -397,29 +397,29 @@ const Drivers = () => {
                         />
                       ))}
                     {unassignedDrivers === 0 && (
-                      <p className="text-xs text-muted-foreground italic py-2">No unassigned drivers</p>
+                      <p className="text-sm text-muted-foreground italic py-3">No unassigned drivers</p>
                     )}
                   </div>
                 </div>
 
                 {/* OFF Drivers - Collapsible */}
                 <Collapsible open={offDriversOpen} onOpenChange={setOffDriversOpen}>
-                  <CollapsibleTrigger className="flex w-full items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1 hover:text-foreground transition-colors cursor-pointer">
-                    <span className="flex items-center gap-1">
-                      <ChevronDown className={cn("h-3 w-3 transition-transform", !offDriversOpen && "-rotate-90")} />
+                  <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2 hover:text-foreground transition-colors cursor-pointer">
+                    <span className="flex items-center gap-2">
+                      <ChevronDown className={cn("h-4 w-4 transition-transform", !offDriversOpen && "-rotate-90")} />
                       OFF Drivers
                       {calledOutCount > 0 && (
-                        <span className="rounded bg-destructive/20 text-destructive px-1 py-0.5 font-mono text-[9px]">
+                        <span className="rounded bg-destructive/20 text-destructive px-1.5 py-0.5 font-mono text-xs">
                           {calledOutCount} called out
                         </span>
                       )}
                     </span>
-                    <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                    <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
                       {offDriverCount}
                     </span>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-1">
-                    <div className="flex flex-col gap-1">
+                  <CollapsibleContent className="pt-2">
+                    <div className="flex flex-col gap-2">
                       {offDrivers.map((driver) => {
                         const calledOut = isCallOut(driver.id);
                         const note = getCallOutNote(driver.id);
@@ -427,23 +427,23 @@ const Drivers = () => {
                           <div
                             key={driver.id}
                             className={cn(
-                              "flex items-center gap-2 rounded border border-border bg-card px-2 py-1.5 text-xs",
+                              "flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm",
                               calledOut && "border-l-2 border-l-destructive bg-destructive/5"
                             )}
                           >
-                            <span className="h-2 w-2 rounded-full bg-status-offline shrink-0" />
+                            <span className="h-2.5 w-2.5 rounded-full bg-status-offline shrink-0" />
                             <span className="font-mono font-medium text-foreground flex-1">{driver.name}</span>
                             {calledOut && (
-                              <span className="flex items-center gap-1 text-destructive" title={note || "Called out"}>
-                                <PhoneOff className="h-3 w-3" />
-                                <span className="text-[10px]">Called Out</span>
+                              <span className="flex items-center gap-1.5 text-destructive" title={note || "Called out"}>
+                                <PhoneOff className="h-4 w-4" />
+                                <span className="text-xs">Called Out</span>
                               </span>
                             )}
                           </div>
                         );
                       })}
                       {offDriverCount === 0 && (
-                        <p className="text-xs text-muted-foreground italic py-2">No OFF drivers</p>
+                        <p className="text-sm text-muted-foreground italic py-3">No OFF drivers</p>
                       )}
                     </div>
                   </CollapsibleContent>
@@ -451,16 +451,16 @@ const Drivers = () => {
               </div>
 
               {/* Right Column */}
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-5">
                 {/* Working */}
-                <div className="space-y-1">
-                  <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                <div className="space-y-2">
+                  <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
                     <span>Working</span>
-                    <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                    <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
                       {workingDrivers}
                     </span>
                   </h3>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-2">
                     {displayDrivers
                       .filter((d) => ["on-route", "working"].includes(d.status))
                       .map((driver) => (
@@ -475,20 +475,20 @@ const Drivers = () => {
                         />
                       ))}
                     {workingDrivers === 0 && (
-                      <p className="text-xs text-muted-foreground italic py-2">No drivers working</p>
+                      <p className="text-sm text-muted-foreground italic py-3">No drivers working</p>
                     )}
                   </div>
                 </div>
 
                 {/* Punched Out */}
-                <div className="space-y-1">
-                  <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                <div className="space-y-2">
+                  <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
                     <span>Punched Out</span>
-                    <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                    <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
                       {punchedOutDrivers}
                     </span>
                   </h3>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-2">
                     {displayDrivers
                       .filter((d) => ["offline", "punched-out"].includes(d.status))
                       .map((driver) => (
@@ -503,7 +503,7 @@ const Drivers = () => {
                         />
                       ))}
                     {punchedOutDrivers === 0 && (
-                      <p className="text-xs text-muted-foreground italic py-2">No drivers punched out</p>
+                      <p className="text-sm text-muted-foreground italic py-3">No drivers punched out</p>
                     )}
                   </div>
                 </div>
