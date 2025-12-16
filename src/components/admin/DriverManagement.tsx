@@ -51,7 +51,7 @@ const initialFormData: DriverFormData = {
   status: "offline",
 };
 
-const validStatuses: DriverStatus[] = ["available", "on-route", "break", "offline"];
+const validStatuses: DriverStatus[] = ["unassigned", "assigned", "working", "punched-out", "available", "on-route", "break", "offline", "off"];
 
 export function DriverManagement() {
   const { drivers } = useDispatchData();
@@ -74,9 +74,13 @@ export function DriverManagement() {
   };
 
   const handleDownloadTemplate = () => {
-    const template = "Name,Phone,Vehicle,Status\nJohn Doe,555-0123,V-101,available";
+    const template = "Name,Phone,Vehicle,Status,Mon_In,Mon_Out,Tue_In,Tue_Out,Wed_In,Wed_Out,Thu_In,Thu_Out,Fri_In,Fri_Out,Sat_In,Sat_Out,Sun_In,Sun_Out\nJohn Doe,555-0123,V-101,unassigned,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,OFF,,OFF,";
     downloadCSV(template, "drivers-template.csv");
-    toast({ title: "Template Downloaded", description: "CSV template with example row" });
+    toast({ title: "Template Downloaded", description: "CSV template with schedule columns (Out times are optional, use OFF for days off)" });
+  };
+
+  const dayMapping: Record<string, number> = {
+    Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 0
   };
 
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,33 +90,74 @@ export function DriverManagement() {
     setImporting(true);
     try {
       const text = await file.text();
-      const rows = parseCSV<{ name: string; phone?: string; vehicle?: string; status?: string }>(text);
+      const rows = parseCSV<Record<string, string>>(text);
 
       if (rows.length === 0) {
         toast({ title: "Error", description: "No valid data found in CSV", variant: "destructive" });
         return;
       }
 
-      const validRows = rows
-        .filter(row => row.name?.trim())
-        .map(row => ({
-          name: row.name.trim(),
-          phone: row.phone?.trim() || null,
-          vehicle: row.vehicle?.trim() || null,
-          status: (validStatuses.includes(row.status as DriverStatus) ? row.status : "offline") as DriverStatus,
-        }));
+      let driversImported = 0;
+      let schedulesImported = 0;
 
-      if (validRows.length === 0) {
-        toast({ title: "Error", description: "No valid drivers found (name is required)", variant: "destructive" });
-        return;
+      for (const row of rows) {
+        if (!row.Name?.trim()) continue;
+
+        // Insert driver
+        const { data: driverData, error: driverError } = await supabase
+          .from("drivers")
+          .insert({
+            name: row.Name.trim(),
+            phone: row.Phone?.trim() || null,
+            vehicle: row.Vehicle?.trim() || null,
+            status: (validStatuses.includes(row.Status as DriverStatus) ? row.Status : "unassigned") as DriverStatus,
+          })
+          .select("id")
+          .single();
+
+        if (driverError || !driverData) {
+          console.error("Failed to import driver:", row.Name, driverError);
+          continue;
+        }
+
+        driversImported++;
+
+        // Parse and insert schedules
+        const scheduleInserts = [];
+        for (const [dayAbbrev, dayNum] of Object.entries(dayMapping)) {
+          const inTime = row[`${dayAbbrev}_In`]?.trim();
+          const outTime = row[`${dayAbbrev}_Out`]?.trim();
+
+          if (inTime) {
+            const isOff = inTime.toUpperCase() === "OFF";
+            scheduleInserts.push({
+              driver_id: driverData.id,
+              day_of_week: dayNum,
+              is_off: isOff,
+              start_time: isOff ? null : inTime,
+              end_time: isOff ? null : (outTime || null),
+            });
+          }
+        }
+
+        if (scheduleInserts.length > 0) {
+          const { error: scheduleError } = await supabase
+            .from("driver_schedules")
+            .insert(scheduleInserts);
+
+          if (!scheduleError) {
+            schedulesImported += scheduleInserts.length;
+          }
+        }
       }
 
-      const { error } = await supabase.from("drivers").insert(validRows);
-
-      if (error) {
-        toast({ title: "Error", description: "Failed to import drivers", variant: "destructive" });
+      if (driversImported === 0) {
+        toast({ title: "Error", description: "No valid drivers found (name is required)", variant: "destructive" });
       } else {
-        toast({ title: "Success", description: `${validRows.length} drivers imported successfully` });
+        toast({ 
+          title: "Success", 
+          description: `${driversImported} drivers imported${schedulesImported > 0 ? ` with ${schedulesImported} schedule entries` : ""}` 
+        });
       }
     } catch (err) {
       toast({ title: "Error", description: "Failed to parse CSV file", variant: "destructive" });
