@@ -183,6 +183,71 @@ export function TimePunchReport() {
     return results.sort((a, b) => b.totalMinutes - a.totalMinutes);
   })();
 
+  // Calculate daily breakdown
+  const dailyBreakdown = (() => {
+    const dayMap = new Map<string, Map<string, { name: string; minutes: number; hasOpenSession: boolean }>>();
+    
+    // Sort all punches by time
+    const sortedPunches = [...punches].sort(
+      (a, b) => new Date(a.punch_time).getTime() - new Date(b.punch_time).getTime()
+    );
+
+    // Track open sessions per driver
+    const openSessions = new Map<string, Date>();
+
+    sortedPunches.forEach((punch) => {
+      const punchDate = format(new Date(punch.punch_time), "yyyy-MM-dd");
+      
+      if (!dayMap.has(punchDate)) {
+        dayMap.set(punchDate, new Map());
+      }
+      const dayDrivers = dayMap.get(punchDate)!;
+      
+      if (!dayDrivers.has(punch.driver_id)) {
+        dayDrivers.set(punch.driver_id, { name: punch.driver_name, minutes: 0, hasOpenSession: false });
+      }
+      
+      if (punch.punch_type === "in") {
+        openSessions.set(punch.driver_id, new Date(punch.punch_time));
+      } else if (punch.punch_type === "out") {
+        const inTime = openSessions.get(punch.driver_id);
+        if (inTime) {
+          const outTime = new Date(punch.punch_time);
+          const minutes = (outTime.getTime() - inTime.getTime()) / (1000 * 60);
+          
+          // Add minutes to the day of punch out
+          const driverData = dayDrivers.get(punch.driver_id)!;
+          driverData.minutes += minutes;
+          
+          openSessions.delete(punch.driver_id);
+        }
+      }
+    });
+
+    // Mark drivers with open sessions
+    openSessions.forEach((inTime, driverId) => {
+      const dayKey = format(inTime, "yyyy-MM-dd");
+      const dayDrivers = dayMap.get(dayKey);
+      if (dayDrivers?.has(driverId)) {
+        dayDrivers.get(driverId)!.hasOpenSession = true;
+      }
+    });
+
+    // Convert to array and sort by date descending
+    const result: { date: string; drivers: { id: string; name: string; minutes: number; hasOpenSession: boolean }[] }[] = [];
+    
+    dayMap.forEach((drivers, date) => {
+      const driverArray: { id: string; name: string; minutes: number; hasOpenSession: boolean }[] = [];
+      drivers.forEach((data, id) => {
+        driverArray.push({ id, ...data });
+      });
+      driverArray.sort((a, b) => b.minutes - a.minutes);
+      result.push({ date, drivers: driverArray });
+    });
+
+    return result.sort((a, b) => b.date.localeCompare(a.date));
+  })();
+
   const formatHoursMinutes = (totalMinutes: number) => {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = Math.round(totalMinutes % 60);
@@ -359,7 +424,7 @@ export function TimePunchReport() {
           {/* Hours Summary */}
           <Card className="mb-4">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Hours Worked Summary</CardTitle>
+              <CardTitle className="text-sm font-medium">Hours Worked - Total</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -384,6 +449,43 @@ export function TimePunchReport() {
                   {formatHoursMinutes(driverHours.reduce((sum, d) => sum + d.totalMinutes, 0))}
                 </span>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Daily Breakdown */}
+          <Card className="mb-4">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Daily Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {dailyBreakdown.map((day) => (
+                <div key={day.date} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm">
+                      {format(new Date(day.date + "T12:00:00"), "EEEE, MMM d, yyyy")}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {formatHoursMinutes(day.drivers.reduce((sum, d) => sum + d.minutes, 0))}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {day.drivers.map((driver) => (
+                      <div
+                        key={driver.id}
+                        className="flex items-center justify-between p-2 rounded-md bg-muted/30 text-sm"
+                      >
+                        <span className="font-mono truncate mr-2">{driver.name}</span>
+                        <span className="font-medium whitespace-nowrap">
+                          {formatHoursMinutes(driver.minutes)}
+                          {driver.hasOpenSession && (
+                            <span className="ml-1 text-xs text-amber-500" title="Currently clocked in">●</span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
         <div className="rounded-md border">
