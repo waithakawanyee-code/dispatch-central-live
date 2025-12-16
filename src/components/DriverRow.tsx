@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, Phone, Clock, Truck } from "lucide-react";
+import { User, Phone, Clock, Truck, Pencil, Trash2, Check, X } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import {
@@ -96,6 +96,8 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
   const [showPunchTimesDialog, setShowPunchTimesDialog] = useState(false);
   const [punchTimes, setPunchTimes] = useState<TimePunch[]>([]);
   const [loadingPunches, setLoadingPunches] = useState(false);
+  const [editingPunchId, setEditingPunchId] = useState<string | null>(null);
+  const [editPunchTime, setEditPunchTime] = useState("");
   const [reportTime, setReportTime] = useState(driver.report_time?.slice(0, 5) || "");
   const [selectedVehicle, setSelectedVehicle] = useState(driver.vehicle || "__none__");
   const [isCallOut, setIsCallOut] = useState(false);
@@ -117,6 +119,64 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
     }
     setLoadingPunches(false);
     setShowPunchTimesDialog(true);
+  };
+
+  const handleEditPunch = (punch: TimePunch) => {
+    setEditingPunchId(punch.id);
+    const time = new Date(punch.punch_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    setEditPunchTime(time);
+  };
+
+  const handleSaveEdit = async (punchId: string) => {
+    if (!editPunchTime) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const newPunchTime = `${today}T${editPunchTime}:00`;
+    
+    const { error } = await supabase
+      .from("time_punches")
+      .update({ punch_time: newPunchTime })
+      .eq("id", punchId);
+
+    if (error) {
+      toast({
+        title: "Error updating punch time",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Punch time updated",
+        description: "The punch time has been updated successfully",
+      });
+      // Refresh punch times
+      setPunchTimes(punchTimes.map(p => 
+        p.id === punchId ? { ...p, punch_time: newPunchTime } : p
+      ));
+    }
+    setEditingPunchId(null);
+    setEditPunchTime("");
+  };
+
+  const handleDeletePunch = async (punchId: string) => {
+    const { error } = await supabase
+      .from("time_punches")
+      .delete()
+      .eq("id", punchId);
+
+    if (error) {
+      toast({
+        title: "Error deleting punch",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Punch deleted",
+        description: "The punch record has been deleted",
+      });
+      setPunchTimes(punchTimes.filter(p => p.id !== punchId));
+    }
   };
 
   const handleStatusSelect = (status: DriverStatus) => {
@@ -391,19 +451,68 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                       <div
                         key={punch.id}
                         className={cn(
-                          "flex items-center justify-between rounded-lg border px-4 py-3",
+                          "flex items-center gap-3 rounded-lg border px-4 py-3",
                           punch.punch_type === "in" ? "border-emerald-500/30 bg-emerald-500/10" : "border-destructive/30 bg-destructive/10"
                         )}
                       >
                         <span className={cn(
-                          "font-medium text-sm",
+                          "font-medium text-sm shrink-0",
                           punch.punch_type === "in" ? "text-emerald-600" : "text-destructive"
                         )}>
                           {punch.punch_type === "in" ? "Punch In" : "Punch Out"}
                         </span>
-                        <span className="font-mono text-base font-semibold">
-                          {new Date(punch.punch_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                        
+                        {editingPunchId === punch.id ? (
+                          <div className="flex items-center gap-2 flex-1 justify-end">
+                            <Input
+                              type="time"
+                              value={editPunchTime}
+                              onChange={(e) => setEditPunchTime(e.target.value)}
+                              className="w-28 h-8 text-sm"
+                            />
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-emerald-600 hover:text-emerald-700"
+                              onClick={() => handleSaveEdit(punch.id)}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                              onClick={() => {
+                                setEditingPunchId(null);
+                                setEditPunchTime("");
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 flex-1 justify-end">
+                            <span className="font-mono text-base font-semibold">
+                              {new Date(punch.punch_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-muted-foreground hover:text-primary"
+                              onClick={() => handleEditPunch(punch)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDeletePunch(punch.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -613,19 +722,68 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                   <div
                     key={punch.id}
                     className={cn(
-                      "flex items-center justify-between rounded-lg border px-4 py-3",
+                      "flex items-center gap-3 rounded-lg border px-4 py-3",
                       punch.punch_type === "in" ? "border-emerald-500/30 bg-emerald-500/10" : "border-destructive/30 bg-destructive/10"
                     )}
                   >
                     <span className={cn(
-                      "font-medium text-sm",
+                      "font-medium text-sm shrink-0",
                       punch.punch_type === "in" ? "text-emerald-600" : "text-destructive"
                     )}>
                       {punch.punch_type === "in" ? "Punch In" : "Punch Out"}
                     </span>
-                    <span className="font-mono text-base font-semibold">
-                      {new Date(punch.punch_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                    
+                    {editingPunchId === punch.id ? (
+                      <div className="flex items-center gap-2 flex-1 justify-end">
+                        <Input
+                          type="time"
+                          value={editPunchTime}
+                          onChange={(e) => setEditPunchTime(e.target.value)}
+                          className="w-28 h-8 text-sm"
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-emerald-600 hover:text-emerald-700"
+                          onClick={() => handleSaveEdit(punch.id)}
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                            setEditingPunchId(null);
+                            setEditPunchTime("");
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 flex-1 justify-end">
+                        <span className="font-mono text-base font-semibold">
+                          {new Date(punch.punch_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          onClick={() => handleEditPunch(punch)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleDeletePunch(punch.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
