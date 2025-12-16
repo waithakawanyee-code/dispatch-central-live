@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, Phone, Clock, Truck, Pencil, Trash2, Check, X } from "lucide-react";
+import { User, Phone, Clock, Truck, Pencil, Trash2, Check, X, Plus } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import {
@@ -98,6 +98,9 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
   const [loadingPunches, setLoadingPunches] = useState(false);
   const [editingPunchId, setEditingPunchId] = useState<string | null>(null);
   const [editPunchTime, setEditPunchTime] = useState("");
+  const [showAddPunch, setShowAddPunch] = useState(false);
+  const [newPunchType, setNewPunchType] = useState<"in" | "out">("in");
+  const [newPunchTime, setNewPunchTime] = useState("");
   const [reportTime, setReportTime] = useState(driver.report_time?.slice(0, 5) || "");
   const [selectedVehicle, setSelectedVehicle] = useState(driver.vehicle || "__none__");
   const [isCallOut, setIsCallOut] = useState(false);
@@ -176,6 +179,48 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
         description: "The punch record has been deleted",
       });
       setPunchTimes(punchTimes.filter(p => p.id !== punchId));
+    }
+  };
+
+  const handleAddPunch = async () => {
+    if (!newPunchTime) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const punchTime = `${today}T${newPunchTime}:00`;
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { data, error } = await supabase
+      .from("time_punches")
+      .insert({
+        driver_id: driver.id,
+        driver_name: driver.name,
+        punch_type: newPunchType,
+        punch_time: punchTime,
+        punched_by: user?.id || null,
+      })
+      .select("id, punch_type, punch_time")
+      .single();
+
+    if (error) {
+      toast({
+        title: "Error adding punch",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else if (data) {
+      toast({
+        title: "Punch added",
+        description: `${newPunchType === "in" ? "Punch in" : "Punch out"} recorded`,
+      });
+      // Add to list and sort by time
+      const updatedPunches = [...punchTimes, data].sort((a, b) => 
+        new Date(a.punch_time).getTime() - new Date(b.punch_time).getTime()
+      );
+      setPunchTimes(updatedPunches);
+      setShowAddPunch(false);
+      setNewPunchTime("");
+      setNewPunchType("in");
     }
   };
 
@@ -443,10 +488,11 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                   <div className="flex items-center justify-center py-4">
                     <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                   </div>
-                ) : punchTimes.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">No punch records for today</p>
                 ) : (
                   <div className="space-y-2">
+                    {punchTimes.length === 0 && !showAddPunch && (
+                      <p className="text-sm text-muted-foreground text-center py-4">No punch records for today</p>
+                    )}
                     {punchTimes.map((punch) => (
                       <div
                         key={punch.id}
@@ -515,6 +561,57 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                         )}
                       </div>
                     ))}
+                    
+                    {showAddPunch ? (
+                      <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+                        <Select value={newPunchType} onValueChange={(v) => setNewPunchType(v as "in" | "out")}>
+                          <SelectTrigger className="w-28 h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="in">Punch In</SelectItem>
+                            <SelectItem value="out">Punch Out</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="time"
+                          value={newPunchTime}
+                          onChange={(e) => setNewPunchTime(e.target.value)}
+                          className="w-28 h-8 text-sm"
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-emerald-600 hover:text-emerald-700"
+                          onClick={handleAddPunch}
+                          disabled={!newPunchTime}
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                            setShowAddPunch(false);
+                            setNewPunchTime("");
+                            setNewPunchType("in");
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-2"
+                        onClick={() => setShowAddPunch(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Punch
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
@@ -714,10 +811,11 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               <div className="flex items-center justify-center py-4">
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               </div>
-            ) : punchTimes.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No punch records for today</p>
             ) : (
               <div className="space-y-2">
+                {punchTimes.length === 0 && !showAddPunch && (
+                  <p className="text-sm text-muted-foreground text-center py-4">No punch records for today</p>
+                )}
                 {punchTimes.map((punch) => (
                   <div
                     key={punch.id}
@@ -786,6 +884,57 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                     )}
                   </div>
                 ))}
+                
+                {showAddPunch ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+                    <Select value={newPunchType} onValueChange={(v) => setNewPunchType(v as "in" | "out")}>
+                      <SelectTrigger className="w-28 h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="in">Punch In</SelectItem>
+                        <SelectItem value="out">Punch Out</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="time"
+                      value={newPunchTime}
+                      onChange={(e) => setNewPunchTime(e.target.value)}
+                      className="w-28 h-8 text-sm"
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-emerald-600 hover:text-emerald-700"
+                      onClick={handleAddPunch}
+                      disabled={!newPunchTime}
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setShowAddPunch(false);
+                        setNewPunchTime("");
+                        setNewPunchType("in");
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-2"
+                    onClick={() => setShowAddPunch(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Punch
+                  </Button>
+                )}
               </div>
             )}
           </div>
