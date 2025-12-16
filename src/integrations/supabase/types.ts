@@ -254,6 +254,8 @@ export type Database = {
         | "scheduled"
         | "assigned"
         | "working"
+        | "unassigned"
+        | "punched-out"
       vehicle_status: "active" | "out-of-service"
     }
     CompositeTypes: {
@@ -393,6 +395,8 @@ export const Constants = {
         "scheduled",
         "assigned",
         "working",
+        "unassigned",
+        "punched-out",
       ],
       vehicle_status: ["active", "out-of-service"],
     },

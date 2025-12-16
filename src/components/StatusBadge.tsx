@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-type DriverStatus = "available" | "on-route" | "break" | "offline" | "off" | "scheduled" | "assigned" | "working";
+type DriverStatus = "available" | "on-route" | "break" | "offline" | "off" | "scheduled" | "assigned" | "working" | "unassigned" | "punched-out";
 type VehicleStatus = "active" | "out-of-service";
 type CleanStatus = "clean" | "dirty";
 
@@ -60,6 +60,18 @@ const statusConfig: Record<string, { bg: string; text: string; border: string; g
     border: "border-status-on-route/50",
     glow: "status-glow-on-route",
   },
+  unassigned: {
+    bg: "bg-slate-500/20",
+    text: "text-slate-400",
+    border: "border-slate-500/50",
+    glow: "status-glow-offline",
+  },
+  "punched-out": {
+    bg: "bg-status-offline/20",
+    text: "text-status-offline",
+    border: "border-status-offline/50",
+    glow: "status-glow-offline",
+  },
   active: {
     bg: "bg-status-active/20",
     text: "text-status-active",
@@ -97,6 +109,9 @@ const statusLabels: Record<string, string> = {
   "offline": "PUNCHED OUT",
   "scheduled": "NOT ASSIGNED",
   "assigned": "ASSIGNED",
+  "unassigned": "UNASSIGNED",
+  "punched-out": "PUNCHED OUT",
+  "working": "WORKING",
 };
 
 export function StatusBadge({ status, label, showPulse = false, size = "md" }: StatusBadgeProps) {

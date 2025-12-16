@@ -31,15 +31,16 @@ interface DriverRowProps {
   compact?: boolean;
 }
 
+// Workflow: Unassigned → Assigned → Working → Punched Out
 const statusOptions: { value: DriverStatus; label: string }[] = [
-  { value: "scheduled", label: "Not Assigned" },
+  { value: "unassigned", label: "Unassigned" },
   { value: "assigned", label: "Assigned" },
-  { value: "on-route", label: "Punched In" },
-  { value: "offline", label: "Punched Out" },
+  { value: "working", label: "Working" },
+  { value: "punched-out", label: "Punched Out" },
 ];
 
 const compactStatusOptions: { value: DriverStatus; label: string }[] = [
-  { value: "scheduled", label: "Not Assigned" },
+  { value: "unassigned", label: "Unassigned" },
   { value: "assigned", label: "Assigned" },
 ];
 
