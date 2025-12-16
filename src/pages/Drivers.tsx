@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock } from "lucide-react";
+import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock, PhoneOff } from "lucide-react";
 import { format, addDays, isSameDay, startOfDay, getDay } from "date-fns";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
@@ -16,6 +16,14 @@ import type { Database } from "@/integrations/supabase/types";
 
 type DriverSchedule = Database["public"]["Tables"]["driver_schedules"]["Row"];
 
+interface CallOut {
+  id: string;
+  driver_id: string;
+  driver_name: string;
+  call_out_date: string;
+  note: string | null;
+}
+
 const Drivers = () => {
   const {
     drivers,
@@ -30,6 +38,7 @@ const Drivers = () => {
   const [schedules, setSchedules] = useState<DriverSchedule[]>([]);
   const [schedulesLoading, setSchedulesLoading] = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [todayCallOuts, setTodayCallOuts] = useState<CallOut[]>([]);
 
   const today = startOfDay(new Date());
   const isToday = isSameDay(selectedDate, today);
@@ -41,20 +50,30 @@ const Drivers = () => {
     return Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
   }, [weekOffset]);
 
-  // Fetch driver schedules
+  // Fetch driver schedules and today's call outs
   useEffect(() => {
-    const fetchSchedules = async () => {
+    const fetchData = async () => {
       setSchedulesLoading(true);
-      const { data, error } = await supabase
-        .from("driver_schedules")
-        .select("*");
       
-      if (!error && data) {
-        setSchedules(data);
+      const [schedulesRes, callOutsRes] = await Promise.all([
+        supabase.from("driver_schedules").select("*"),
+        supabase
+          .from("call_outs")
+          .select("*")
+          .eq("call_out_date", format(today, "yyyy-MM-dd")),
+      ]);
+      
+      if (!schedulesRes.error && schedulesRes.data) {
+        setSchedules(schedulesRes.data);
       }
+      
+      if (!callOutsRes.error && callOutsRes.data) {
+        setTodayCallOuts(callOutsRes.data as CallOut[]);
+      }
+      
       setSchedulesLoading(false);
     };
-    fetchSchedules();
+    fetchData();
   }, []);
 
   // Get drivers available on selected date based on their schedule
@@ -101,11 +120,42 @@ const Drivers = () => {
     }));
   }, [isToday, getAvailableDriversWithSchedule, drivers]);
 
+  // Get drivers NOT scheduled for today (OFF drivers)
+  const offDrivers = useMemo(() => {
+    if (!isToday) return [];
+    
+    const dayOfWeek = getDay(today);
+    
+    // Get driver IDs that ARE scheduled for today (not marked as off)
+    const scheduledDriverIds = new Set(
+      schedules
+        .filter((s) => s.day_of_week === dayOfWeek && !s.is_off)
+        .map((s) => s.driver_id)
+    );
+    
+    // Return drivers who are NOT scheduled for today OR have status "off"
+    return drivers.filter(
+      (driver) => !scheduledDriverIds.has(driver.id) || driver.status === "off"
+    );
+  }, [drivers, schedules, isToday]);
+
+  // Check if a driver called out today
+  const isCallOut = (driverId: string) => {
+    return todayCallOuts.some((co) => co.driver_id === driverId);
+  };
+
+  const getCallOutNote = (driverId: string) => {
+    const callOut = todayCallOuts.find((co) => co.driver_id === driverId);
+    return callOut?.note || null;
+  };
+
   // Calculate stats based on displayed drivers
   const unassignedDrivers = displayDrivers.filter((d) => d.status === "unassigned" || d.status === "scheduled").length;
   const assignedDrivers = displayDrivers.filter((d) => d.status === "assigned").length;
   const workingDrivers = displayDrivers.filter((d) => ["on-route", "working"].includes(d.status)).length;
-  const punchedOutDrivers = displayDrivers.filter((d) => ["offline", "off", "punched-out"].includes(d.status)).length;
+  const punchedOutDrivers = displayDrivers.filter((d) => ["offline", "punched-out"].includes(d.status)).length;
+  const offDriverCount = offDrivers.length;
+  const calledOutCount = todayCallOuts.length;
 
   if (loading || schedulesLoading) {
     return (
@@ -350,6 +400,50 @@ const Drivers = () => {
                     )}
                   </div>
                 </div>
+
+                {/* OFF Drivers */}
+                <div className="space-y-1">
+                  <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                    <span className="flex items-center gap-1">
+                      OFF Drivers
+                      {calledOutCount > 0 && (
+                        <span className="rounded bg-destructive/20 text-destructive px-1 py-0.5 font-mono text-[9px]">
+                          {calledOutCount} called out
+                        </span>
+                      )}
+                    </span>
+                    <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                      {offDriverCount}
+                    </span>
+                  </h3>
+                  <div className="flex flex-col gap-1">
+                    {offDrivers.map((driver) => {
+                      const calledOut = isCallOut(driver.id);
+                      const note = getCallOutNote(driver.id);
+                      return (
+                        <div
+                          key={driver.id}
+                          className={cn(
+                            "flex items-center gap-2 rounded border border-border bg-card px-2 py-1.5 text-xs",
+                            calledOut && "border-l-2 border-l-destructive bg-destructive/5"
+                          )}
+                        >
+                          <span className="h-2 w-2 rounded-full bg-status-offline shrink-0" />
+                          <span className="font-mono font-medium text-foreground flex-1">{driver.name}</span>
+                          {calledOut && (
+                            <span className="flex items-center gap-1 text-destructive" title={note || "Called out"}>
+                              <PhoneOff className="h-3 w-3" />
+                              <span className="text-[10px]">Called Out</span>
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {offDriverCount === 0 && (
+                      <p className="text-xs text-muted-foreground italic py-2">No OFF drivers</p>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Right Column */}
@@ -392,7 +486,7 @@ const Drivers = () => {
                   </h3>
                   <div className="flex flex-wrap gap-1">
                     {displayDrivers
-                      .filter((d) => ["offline", "off", "punched-out"].includes(d.status))
+                      .filter((d) => ["offline", "punched-out"].includes(d.status))
                       .map((driver) => (
                         <DriverRow
                           key={driver.id}
