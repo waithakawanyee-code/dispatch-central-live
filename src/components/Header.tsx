@@ -34,13 +34,13 @@ export function Header() {
   return <header className="border-b border-border bg-card/50 backdrop-blur-sm">
       <div className="flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-4">
-          <div className="flex h-20 w-24 flex-col items-center justify-center rounded-lg bg-primary/20">
-            <span className="font-bold text-primary px-[5px] text-3xl">
+          <div className="flex h-20 flex-col items-center justify-center rounded-lg bg-primary/20 px-4">
+            <span className="font-bold text-primary text-3xl whitespace-nowrap">
               {currentTime.toLocaleDateString("en-US", {
               weekday: "long"
             })}
             </span>
-            <span className="text-muted-foreground text-lg">
+            <span className="text-muted-foreground text-sm">
               {currentTime.toLocaleDateString("en-US", {
               month: "2-digit",
               day: "2-digit",
