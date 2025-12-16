@@ -43,54 +43,8 @@ const Index = () => {
       <Header />
 
       <main className="p-4">
-        {/* Stats Overview */}
-        <section className="mb-6 grid gap-3 grid-cols-3 lg:grid-cols-6">
-          <StatsCard
-            title="Available"
-            value={availableDrivers}
-            subtitle="Ready"
-            icon={Users}
-            accentColor="primary"
-          />
-          <StatsCard
-            title="On Route"
-            value={onRouteDrivers}
-            subtitle="Active"
-            icon={Clock}
-            accentColor="accent"
-          />
-          <StatsCard
-            title="Total Drivers"
-            value={drivers.length}
-            subtitle="Registered"
-            icon={Users}
-            accentColor="primary"
-          />
-          <StatsCard
-            title="Active"
-            value={activeVehicles}
-            subtitle="In operation"
-            icon={Truck}
-            accentColor="primary"
-          />
-          <StatsCard
-            title="Out of Service"
-            value={outOfServiceVehicles}
-            subtitle="Attention"
-            icon={AlertTriangle}
-            accentColor="destructive"
-          />
-          <StatsCard
-            title="Needs Cleaning"
-            value={dirtyVehicles}
-            subtitle="At base"
-            icon={Droplets}
-            accentColor="accent"
-          />
-        </section>
-
         {/* Driver & Vehicle Status - Side by Side */}
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid gap-4 xl:grid-cols-2 mb-6">
           {/* Driver Status */}
           <section className="rounded-lg border border-border bg-card/50 p-3">
             <div className="mb-3 flex items-center justify-between">
@@ -138,6 +92,52 @@ const Index = () => {
             </div>
           </section>
         </div>
+
+        {/* Stats Overview */}
+        <section className="mb-6 grid gap-3 grid-cols-3 lg:grid-cols-6">
+          <StatsCard
+            title="Available"
+            value={availableDrivers}
+            subtitle="Ready"
+            icon={Users}
+            accentColor="primary"
+          />
+          <StatsCard
+            title="On Route"
+            value={onRouteDrivers}
+            subtitle="Active"
+            icon={Clock}
+            accentColor="accent"
+          />
+          <StatsCard
+            title="Total Drivers"
+            value={drivers.length}
+            subtitle="Registered"
+            icon={Users}
+            accentColor="primary"
+          />
+          <StatsCard
+            title="Active"
+            value={activeVehicles}
+            subtitle="In operation"
+            icon={Truck}
+            accentColor="primary"
+          />
+          <StatsCard
+            title="Out of Service"
+            value={outOfServiceVehicles}
+            subtitle="Attention"
+            icon={AlertTriangle}
+            accentColor="destructive"
+          />
+          <StatsCard
+            title="Needs Cleaning"
+            value={dirtyVehicles}
+            subtitle="At base"
+            icon={Droplets}
+            accentColor="accent"
+          />
+        </section>
 
         {/* Daily Schedule */}
         <section className="mt-6">
