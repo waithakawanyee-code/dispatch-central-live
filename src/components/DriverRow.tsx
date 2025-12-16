@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { User, Phone, Clock } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
@@ -7,14 +8,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriverStatus = Database["public"]["Enums"]["driver_status"];
-type DriverRow = Database["public"]["Tables"]["drivers"]["Row"];
+type DriverRowType = Database["public"]["Tables"]["drivers"]["Row"];
 
 interface DriverRowProps {
-  driver: DriverRow;
-  onStatusChange?: (newStatus: DriverStatus) => void;
+  driver: DriverRowType;
+  onStatusChange?: (newStatus: DriverStatus, reportTime?: string) => void;
   canEdit?: boolean;
   isUpdated?: boolean;
   compact?: boolean;
@@ -35,6 +46,22 @@ const compactStatusOptions: { value: DriverStatus; label: string }[] = [
 ];
 
 export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false }: DriverRowProps) {
+  const [showTimeDialog, setShowTimeDialog] = useState(false);
+  const [reportTime, setReportTime] = useState(driver.report_time?.slice(0, 5) || "08:00");
+
+  const handleStatusSelect = (status: DriverStatus) => {
+    if (status === "assigned") {
+      setShowTimeDialog(true);
+    } else {
+      onStatusChange?.(status);
+    }
+  };
+
+  const handleAssignWithTime = () => {
+    onStatusChange?.("assigned", reportTime);
+    setShowTimeDialog(false);
+  };
+
   if (compact) {
     const content = (
       <div
@@ -62,25 +89,54 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
 
     if (canEdit) {
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            {content}
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[120px]">
-            {compactStatusOptions.map((option) => (
-              <DropdownMenuItem
-                key={option.value}
-                onClick={() => onStatusChange?.(option.value)}
-                className={cn(
-                  "cursor-pointer text-xs",
-                  driver.status === option.value && "bg-secondary"
-                )}
-              >
-                <span>{option.label}</span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              {content}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[120px]">
+              {compactStatusOptions.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => handleStatusSelect(option.value)}
+                  className={cn(
+                    "cursor-pointer text-xs",
+                    driver.status === option.value && "bg-secondary"
+                  )}
+                >
+                  <span>{option.label}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Dialog open={showTimeDialog} onOpenChange={setShowTimeDialog}>
+            <DialogContent className="sm:max-w-[300px]">
+              <DialogHeader>
+                <DialogTitle>Set Report Time</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="report-time">Report Time for {driver.name}</Label>
+                  <Input
+                    id="report-time"
+                    type="time"
+                    value={reportTime}
+                    onChange={(e) => setReportTime(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowTimeDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAssignWithTime}>
+                  Assign
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
       );
     }
 
@@ -88,68 +144,97 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
   }
 
   return (
-    <div
-      className={cn(
-        "flex items-center gap-4 rounded-lg border border-border bg-card px-3 py-2 transition-all duration-200",
-        "hover:border-primary/30",
-        driver.status === "available" && "border-l-4 border-l-status-available",
-        driver.status === "on-route" && "border-l-4 border-l-status-on-route",
-        driver.status === "break" && "border-l-4 border-l-status-break",
-        driver.status === "offline" && "border-l-4 border-l-status-offline opacity-60",
-        isUpdated && "animate-row-flash"
-      )}
-    >
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary">
-        <User className="h-3.5 w-3.5 text-muted-foreground" />
-      </div>
+    <>
+      <div
+        className={cn(
+          "flex items-center gap-4 rounded-lg border border-border bg-card px-3 py-2 transition-all duration-200",
+          "hover:border-primary/30",
+          driver.status === "available" && "border-l-4 border-l-status-available",
+          driver.status === "on-route" && "border-l-4 border-l-status-on-route",
+          driver.status === "break" && "border-l-4 border-l-status-break",
+          driver.status === "offline" && "border-l-4 border-l-status-offline opacity-60",
+          isUpdated && "animate-row-flash"
+        )}
+      >
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary">
+          <User className="h-3.5 w-3.5 text-muted-foreground" />
+        </div>
 
-      <div className="min-w-[120px] flex-1">
-        <p className="text-sm font-medium text-foreground">{driver.name}</p>
-        {driver.vehicle && (
-          <p className="font-mono text-[10px] text-primary">{driver.vehicle}</p>
+        <div className="min-w-[120px] flex-1">
+          <p className="text-sm font-medium text-foreground">{driver.name}</p>
+          {driver.vehicle && (
+            <p className="font-mono text-[10px] text-primary">{driver.vehicle}</p>
+          )}
+        </div>
+
+        {driver.status === "assigned" && driver.report_time && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span className="font-mono">{driver.report_time.slice(0, 5)}</span>
+          </div>
+        )}
+
+        {driver.phone && (
+          <div className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
+            <Phone className="h-3 w-3" />
+            <span className="font-mono">{driver.phone}</span>
+          </div>
+        )}
+
+        {canEdit ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="cursor-pointer focus:outline-none">
+                <StatusBadge status={driver.status} showPulse={driver.status !== "offline"} size="sm" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[120px]">
+              {statusOptions.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => handleStatusSelect(option.value)}
+                  className={cn(
+                    "cursor-pointer text-xs",
+                    driver.status === option.value && "bg-secondary"
+                  )}
+                >
+                  <StatusBadge status={option.value} size="sm" />
+                  <span className="ml-2">{option.label}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <StatusBadge status={driver.status} showPulse={driver.status !== "offline"} size="sm" />
         )}
       </div>
 
-      {driver.status === "assigned" && driver.report_time && (
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Clock className="h-3 w-3" />
-          <span className="font-mono">{driver.report_time.slice(0, 5)}</span>
-        </div>
-      )}
-
-      {driver.phone && (
-        <div className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
-          <Phone className="h-3 w-3" />
-          <span className="font-mono">{driver.phone}</span>
-        </div>
-      )}
-
-      {canEdit ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="cursor-pointer focus:outline-none">
-              <StatusBadge status={driver.status} showPulse={driver.status !== "offline"} size="sm" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[120px]">
-            {statusOptions.map((option) => (
-              <DropdownMenuItem
-                key={option.value}
-                onClick={() => onStatusChange?.(option.value)}
-                className={cn(
-                  "cursor-pointer text-xs",
-                  driver.status === option.value && "bg-secondary"
-                )}
-              >
-                <StatusBadge status={option.value} size="sm" />
-                <span className="ml-2">{option.label}</span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : (
-        <StatusBadge status={driver.status} showPulse={driver.status !== "offline"} size="sm" />
-      )}
-    </div>
+      <Dialog open={showTimeDialog} onOpenChange={setShowTimeDialog}>
+        <DialogContent className="sm:max-w-[300px]">
+          <DialogHeader>
+            <DialogTitle>Set Report Time</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="report-time-full">Report Time for {driver.name}</Label>
+              <Input
+                id="report-time-full"
+                type="time"
+                value={reportTime}
+                onChange={(e) => setReportTime(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTimeDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAssignWithTime}>
+              Assign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

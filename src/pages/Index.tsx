@@ -77,7 +77,7 @@ const Index = () => {
                         driver={driver}
                         canEdit={isAdmin}
                         isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                        onStatusChange={(newStatus) => updateDriverStatus(driver.id, newStatus)}
+                        onStatusChange={(newStatus, reportTime) => updateDriverStatus(driver.id, newStatus, reportTime)}
                       />
                     ))}
                   {drivers.filter((d) => ["scheduled", "assigned"].includes(d.status)).length === 0 && (
@@ -105,7 +105,7 @@ const Index = () => {
                           driver={driver}
                           canEdit={isAdmin}
                           isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                          onStatusChange={(newStatus) => updateDriverStatus(driver.id, newStatus)}
+                          onStatusChange={(newStatus, reportTime) => updateDriverStatus(driver.id, newStatus, reportTime)}
                           compact
                         />
                       ))}
@@ -132,7 +132,7 @@ const Index = () => {
                           driver={driver}
                           canEdit={isAdmin}
                           isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                          onStatusChange={(newStatus) => updateDriverStatus(driver.id, newStatus)}
+                          onStatusChange={(newStatus, reportTime) => updateDriverStatus(driver.id, newStatus, reportTime)}
                           compact
                         />
                       ))}
