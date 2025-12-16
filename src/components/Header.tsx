@@ -1,4 +1,4 @@
-import { Radio, Clock, Settings, LogOut, Shield } from "lucide-react";
+import { Radio, Clock, Settings, LogOut, Shield, Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,6 +48,14 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-4">
+          <Link
+            to="/scheduler"
+            className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <Calendar className="h-4 w-4" />
+            Schedule
+          </Link>
+
           {isAdmin && (
             <Link
               to="/admin"
