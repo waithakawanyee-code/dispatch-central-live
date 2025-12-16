@@ -42,6 +42,7 @@ interface DriverRowProps {
   canEdit?: boolean;
   isUpdated?: boolean;
   compact?: boolean;
+  mini?: boolean;
   availableVehicles?: VehicleRowType[];
 }
 
@@ -89,7 +90,7 @@ interface TimePunch {
   punch_time: string;
 }
 
-export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, availableVehicles = [] }: DriverRowProps) {
+export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, mini = false, availableVehicles = [] }: DriverRowProps) {
   const { toast } = useToast();
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showOffDialog, setShowOffDialog] = useState(false);
@@ -283,6 +284,309 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
     setIsCallOut(false);
     setCallOutNote("");
   };
+
+  // Mini view - very compact for high-density lists
+  if (mini) {
+    const miniContent = (
+      <div
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded border border-border bg-card px-2 py-1 text-xs transition-all duration-200",
+          "hover:border-primary/30",
+          canEdit && "cursor-pointer",
+          driver.status === "unassigned" && "border-slate-500/30",
+          driver.status === "scheduled" && "border-amber-500/30 bg-amber-500/5",
+          ["offline", "punched-out"].includes(driver.status) && "border-status-offline/30 opacity-70",
+          isUpdated && "animate-row-flash"
+        )}
+      >
+        <span
+          className={cn(
+            "h-1.5 w-1.5 rounded-full shrink-0",
+            driver.status === "scheduled" && "bg-amber-500",
+            driver.status === "unassigned" && "bg-slate-500",
+            ["offline", "punched-out"].includes(driver.status) && "bg-status-offline"
+          )}
+        />
+        <span className="font-mono font-medium text-foreground truncate max-w-[100px]">{driver.name}</span>
+      </div>
+    );
+
+    if (canEdit) {
+      return (
+        <>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              {miniContent}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[140px]">
+              {["punched-out", "offline"].includes(driver.status) && (
+                <DropdownMenuItem
+                  onClick={handlePunchedOutClick}
+                  className="cursor-pointer text-sm"
+                >
+                  <Clock className="h-4 w-4 mr-2" />
+                  <span>View Times</span>
+                </DropdownMenuItem>
+              )}
+              {(["punched-out", "offline", "off"].includes(driver.status) ? compactPunchedOutOptions : compactUnassignedOptions).map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => handleStatusSelect(option.value)}
+                  className={cn(
+                    "cursor-pointer text-sm",
+                    driver.status === option.value && "bg-secondary"
+                  )}
+                >
+                  <span>{option.label}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+            <DialogContent className="sm:max-w-[350px]">
+              <DialogHeader>
+                <DialogTitle>Assign {driver.name}</DialogTitle>
+              </DialogHeader>
+              <p className="text-xs text-muted-foreground">
+                Either report time or vehicle is required.
+              </p>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="report-time-mini">Report Time</Label>
+                  <Input
+                    id="report-time-mini"
+                    type="time"
+                    value={reportTime}
+                    onChange={(e) => setReportTime(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="vehicle-mini">Vehicle</Label>
+                  <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select vehicle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">No vehicle</SelectItem>
+                      {availableVehicles
+                        .filter((v) => v.status === "active")
+                        .map((vehicle) => (
+                          <SelectItem key={vehicle.id} value={vehicle.unit}>
+                            {vehicle.unit} {vehicle.driver && vehicle.driver !== driver.name ? `(${vehicle.driver})` : ""}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAssign} disabled={!canAssign}>
+                  Assign
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showOffDialog} onOpenChange={setShowOffDialog}>
+            <DialogContent className="sm:max-w-[350px]">
+              <DialogHeader>
+                <DialogTitle>Mark {driver.name} as OFF</DialogTitle>
+                <DialogDescription>
+                  Did the driver call out?
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="call-out-mini"
+                    checked={isCallOut}
+                    onCheckedChange={(checked) => setIsCallOut(checked === true)}
+                  />
+                  <Label htmlFor="call-out-mini" className="text-sm font-normal">
+                    Yes, driver called out
+                  </Label>
+                </div>
+                {isCallOut && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="call-out-note-mini">Note (optional)</Label>
+                    <Textarea
+                      id="call-out-note-mini"
+                      placeholder="Reason for call out..."
+                      value={callOutNote}
+                      onChange={(e) => setCallOutNote(e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowOffDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleConfirmOff}>
+                  Confirm OFF
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showPunchTimesDialog} onOpenChange={setShowPunchTimesDialog}>
+            <DialogContent className="sm:max-w-[350px]">
+              <DialogHeader>
+                <DialogTitle>{driver.name} - Today's Punches</DialogTitle>
+                <DialogDescription>
+                  Punch in and out times for today
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                {loadingPunches ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {punchTimes.length === 0 && !showAddPunch && (
+                      <p className="text-sm text-muted-foreground text-center py-4">No punch records for today</p>
+                    )}
+                    {punchTimes.map((punch) => (
+                      <div
+                        key={punch.id}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg border px-4 py-3",
+                          punch.punch_type === "in" ? "border-emerald-500/30 bg-emerald-500/10" : "border-destructive/30 bg-destructive/10"
+                        )}
+                      >
+                        <span className={cn(
+                          "font-medium text-sm shrink-0",
+                          punch.punch_type === "in" ? "text-emerald-600" : "text-destructive"
+                        )}>
+                          {punch.punch_type === "in" ? "Punch In" : "Punch Out"}
+                        </span>
+                        
+                        {editingPunchId === punch.id ? (
+                          <div className="flex items-center gap-2 flex-1 justify-end">
+                            <Input
+                              type="time"
+                              value={editPunchTime}
+                              onChange={(e) => setEditPunchTime(e.target.value)}
+                              className="w-28 h-8 text-sm"
+                            />
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-emerald-600 hover:text-emerald-700"
+                              onClick={() => handleSaveEdit(punch.id)}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                              onClick={() => {
+                                setEditingPunchId(null);
+                                setEditPunchTime("");
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 flex-1 justify-end">
+                            <span className="font-mono text-base font-semibold">
+                              {new Date(punch.punch_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-muted-foreground hover:text-primary"
+                              onClick={() => handleEditPunch(punch)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDeletePunch(punch.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    
+                    {showAddPunch ? (
+                      <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+                        <Select value={newPunchType} onValueChange={(v) => setNewPunchType(v as "in" | "out")}>
+                          <SelectTrigger className="w-28 h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="in">Punch In</SelectItem>
+                            <SelectItem value="out">Punch Out</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="time"
+                          value={newPunchTime}
+                          onChange={(e) => setNewPunchTime(e.target.value)}
+                          className="w-28 h-8 text-sm"
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-emerald-600 hover:text-emerald-700"
+                          onClick={handleAddPunch}
+                          disabled={!newPunchTime}
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                            setShowAddPunch(false);
+                            setNewPunchTime("");
+                            setNewPunchType("in");
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-2"
+                        onClick={() => setShowAddPunch(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Punch
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowPunchTimesDialog(false)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      );
+    }
+
+    return miniContent;
+  }
 
   if (compact) {
     const content = (

@@ -382,7 +382,7 @@ const Drivers = () => {
                       {unassignedDrivers}
                     </span>
                   </h3>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {displayDrivers
                       .filter((d) => d.status === "unassigned" || d.status === "scheduled")
                       .map((driver) => (
@@ -393,7 +393,7 @@ const Drivers = () => {
                           isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                           onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
                           availableVehicles={vehicles}
-                          compact
+                          mini
                         />
                       ))}
                     {unassignedDrivers === 0 && (
@@ -488,7 +488,7 @@ const Drivers = () => {
                       {punchedOutDrivers}
                     </span>
                   </h3>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {displayDrivers
                       .filter((d) => ["offline", "punched-out"].includes(d.status))
                       .map((driver) => (
@@ -499,7 +499,7 @@ const Drivers = () => {
                           isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                           onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
                           availableVehicles={vehicles}
-                          compact
+                          mini
                         />
                       ))}
                     {punchedOutDrivers === 0 && (
