@@ -1,0 +1,63 @@
+import { Radio, Clock } from "lucide-react";
+import { useEffect, useState } from "react";
+
+export function Header() {
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formattedDate = currentTime.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const formattedTime = currentTime.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  return (
+    <header className="border-b border-border bg-card/50 backdrop-blur-sm">
+      <div className="flex items-center justify-between px-6 py-4">
+        <div className="flex items-center gap-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/20">
+            <Radio className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              DISPATCH CONTROL
+            </h1>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest">
+              Fleet Status Monitor
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-3 w-3">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex h-3 w-3 rounded-full bg-primary"></span>
+            </span>
+            <span className="text-sm font-medium text-primary">LIVE</span>
+          </div>
+
+          <div className="text-right">
+            <div className="flex items-center gap-2 font-mono text-2xl font-bold tabular-nums text-foreground">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+              {formattedTime}
+            </div>
+            <p className="text-xs text-muted-foreground">{formattedDate}</p>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
