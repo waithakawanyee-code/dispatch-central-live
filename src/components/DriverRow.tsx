@@ -41,11 +41,10 @@ interface DriverRowProps {
 }
 
 // Workflow: Unassigned → Assigned → Working → Punched Out
-const statusOptions: { value: DriverStatus; label: string }[] = [
-  { value: "unassigned", label: "Unassigned" },
-  { value: "assigned", label: "Assigned" },
-  { value: "working", label: "Working" },
-  { value: "punched-out", label: "Punched Out" },
+// Unassigned drivers get: Assign or OFF
+const unassignedStatusOptions: { value: DriverStatus; label: string }[] = [
+  { value: "assigned", label: "Assign" },
+  { value: "off", label: "OFF" },
 ];
 
 const assignedStatusOptions: { value: DriverStatus; label: string }[] = [
@@ -61,9 +60,9 @@ const punchedOutStatusOptions: { value: DriverStatus; label: string }[] = [
   { value: "unassigned", label: "Reset to Unassigned" },
 ];
 
-const compactStatusOptions: { value: DriverStatus; label: string }[] = [
-  { value: "unassigned", label: "Unassigned" },
-  { value: "assigned", label: "Assigned" },
+const compactUnassignedOptions: { value: DriverStatus; label: string }[] = [
+  { value: "assigned", label: "Assign" },
+  { value: "off", label: "OFF" },
 ];
 
 const compactAssignedOptions: { value: DriverStatus; label: string }[] = [
@@ -154,7 +153,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               {content}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[120px]">
-              {(["punched-out", "offline", "off"].includes(driver.status) ? compactPunchedOutOptions : ["working", "on-route"].includes(driver.status) ? compactWorkingOptions : driver.status === "assigned" ? compactAssignedOptions : compactStatusOptions).map((option) => (
+              {(["punched-out", "offline", "off"].includes(driver.status) ? compactPunchedOutOptions : ["working", "on-route"].includes(driver.status) ? compactWorkingOptions : driver.status === "assigned" ? compactAssignedOptions : compactUnassignedOptions).map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
@@ -272,7 +271,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[120px]">
-              {(["punched-out", "offline", "off"].includes(driver.status) ? punchedOutStatusOptions : ["working", "on-route"].includes(driver.status) ? workingStatusOptions : driver.status === "assigned" ? assignedStatusOptions : statusOptions).map((option) => (
+              {(["punched-out", "offline", "off"].includes(driver.status) ? punchedOutStatusOptions : ["working", "on-route"].includes(driver.status) ? workingStatusOptions : driver.status === "assigned" ? assignedStatusOptions : unassignedStatusOptions).map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
