@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { playAlertForStatus } from "@/lib/audio";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriverRow = Database["public"]["Tables"]["drivers"]["Row"];
@@ -30,6 +31,7 @@ export function useDispatchData() {
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
   const [vehicles, setVehicles] = useState<VehicleRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const isInitialLoad = useRef(true);
 
   // Fetch initial data
   useEffect(() => {
@@ -42,6 +44,10 @@ export function useDispatchData() {
       if (driversRes.data) setDrivers(driversRes.data);
       if (vehiclesRes.data) setVehicles(vehiclesRes.data);
       setLoading(false);
+      // Mark initial load complete after a brief delay
+      setTimeout(() => {
+        isInitialLoad.current = false;
+      }, 1000);
     };
 
     fetchData();
@@ -56,8 +62,14 @@ export function useDispatchData() {
         { event: "*", schema: "public", table: "drivers" },
         (payload) => {
           if (payload.eventType === "UPDATE") {
+            const newDriver = payload.new as DriverRow;
+            const oldDriver = payload.old as DriverRow;
+            // Play sound for status changes (not during initial load)
+            if (!isInitialLoad.current && oldDriver.status !== newDriver.status) {
+              playAlertForStatus(newDriver.status);
+            }
             setDrivers((prev) =>
-              prev.map((d) => (d.id === payload.new.id ? (payload.new as DriverRow) : d))
+              prev.map((d) => (d.id === newDriver.id ? newDriver : d))
             );
           } else if (payload.eventType === "INSERT") {
             setDrivers((prev) => [...prev, payload.new as DriverRow]);
@@ -71,8 +83,16 @@ export function useDispatchData() {
         { event: "*", schema: "public", table: "vehicles" },
         (payload) => {
           if (payload.eventType === "UPDATE") {
+            const newVehicle = payload.new as VehicleRow;
+            const oldVehicle = payload.old as VehicleRow;
+            // Play sound for status changes (not during initial load)
+            if (!isInitialLoad.current && oldVehicle.status !== newVehicle.status) {
+              playAlertForStatus(newVehicle.status);
+            } else if (!isInitialLoad.current && oldVehicle.clean_status !== newVehicle.clean_status) {
+              playAlertForStatus(newVehicle.clean_status);
+            }
             setVehicles((prev) =>
-              prev.map((v) => (v.id === payload.new.id ? (payload.new as VehicleRow) : v))
+              prev.map((v) => (v.id === newVehicle.id ? newVehicle : v))
             );
           } else if (payload.eventType === "INSERT") {
             setVehicles((prev) => [...prev, payload.new as VehicleRow]);
