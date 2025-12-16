@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { Clock, Download, ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, Plus } from "lucide-react";
+import { format, startOfWeek, endOfWeek, addWeeks, eachDayOfInterval } from "date-fns";
+import { Clock, Download, ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -78,6 +79,26 @@ export function TimePunchReport() {
     return today.toISOString().split("T")[0];
   });
 
+  // Weekly view state
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [weeklyPunches, setWeeklyPunches] = useState<TimePunch[]>([]);
+  const [weeklyLoading, setWeeklyLoading] = useState(true);
+
+  // Get current week dates (Monday-Sunday)
+  const currentWeekStart = useMemo(() => {
+    const today = new Date();
+    const start = startOfWeek(addWeeks(today, weekOffset), { weekStartsOn: 1 }); // Monday
+    return start;
+  }, [weekOffset]);
+
+  const currentWeekEnd = useMemo(() => {
+    return endOfWeek(currentWeekStart, { weekStartsOn: 1 }); // Sunday
+  }, [currentWeekStart]);
+
+  const weekDays = useMemo(() => {
+    return eachDayOfInterval({ start: currentWeekStart, end: currentWeekEnd });
+  }, [currentWeekStart, currentWeekEnd]);
+
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingPunch, setEditingPunch] = useState<TimePunch | null>(null);
@@ -126,10 +147,100 @@ export function TimePunchReport() {
     if (data) setDrivers(data);
   };
 
+  // Fetch weekly punches
+  const fetchWeeklyPunches = async () => {
+    setWeeklyLoading(true);
+    const startDateTime = new Date(currentWeekStart);
+    startDateTime.setHours(0, 0, 0, 0);
+    
+    const endDateTime = new Date(currentWeekEnd);
+    endDateTime.setHours(23, 59, 59, 999);
+
+    const { data, error } = await supabase
+      .from("time_punches")
+      .select("*")
+      .gte("punch_time", startDateTime.toISOString())
+      .lte("punch_time", endDateTime.toISOString())
+      .order("punch_time", { ascending: true });
+
+    if (!error && data) {
+      setWeeklyPunches(data || []);
+    }
+    setWeeklyLoading(false);
+  };
+
   useEffect(() => {
     fetchPunches();
     fetchDrivers();
   }, [startDate, endDate]);
+
+  useEffect(() => {
+    fetchWeeklyPunches();
+  }, [currentWeekStart]);
+
+  // Calculate weekly hours per driver per day
+  const weeklyDriverHours = useMemo(() => {
+    // Create a map: driverId -> { name, dayHours: { [dateStr]: minutes } }
+    const driverMap = new Map<string, { name: string; dayHours: Map<string, number> }>();
+    
+    // Also track all drivers who have punches
+    const sortedPunches = [...weeklyPunches].sort(
+      (a, b) => new Date(a.punch_time).getTime() - new Date(b.punch_time).getTime()
+    );
+
+    // Track open sessions
+    const openSessions = new Map<string, { inTime: Date; inDateStr: string }>();
+
+    sortedPunches.forEach((punch) => {
+      if (!driverMap.has(punch.driver_id)) {
+        driverMap.set(punch.driver_id, { name: punch.driver_name, dayHours: new Map() });
+      }
+      
+      if (punch.punch_type === "in") {
+        openSessions.set(punch.driver_id, { 
+          inTime: new Date(punch.punch_time),
+          inDateStr: format(new Date(punch.punch_time), "yyyy-MM-dd")
+        });
+      } else if (punch.punch_type === "out") {
+        const session = openSessions.get(punch.driver_id);
+        if (session) {
+          const outTime = new Date(punch.punch_time);
+          const minutes = (outTime.getTime() - session.inTime.getTime()) / (1000 * 60);
+          const outDateStr = format(outTime, "yyyy-MM-dd");
+          
+          // Add minutes to the punch out day
+          const driverData = driverMap.get(punch.driver_id)!;
+          const currentMinutes = driverData.dayHours.get(outDateStr) || 0;
+          driverData.dayHours.set(outDateStr, currentMinutes + minutes);
+          
+          openSessions.delete(punch.driver_id);
+        }
+      }
+    });
+
+    // Convert to array format
+    const result: { driverId: string; driverName: string; dailyHours: { [key: string]: number }; weekTotal: number }[] = [];
+    
+    driverMap.forEach((data, driverId) => {
+      const dailyHours: { [key: string]: number } = {};
+      let weekTotal = 0;
+      
+      data.dayHours.forEach((minutes, dateStr) => {
+        dailyHours[dateStr] = minutes;
+        weekTotal += minutes;
+      });
+      
+      result.push({
+        driverId,
+        driverName: data.name,
+        dailyHours,
+        weekTotal,
+      });
+    });
+
+    // Sort by week total descending
+    return result.sort((a, b) => b.weekTotal - a.weekTotal);
+  }, [weeklyPunches]);
 
   // Calculate total hours per driver
   const driverHours: DriverHours[] = (() => {
@@ -389,29 +500,147 @@ export function TimePunchReport() {
         </div>
       </div>
 
-      <div className="flex gap-4 items-end">
-        <div className="space-y-1">
-          <Label htmlFor="start-date">Start Date</Label>
-          <Input
-            id="start-date"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="end-date">End Date</Label>
-          <Input
-            id="end-date"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
-        </div>
-        <Button onClick={fetchPunches} variant="secondary">
-          Refresh
-        </Button>
-      </div>
+      <Tabs defaultValue="weekly" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsTrigger value="weekly">Weekly Report</TabsTrigger>
+          <TabsTrigger value="daterange">Date Range</TabsTrigger>
+        </TabsList>
+
+        {/* Weekly Report Tab */}
+        <TabsContent value="weekly" className="space-y-4">
+          {/* Week Navigation */}
+          <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setWeekOffset((prev) => prev - 1)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">
+                {format(currentWeekStart, "MMM d")} - {format(currentWeekEnd, "MMM d, yyyy")}
+              </span>
+              {weekOffset === 0 && (
+                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">Current Week</span>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setWeekOffset((prev) => prev + 1)}
+              disabled={weekOffset >= 0}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {weeklyLoading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading...</div>
+          ) : weeklyDriverHours.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No time punches found for this week.
+            </div>
+          ) : (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Weekly Hours (Mon-Sun)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="sticky left-0 bg-background min-w-[120px]">Driver</TableHead>
+                        {weekDays.map((day) => (
+                          <TableHead key={day.toISOString()} className="text-center min-w-[80px]">
+                            <div className="flex flex-col">
+                              <span className="text-xs text-muted-foreground">{format(day, "EEE")}</span>
+                              <span>{format(day, "d")}</span>
+                            </div>
+                          </TableHead>
+                        ))}
+                        <TableHead className="text-center min-w-[90px] font-bold">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {weeklyDriverHours.map((driver) => (
+                        <TableRow key={driver.driverId}>
+                          <TableCell className="sticky left-0 bg-background font-mono font-medium">
+                            {driver.driverName}
+                          </TableCell>
+                          {weekDays.map((day) => {
+                            const dateStr = format(day, "yyyy-MM-dd");
+                            const minutes = driver.dailyHours[dateStr] || 0;
+                            return (
+                              <TableCell key={dateStr} className="text-center">
+                                {minutes > 0 ? (
+                                  <span className="font-mono text-sm">
+                                    {formatHoursMinutes(minutes)}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">-</span>
+                                )}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="text-center font-bold font-mono bg-muted/30">
+                            {formatHoursMinutes(driver.weekTotal)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Total Row */}
+                      <TableRow className="bg-muted/50 font-bold">
+                        <TableCell className="sticky left-0 bg-muted/50">Total</TableCell>
+                        {weekDays.map((day) => {
+                          const dateStr = format(day, "yyyy-MM-dd");
+                          const dayTotal = weeklyDriverHours.reduce(
+                            (sum, d) => sum + (d.dailyHours[dateStr] || 0), 0
+                          );
+                          return (
+                            <TableCell key={dateStr} className="text-center font-mono">
+                              {dayTotal > 0 ? formatHoursMinutes(dayTotal) : "-"}
+                            </TableCell>
+                          );
+                        })}
+                        <TableCell className="text-center font-mono bg-primary/10">
+                          {formatHoursMinutes(weeklyDriverHours.reduce((sum, d) => sum + d.weekTotal, 0))}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Date Range Tab */}
+        <TabsContent value="daterange" className="space-y-4">
+          <div className="flex gap-4 items-end">
+            <div className="space-y-1">
+              <Label htmlFor="start-date">Start Date</Label>
+              <Input
+                id="start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="end-date">End Date</Label>
+              <Input
+                id="end-date"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+            <Button onClick={fetchPunches} variant="secondary">
+              Refresh
+            </Button>
+          </div>
 
       {loading ? (
         <div className="text-center py-8 text-muted-foreground">Loading...</div>
@@ -558,6 +787,8 @@ export function TimePunchReport() {
       <div className="text-xs text-muted-foreground">
         Total records: {punches.length}
       </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
