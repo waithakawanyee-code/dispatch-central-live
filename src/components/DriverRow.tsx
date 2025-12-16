@@ -27,13 +27,19 @@ const statusOptions: { value: DriverStatus; label: string }[] = [
   { value: "offline", label: "Offline" },
 ];
 
+const compactStatusOptions: { value: DriverStatus; label: string }[] = [
+  { value: "scheduled", label: "Not Assigned" },
+  { value: "assigned", label: "Assigned" },
+];
+
 export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false }: DriverRowProps) {
   if (compact) {
-    return (
+    const content = (
       <div
         className={cn(
           "flex flex-col rounded border border-border bg-card px-2 py-1 text-xs transition-all duration-200",
           "hover:border-primary/30",
+          canEdit && "cursor-pointer",
           driver.status === "available" && "border-l-2 border-l-status-available",
           driver.status === "on-route" && "border-l-2 border-l-status-on-route",
           driver.status === "break" && "border-l-2 border-l-status-break",
@@ -51,6 +57,32 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
         )}
       </div>
     );
+
+    if (canEdit) {
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            {content}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-[120px]">
+            {compactStatusOptions.map((option) => (
+              <DropdownMenuItem
+                key={option.value}
+                onClick={() => onStatusChange?.(option.value)}
+                className={cn(
+                  "cursor-pointer text-xs",
+                  driver.status === option.value && "bg-secondary"
+                )}
+              >
+                <span>{option.label}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
+
+    return content;
   }
 
   return (
