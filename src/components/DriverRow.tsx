@@ -1,6 +1,12 @@
 import { User, Phone, Clock } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type DriverStatus = "available" | "on-route" | "break" | "offline";
 
@@ -17,9 +23,17 @@ interface Driver {
 
 interface DriverRowProps {
   driver: Driver;
+  onStatusChange?: (newStatus: DriverStatus) => void;
 }
 
-export function DriverRow({ driver }: DriverRowProps) {
+const statusOptions: { value: DriverStatus; label: string }[] = [
+  { value: "available", label: "Available" },
+  { value: "on-route", label: "On Route" },
+  { value: "break", label: "Break" },
+  { value: "offline", label: "Offline" },
+];
+
+export function DriverRow({ driver, onStatusChange }: DriverRowProps) {
   return (
     <div
       className={cn(
@@ -58,7 +72,28 @@ export function DriverRow({ driver }: DriverRowProps) {
         </span>
       )}
 
-      <StatusBadge status={driver.status} showPulse={driver.status !== "offline"} size="sm" />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="cursor-pointer focus:outline-none">
+            <StatusBadge status={driver.status} showPulse={driver.status !== "offline"} size="sm" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-[120px]">
+          {statusOptions.map((option) => (
+            <DropdownMenuItem
+              key={option.value}
+              onClick={() => onStatusChange?.(option.value)}
+              className={cn(
+                "cursor-pointer text-xs",
+                driver.status === option.value && "bg-secondary"
+              )}
+            >
+              <StatusBadge status={option.value} size="sm" />
+              <span className="ml-2">{option.label}</span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
