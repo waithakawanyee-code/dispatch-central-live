@@ -1,5 +1,6 @@
-import { Radio, Clock } from "lucide-react";
+import { Radio, Clock, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 export function Header() {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -41,6 +42,14 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-6">
+          <Link
+            to="/admin"
+            className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <Settings className="h-4 w-4" />
+            Admin
+          </Link>
+
           <div className="flex items-center gap-2">
             <span className="relative flex h-3 w-3">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
