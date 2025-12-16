@@ -1,9 +1,12 @@
-import { Radio, Clock, Settings } from "lucide-react";
+import { Radio, Clock, Settings, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 export function Header() {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -41,7 +44,7 @@ export function Header() {
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <Link
             to="/admin"
             className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
@@ -64,6 +67,21 @@ export function Header() {
               {formattedTime}
             </div>
             <p className="text-xs text-muted-foreground">{formattedDate}</p>
+          </div>
+
+          <div className="flex items-center gap-3 border-l border-border pl-4">
+            <span className="text-xs text-muted-foreground truncate max-w-[150px]" title={user?.email || ""}>
+              {user?.email}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={signOut}
+              title="Sign Out"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>
