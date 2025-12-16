@@ -37,10 +37,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Scan line effect */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="animate-scan-line absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
-      </div>
 
       <Header />
 
