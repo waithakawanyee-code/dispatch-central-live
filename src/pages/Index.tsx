@@ -46,8 +46,8 @@ const Index = () => {
       <Header />
 
       <main className="p-4">
-        {/* Driver & Vehicle Status - Side by Side */}
-        <div className="grid gap-4 xl:grid-cols-2 mb-6">
+        {/* Driver & Vehicle Status - Stacked */}
+        <div className="space-y-4 mb-6">
           {/* Driver Status */}
           <section className="rounded-lg border border-border bg-card/50 p-3">
             <div className="mb-3 flex items-center justify-between">
