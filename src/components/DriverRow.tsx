@@ -1,4 +1,4 @@
-import { User, Phone, Clock } from "lucide-react";
+import { User, Phone } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import {
@@ -7,22 +7,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { Database } from "@/integrations/supabase/types";
 
-type DriverStatus = "available" | "on-route" | "break" | "offline";
-
-interface Driver {
-  id: string;
-  name: string;
-  phone: string;
-  status: DriverStatus;
-  currentLocation?: string;
-  shiftStart?: string;
-  shiftEnd?: string;
-  vehicleId?: string;
-}
+type DriverStatus = Database["public"]["Enums"]["driver_status"];
+type DriverRow = Database["public"]["Tables"]["drivers"]["Row"];
 
 interface DriverRowProps {
-  driver: Driver;
+  driver: DriverRow;
   onStatusChange?: (newStatus: DriverStatus) => void;
 }
 
@@ -51,25 +42,16 @@ export function DriverRow({ driver, onStatusChange }: DriverRowProps) {
 
       <div className="min-w-[120px] flex-1">
         <p className="text-sm font-medium text-foreground">{driver.name}</p>
-        <p className="font-mono text-[10px] text-muted-foreground">{driver.id}</p>
+        {driver.vehicle && (
+          <p className="font-mono text-[10px] text-primary">{driver.vehicle}</p>
+        )}
       </div>
 
-      <div className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
-        <Phone className="h-3 w-3" />
-        <span className="font-mono">{driver.phone}</span>
-      </div>
-
-      {driver.shiftStart && driver.shiftEnd && (
-        <div className="hidden items-center gap-1.5 text-xs text-muted-foreground lg:flex">
-          <Clock className="h-3 w-3" />
-          <span className="font-mono">{driver.shiftStart}-{driver.shiftEnd}</span>
+      {driver.phone && (
+        <div className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
+          <Phone className="h-3 w-3" />
+          <span className="font-mono">{driver.phone}</span>
         </div>
-      )}
-
-      {driver.vehicleId && (
-        <span className="hidden rounded bg-secondary/80 px-1.5 py-0.5 font-mono text-[10px] text-primary md:inline">
-          {driver.vehicleId}
-        </span>
       )}
 
       <DropdownMenu>

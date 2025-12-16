@@ -1,4 +1,4 @@
-import { Truck, Wrench, Droplets, MapPin } from "lucide-react";
+import { Truck, Wrench, Droplets } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import {
@@ -7,23 +7,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { Database } from "@/integrations/supabase/types";
 
-type VehicleStatus = "active" | "out-of-service";
-type CleanStatus = "clean" | "dirty";
-
-interface Vehicle {
-  id: string;
-  plate: string;
-  model: string;
-  status: VehicleStatus;
-  cleanStatus: CleanStatus;
-  location: "on-route" | "at-base";
-  assignedDriver?: string;
-  lastService?: string;
-}
+type VehicleStatus = Database["public"]["Enums"]["vehicle_status"];
+type CleanStatus = Database["public"]["Enums"]["clean_status"];
+type VehicleRow = Database["public"]["Tables"]["vehicles"]["Row"];
 
 interface VehicleRowProps {
-  vehicle: Vehicle;
+  vehicle: VehicleRow;
   onStatusChange?: (newStatus: VehicleStatus) => void;
   onCleanStatusChange?: (newCleanStatus: CleanStatus) => void;
 }
@@ -39,8 +30,6 @@ const cleanStatusOptions: { value: CleanStatus; label: string }[] = [
 ];
 
 export function VehicleRow({ vehicle, onStatusChange, onCleanStatusChange }: VehicleRowProps) {
-  const isAtBase = vehicle.location === "at-base";
-
   return (
     <div
       className={cn(
@@ -63,47 +52,42 @@ export function VehicleRow({ vehicle, onStatusChange, onCleanStatusChange }: Veh
         )}
       </div>
 
-      <div className="min-w-[90px]">
-        <p className="font-mono text-sm font-medium text-foreground">{vehicle.plate}</p>
-        <p className="text-[10px] text-muted-foreground">{vehicle.model}</p>
+      <div className="min-w-[90px] flex-1">
+        <p className="font-mono text-sm font-medium text-foreground">{vehicle.unit}</p>
+        {vehicle.driver && (
+          <p className="text-[10px] text-muted-foreground">{vehicle.driver}</p>
+        )}
       </div>
 
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <MapPin className="h-3 w-3" />
-        <span className="capitalize">{vehicle.location.replace("-", " ")}</span>
-      </div>
-
-      {isAtBase && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex cursor-pointer items-center gap-1.5 focus:outline-none">
-              <Droplets className="h-3 w-3 text-muted-foreground" />
-              <StatusBadge status={vehicle.cleanStatus} size="sm" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[100px]">
-            {cleanStatusOptions.map((option) => (
-              <DropdownMenuItem
-                key={option.value}
-                onClick={() => onCleanStatusChange?.(option.value)}
-                className={cn(
-                  "cursor-pointer text-xs",
-                  vehicle.cleanStatus === option.value && "bg-secondary"
-                )}
-              >
-                <StatusBadge status={option.value} size="sm" />
-                <span className="ml-2">{option.label}</span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-
-      {vehicle.assignedDriver && (
-        <span className="hidden rounded bg-secondary/80 px-1.5 py-0.5 text-[10px] text-muted-foreground md:inline">
-          {vehicle.assignedDriver}
+      {vehicle.mileage && (
+        <span className="hidden font-mono text-[10px] text-muted-foreground md:inline">
+          {vehicle.mileage.toLocaleString()} mi
         </span>
       )}
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex cursor-pointer items-center gap-1.5 focus:outline-none">
+            <Droplets className="h-3 w-3 text-muted-foreground" />
+            <StatusBadge status={vehicle.clean_status} size="sm" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-[100px]">
+          {cleanStatusOptions.map((option) => (
+            <DropdownMenuItem
+              key={option.value}
+              onClick={() => onCleanStatusChange?.(option.value)}
+              className={cn(
+                "cursor-pointer text-xs",
+                vehicle.clean_status === option.value && "bg-secondary"
+              )}
+            >
+              <StatusBadge status={option.value} size="sm" />
+              <span className="ml-2">{option.label}</span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <div className="ml-auto">
         <DropdownMenu>
