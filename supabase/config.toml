@@ -1,1 +1,4 @@
 project_id = "ivaedxvxaeycdphcxqgf"
+
+[functions.reset-driver-status]
+verify_jwt = false
