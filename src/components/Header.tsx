@@ -40,7 +40,7 @@ export function Header() {
               weekday: "long"
             })}
             </span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-lg">
               {currentTime.toLocaleDateString("en-US", {
               month: "2-digit",
               day: "2-digit",
