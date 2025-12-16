@@ -50,7 +50,7 @@ const Index = () => {
         <div className="space-y-4 mb-6">
           {/* Driver Status */}
           <section className="rounded-lg border border-border bg-card/50 p-3">
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-2 flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <Users className="h-4 w-4 text-primary" />
                 Driver Status
@@ -58,6 +58,33 @@ const Index = () => {
               <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
                 {drivers.length} TOTAL
               </span>
+            </div>
+            {/* Color Legend */}
+            <div className="mb-3 flex flex-wrap gap-3 text-[10px] text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                <span>Unassigned</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span>Assigned</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-status-available" />
+                <span>Available</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-status-on-route" />
+                <span>On Route</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-status-break" />
+                <span>Break</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-status-offline" />
+                <span>Offline</span>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               {/* Left Column - Split Top/Bottom */}
