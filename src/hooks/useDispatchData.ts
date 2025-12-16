@@ -159,11 +159,11 @@ export function useDispatchData() {
     } else {
       await logStatusChange("driver", driverId, driver.name, "status", oldStatus, newStatus);
       
-      // Record punch in/out when status changes to on-route or offline
-      if (newStatus === "on-route" && oldStatus !== "on-route") {
+      // Record punch in when status changes to working
+      if (newStatus === "working" && oldStatus !== "working") {
         await recordTimePunch(driverId, driver.name, "in");
-      } else if (newStatus === "offline" && oldStatus !== "offline" && oldStatus !== "scheduled") {
-        // Only record punch out if driver was previously working (not just scheduled)
+      } else if (newStatus === "punched-out" && oldStatus !== "punched-out" && oldStatus !== "unassigned") {
+        // Record punch out when status changes to punched-out (not from unassigned)
         await recordTimePunch(driverId, driver.name, "out");
       }
     }
