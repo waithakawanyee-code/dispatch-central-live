@@ -46,6 +46,7 @@ const Scheduler = () => {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<DriverStatus | "all">("all");
 
   useEffect(() => {
     fetchAllSchedules();
@@ -119,9 +120,15 @@ const Scheduler = () => {
   const canGoForward = selectedDate < addDays(startOfDay(new Date()), 6);
 
   const driversWithSchedules = getDriversWithSchedules(selectedDate);
-  const availableDrivers = driversWithSchedules.filter(d => d.schedule && !d.schedule.is_off);
-  const offDrivers = driversWithSchedules.filter(d => d.schedule?.is_off);
-  const unscheduledDrivers = driversWithSchedules.filter(d => !d.schedule);
+  
+  // Apply status filter
+  const filteredDrivers = statusFilter === "all" 
+    ? driversWithSchedules 
+    : driversWithSchedules.filter(d => d.status === statusFilter);
+  
+  const availableDrivers = filteredDrivers.filter(d => d.schedule && !d.schedule.is_off);
+  const offDrivers = filteredDrivers.filter(d => d.schedule?.is_off);
+  const unscheduledDrivers = filteredDrivers.filter(d => !d.schedule);
 
   // Generate week days for quick navigation
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfDay(new Date()), i));
@@ -199,20 +206,41 @@ const Scheduler = () => {
             ))}
           </div>
 
-          {/* Status Legend */}
-          <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-card/50 px-4 py-3">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Status:</span>
+          {/* Status Legend & Filter - Sticky */}
+          <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mr-2">Filter:</span>
+            <button
+              onClick={() => setStatusFilter("all")}
+              className={cn(
+                "px-3 py-1.5 rounded-md text-xs font-medium border transition-colors",
+                statusFilter === "all"
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-secondary/50 border-border hover:bg-secondary text-foreground"
+              )}
+            >
+              All
+            </button>
             {schedulerStatusOptions.map((option) => (
-              <div key={option.value} className="flex items-center gap-2">
+              <button
+                key={option.value}
+                onClick={() => setStatusFilter(option.value)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors",
+                  statusFilter === option.value
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-secondary/50 border-border hover:bg-secondary"
+                )}
+              >
                 <span className={cn(
-                  "h-2.5 w-2.5 rounded-full",
+                  "h-2 w-2 rounded-full",
                   option.value === "off" && "bg-status-offline",
                   option.value === "scheduled" && "bg-status-available",
                   option.value === "assigned" && "bg-blue-500",
-                  option.value === "working" && "bg-status-on-route"
+                  option.value === "working" && "bg-status-on-route",
+                  statusFilter === option.value && "ring-1 ring-white"
                 )} />
-                <span className={cn("text-sm font-medium", option.color)}>{option.label}</span>
-              </div>
+                <span className={statusFilter === option.value ? "" : option.color}>{option.label}</span>
+              </button>
             ))}
           </div>
         </div>
