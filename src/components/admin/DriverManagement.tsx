@@ -39,6 +39,7 @@ type DriverStatus = Database["public"]["Enums"]["driver_status"];
 
 interface DriverFormData {
   name: string;
+  code: string;
   phone: string;
   vehicle: string;
   status: DriverStatus;
@@ -46,6 +47,7 @@ interface DriverFormData {
 
 const initialFormData: DriverFormData = {
   name: "",
+  code: "",
   phone: "",
   vehicle: "",
   status: "offline",
@@ -65,6 +67,7 @@ export function DriverManagement() {
   const handleExport = () => {
     const csv = generateCSV(drivers, [
       { key: "name", header: "Name" },
+      { key: "code", header: "Code" },
       { key: "phone", header: "Phone" },
       { key: "vehicle", header: "Vehicle" },
       { key: "status", header: "Status" },
@@ -74,9 +77,9 @@ export function DriverManagement() {
   };
 
   const handleDownloadTemplate = () => {
-    const template = "Name,Phone,Vehicle,Status,Mon_In,Mon_Out,Tue_In,Tue_Out,Wed_In,Wed_Out,Thu_In,Thu_Out,Fri_In,Fri_Out,Sat_In,Sat_Out,Sun_In,Sun_Out\nJohn Doe,555-0123,V-101,unassigned,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,OFF,,OFF,";
+    const template = "Name,Code,Phone,Vehicle,Status,Mon_In,Mon_Out,Tue_In,Tue_Out,Wed_In,Wed_Out,Thu_In,Thu_Out,Fri_In,Fri_Out,Sat_In,Sat_Out,Sun_In,Sun_Out\nJohn Doe,JDOE,555-0123,V-101,unassigned,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,OFF,,OFF,";
     downloadCSV(template, "drivers-template.csv");
-    toast({ title: "Template Downloaded", description: "CSV template with schedule columns (Out times are optional, use OFF for days off)" });
+    toast({ title: "Template Downloaded", description: "CSV template with schedule columns (Code is 4-letter identifier, Out times are optional, use OFF for days off)" });
   };
 
   const dayMapping: Record<string, number> = {
@@ -108,6 +111,7 @@ export function DriverManagement() {
           .from("drivers")
           .insert({
             name: row.Name.trim(),
+            code: row.Code?.trim().toUpperCase().slice(0, 4) || null,
             phone: row.Phone?.trim() || null,
             vehicle: row.Vehicle?.trim() || null,
             status: (validStatuses.includes(row.Status as DriverStatus) ? row.Status : "unassigned") as DriverStatus,
@@ -175,6 +179,7 @@ export function DriverManagement() {
 
     const { error } = await supabase.from("drivers").insert({
       name: formData.name.trim(),
+      code: formData.code.trim().toUpperCase().slice(0, 4) || null,
       phone: formData.phone.trim() || null,
       vehicle: formData.vehicle.trim() || null,
       status: formData.status,
@@ -199,6 +204,7 @@ export function DriverManagement() {
       .from("drivers")
       .update({
         name: formData.name.trim(),
+        code: formData.code.trim().toUpperCase().slice(0, 4) || null,
         phone: formData.phone.trim() || null,
         vehicle: formData.vehicle.trim() || null,
         status: formData.status,
@@ -229,6 +235,7 @@ export function DriverManagement() {
     setEditingId(driver.id);
     setFormData({
       name: driver.name,
+      code: driver.code || "",
       phone: driver.phone || "",
       vehicle: driver.vehicle || "",
       status: driver.status,
@@ -287,6 +294,17 @@ export function DriverManagement() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="code">Code (4 letters)</Label>
+                  <Input
+                    id="code"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase().slice(0, 4) })}
+                    placeholder="ABCD"
+                    maxLength={4}
+                    className="font-mono uppercase"
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="phone">Phone</Label>
                   <Input
                     id="phone"
@@ -329,12 +347,13 @@ export function DriverManagement() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        CSV format: Name, Phone, Vehicle, Status (available/on-route/break/offline)
+        CSV format: Name, Code, Phone, Vehicle, Status (available/on-route/break/offline)
       </p>
 
       <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[1fr_120px_100px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground">
+        <div className="grid grid-cols-[1fr_60px_100px_80px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground">
           <span>Name</span>
+          <span>Code</span>
           <span>Phone</span>
           <span>Vehicle</span>
           <span>Status</span>
@@ -349,7 +368,7 @@ export function DriverManagement() {
           drivers.map((driver) => (
             <div
               key={driver.id}
-              className="grid grid-cols-[1fr_120px_100px_100px_100px] gap-4 border-b border-border px-4 py-3 text-sm last:border-0"
+              className="grid grid-cols-[1fr_60px_100px_80px_100px_100px] gap-4 border-b border-border px-4 py-3 text-sm last:border-0"
             >
               {editingId === driver.id ? (
                 <>
@@ -357,6 +376,12 @@ export function DriverManagement() {
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="h-8"
+                  />
+                  <Input
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase().slice(0, 4) })}
+                    className="h-8 font-mono uppercase"
+                    maxLength={4}
                   />
                   <Input
                     value={formData.phone}
@@ -394,6 +419,7 @@ export function DriverManagement() {
               ) : (
                 <>
                   <span className="font-medium">{driver.name}</span>
+                  <span className="font-mono text-xs text-primary">{driver.code || "-"}</span>
                   <span className="font-mono text-muted-foreground">{driver.phone || "-"}</span>
                   <span className="font-mono text-primary">{driver.vehicle || "-"}</span>
                   <StatusBadge status={driver.status} size="sm" />
