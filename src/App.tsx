@@ -9,6 +9,9 @@ import Index from "./pages/Index";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import Scheduler from "./pages/Scheduler";
+import Drivers from "./pages/Drivers";
+import Vehicles from "./pages/Vehicles";
+import Display from "./pages/Display";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +26,9 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/drivers" element={<ProtectedRoute><Drivers /></ProtectedRoute>} />
+            <Route path="/vehicles" element={<ProtectedRoute><Vehicles /></ProtectedRoute>} />
+            <Route path="/display" element={<ProtectedRoute><Display /></ProtectedRoute>} />
             <Route path="/scheduler" element={<ProtectedRoute><Scheduler /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
