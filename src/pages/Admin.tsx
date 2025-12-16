@@ -1,10 +1,9 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Users, Truck, Plus } from "lucide-react";
+import { ArrowLeft, Users, Truck, History } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { DriverManagement } from "@/components/admin/DriverManagement";
 import { VehicleManagement } from "@/components/admin/VehicleManagement";
+import { HistoryLog } from "@/components/admin/HistoryLog";
 
 const Admin = () => {
   return (
@@ -31,6 +30,10 @@ const Admin = () => {
               <Truck className="h-4 w-4" />
               Vehicles
             </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-2">
+              <History className="h-4 w-4" />
+              History
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="drivers">
@@ -39,6 +42,10 @@ const Admin = () => {
 
           <TabsContent value="vehicles">
             <VehicleManagement />
+          </TabsContent>
+
+          <TabsContent value="history">
+            <HistoryLog />
           </TabsContent>
         </Tabs>
       </main>
