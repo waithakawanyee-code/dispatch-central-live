@@ -68,7 +68,7 @@ const Index = () => {
                     {drivers.filter((d) => ["scheduled", "assigned"].includes(d.status)).length}
                   </span>
                 </h3>
-                <div className="flex flex-wrap gap-1">
+                <div className="space-y-1">
                   {drivers
                     .filter((d) => ["scheduled", "assigned"].includes(d.status))
                     .map((driver) => (
@@ -78,7 +78,6 @@ const Index = () => {
                         canEdit={isAdmin}
                         isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                         onStatusChange={(newStatus) => updateDriverStatus(driver.id, newStatus)}
-                        compact
                       />
                     ))}
                   {drivers.filter((d) => ["scheduled", "assigned"].includes(d.status)).length === 0 && (
