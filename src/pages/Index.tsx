@@ -6,6 +6,7 @@ import { VehicleRow } from "@/components/VehicleRow";
 import { ScheduleRow } from "@/components/ScheduleRow";
 import { mockSchedule } from "@/data/mockData";
 import { useDispatchData } from "@/hooks/useDispatchData";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const Index = () => {
   const {
@@ -16,6 +17,7 @@ const Index = () => {
     updateVehicleStatus,
     updateVehicleCleanStatus,
   } = useDispatchData();
+  const { isAdmin } = useUserRole();
 
   // Calculate stats
   const availableDrivers = drivers.filter((d) => d.status === "available").length;
@@ -105,6 +107,7 @@ const Index = () => {
                 <DriverRow
                   key={driver.id}
                   driver={driver}
+                  canEdit={isAdmin}
                   onStatusChange={(newStatus) => updateDriverStatus(driver.id, newStatus)}
                 />
               ))}
@@ -127,6 +130,7 @@ const Index = () => {
                 <VehicleRow
                   key={vehicle.id}
                   vehicle={vehicle}
+                  canEdit={isAdmin}
                   onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
                   onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
                 />
