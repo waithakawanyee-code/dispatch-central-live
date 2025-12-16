@@ -56,12 +56,12 @@ const compactStatusOptions: { value: DriverStatus; label: string }[] = [
 export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, availableVehicles = [] }: DriverRowProps) {
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [reportTime, setReportTime] = useState(driver.report_time?.slice(0, 5) || "");
-  const [selectedVehicle, setSelectedVehicle] = useState(driver.vehicle || "");
+  const [selectedVehicle, setSelectedVehicle] = useState(driver.vehicle || "__none__");
 
   const handleStatusSelect = (status: DriverStatus) => {
     if (status === "assigned") {
       setReportTime(driver.report_time?.slice(0, 5) || "");
-      setSelectedVehicle(driver.vehicle || "");
+      setSelectedVehicle(driver.vehicle || "__none__");
       setShowAssignDialog(true);
     } else {
       onStatusChange?.(status);
@@ -69,7 +69,8 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
   };
 
   const handleAssign = () => {
-    onStatusChange?.("assigned", reportTime || undefined, selectedVehicle || undefined);
+    const vehicleValue = selectedVehicle === "__none__" ? undefined : selectedVehicle;
+    onStatusChange?.("assigned", reportTime || undefined, vehicleValue);
     setShowAssignDialog(false);
   };
 
@@ -162,7 +163,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                       <SelectValue placeholder="Select vehicle" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No vehicle</SelectItem>
+                      <SelectItem value="__none__">No vehicle</SelectItem>
                       {availableVehicles
                         .filter((v) => v.status === "active")
                         .map((vehicle) => (
@@ -282,7 +283,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                   <SelectValue placeholder="Select vehicle" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No vehicle</SelectItem>
+                  <SelectItem value="__none__">No vehicle</SelectItem>
                   {availableVehicles
                     .filter((v) => v.status === "active")
                     .map((vehicle) => (
