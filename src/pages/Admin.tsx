@@ -1,11 +1,45 @@
-import { Link } from "react-router-dom";
-import { ArrowLeft, Users, Truck, History } from "lucide-react";
+import { Link, Navigate } from "react-router-dom";
+import { ArrowLeft, Users, Truck, History, ShieldAlert } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DriverManagement } from "@/components/admin/DriverManagement";
 import { VehicleManagement } from "@/components/admin/VehicleManagement";
 import { HistoryLog } from "@/components/admin/HistoryLog";
+import { useUserRole } from "@/hooks/useUserRole";
+import { Button } from "@/components/ui/button";
 
 const Admin = () => {
+  const { isAdmin, loading } = useUserRole();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div className="text-center max-w-md">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-destructive/20 mb-4">
+            <ShieldAlert className="h-8 w-8 text-destructive" />
+          </div>
+          <h1 className="text-xl font-bold text-foreground mb-2">Access Denied</h1>
+          <p className="text-muted-foreground mb-6">
+            You don't have permission to access the admin panel. Contact an administrator to request access.
+          </p>
+          <Link to="/">
+            <Button variant="outline" className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dispatch
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card/80 px-4 py-3">

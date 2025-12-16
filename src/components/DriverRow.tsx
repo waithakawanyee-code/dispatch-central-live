@@ -15,6 +15,7 @@ type DriverRow = Database["public"]["Tables"]["drivers"]["Row"];
 interface DriverRowProps {
   driver: DriverRow;
   onStatusChange?: (newStatus: DriverStatus) => void;
+  canEdit?: boolean;
 }
 
 const statusOptions: { value: DriverStatus; label: string }[] = [
@@ -24,7 +25,7 @@ const statusOptions: { value: DriverStatus; label: string }[] = [
   { value: "offline", label: "Offline" },
 ];
 
-export function DriverRow({ driver, onStatusChange }: DriverRowProps) {
+export function DriverRow({ driver, onStatusChange, canEdit = true }: DriverRowProps) {
   return (
     <div
       className={cn(
@@ -54,28 +55,32 @@ export function DriverRow({ driver, onStatusChange }: DriverRowProps) {
         </div>
       )}
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="cursor-pointer focus:outline-none">
-            <StatusBadge status={driver.status} showPulse={driver.status !== "offline"} size="sm" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-[120px]">
-          {statusOptions.map((option) => (
-            <DropdownMenuItem
-              key={option.value}
-              onClick={() => onStatusChange?.(option.value)}
-              className={cn(
-                "cursor-pointer text-xs",
-                driver.status === option.value && "bg-secondary"
-              )}
-            >
-              <StatusBadge status={option.value} size="sm" />
-              <span className="ml-2">{option.label}</span>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {canEdit ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="cursor-pointer focus:outline-none">
+              <StatusBadge status={driver.status} showPulse={driver.status !== "offline"} size="sm" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[120px]">
+            {statusOptions.map((option) => (
+              <DropdownMenuItem
+                key={option.value}
+                onClick={() => onStatusChange?.(option.value)}
+                className={cn(
+                  "cursor-pointer text-xs",
+                  driver.status === option.value && "bg-secondary"
+                )}
+              >
+                <StatusBadge status={option.value} size="sm" />
+                <span className="ml-2">{option.label}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <StatusBadge status={driver.status} showPulse={driver.status !== "offline"} size="sm" />
+      )}
     </div>
   );
 }
