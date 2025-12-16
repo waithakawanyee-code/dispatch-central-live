@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      call_outs: {
+        Row: {
+          call_out_date: string
+          created_at: string
+          created_by: string | null
+          driver_id: string
+          driver_name: string
+          id: string
+          note: string | null
+        }
+        Insert: {
+          call_out_date?: string
+          created_at?: string
+          created_by?: string | null
+          driver_id: string
+          driver_name: string
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          call_out_date?: string
+          created_at?: string
+          created_by?: string | null
+          driver_id?: string
+          driver_name?: string
+          id?: string
+          note?: string | null
+        }
+        Relationships: []
+      }
       driver_schedules: {
         Row: {
           created_at: string
