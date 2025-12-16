@@ -57,6 +57,7 @@ export type Database = {
       }
       drivers: {
         Row: {
+          code: string | null
           created_at: string
           id: string
           name: string
@@ -67,6 +68,7 @@ export type Database = {
           vehicle: string | null
         }
         Insert: {
+          code?: string | null
           created_at?: string
           id?: string
           name: string
@@ -77,6 +79,7 @@ export type Database = {
           vehicle?: string | null
         }
         Update: {
+          code?: string | null
           created_at?: string
           id?: string
           name?: string
