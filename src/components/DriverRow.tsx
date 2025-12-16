@@ -107,6 +107,35 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
   const [isCallOut, setIsCallOut] = useState(false);
   const [callOutNote, setCallOutNote] = useState("");
 
+  // Calculate total hours worked from punch pairs
+  const calculateTotalHours = () => {
+    let totalMinutes = 0;
+    const sortedPunches = [...punchTimes].sort((a, b) => 
+      new Date(a.punch_time).getTime() - new Date(b.punch_time).getTime()
+    );
+    
+    let punchInTime: Date | null = null;
+    
+    for (const punch of sortedPunches) {
+      if (punch.punch_type === "in") {
+        punchInTime = new Date(punch.punch_time);
+      } else if (punch.punch_type === "out" && punchInTime) {
+        const punchOutTime = new Date(punch.punch_time);
+        totalMinutes += (punchOutTime.getTime() - punchInTime.getTime()) / (1000 * 60);
+        punchInTime = null;
+      }
+    }
+    
+    // If still punched in, calculate time until now
+    if (punchInTime) {
+      totalMinutes += (new Date().getTime() - punchInTime.getTime()) / (1000 * 60);
+    }
+    
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = Math.round(totalMinutes % 60);
+    return { hours, minutes, totalMinutes };
+  };
+
   const fetchPunchTimes = async () => {
     setLoadingPunches(true);
     const today = new Date().toISOString().split('T')[0];
@@ -586,6 +615,19 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                   </div>
                 )}
               </div>
+              {punchTimes.length > 0 && !loadingPunches && (
+                <div className="border-t border-border pt-3 mt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Total Hours Worked</span>
+                    <span className="font-mono font-bold text-lg text-foreground">
+                      {(() => {
+                        const { hours, minutes } = calculateTotalHours();
+                        return `${hours}h ${minutes}m`;
+                      })()}
+                    </span>
+                  </div>
+                </div>
+              )}
               <DialogFooter>
                 <Button variant="outline" onClick={() => setShowPunchTimesDialog(false)}>
                   Close
@@ -931,6 +973,19 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                   </div>
                 )}
               </div>
+              {punchTimes.length > 0 && !loadingPunches && (
+                <div className="border-t border-border pt-3 mt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Total Hours Worked</span>
+                    <span className="font-mono font-bold text-lg text-foreground">
+                      {(() => {
+                        const { hours, minutes } = calculateTotalHours();
+                        return `${hours}h ${minutes}m`;
+                      })()}
+                    </span>
+                  </div>
+                </div>
+              )}
               <DialogFooter>
                 <Button variant="outline" onClick={() => setShowPunchTimesDialog(false)}>
                   Close
@@ -1254,6 +1309,19 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               </div>
             )}
           </div>
+          {punchTimes.length > 0 && !loadingPunches && (
+            <div className="border-t border-border pt-3 mt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Total Hours Worked</span>
+                <span className="font-mono font-bold text-lg text-foreground">
+                  {(() => {
+                    const { hours, minutes } = calculateTotalHours();
+                    return `${hours}h ${minutes}m`;
+                  })()}
+                </span>
+              </div>
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPunchTimesDialog(false)}>
               Close
