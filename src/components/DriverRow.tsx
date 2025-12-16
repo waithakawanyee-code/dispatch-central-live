@@ -21,6 +21,8 @@ interface DriverRowProps {
 }
 
 const statusOptions: { value: DriverStatus; label: string }[] = [
+  { value: "scheduled", label: "Not Assigned" },
+  { value: "assigned", label: "Assigned" },
   { value: "available", label: "Available" },
   { value: "on-route", label: "On Route" },
   { value: "break", label: "Break" },
