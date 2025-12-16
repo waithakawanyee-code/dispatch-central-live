@@ -198,6 +198,23 @@ const Scheduler = () => {
               </Button>
             ))}
           </div>
+
+          {/* Status Legend */}
+          <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-card/50 px-4 py-3">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Status:</span>
+            {schedulerStatusOptions.map((option) => (
+              <div key={option.value} className="flex items-center gap-2">
+                <span className={cn(
+                  "h-2.5 w-2.5 rounded-full",
+                  option.value === "off" && "bg-status-offline",
+                  option.value === "scheduled" && "bg-status-available",
+                  option.value === "assigned" && "bg-blue-500",
+                  option.value === "working" && "bg-status-on-route"
+                )} />
+                <span className={cn("text-sm font-medium", option.color)}>{option.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {loading ? (
