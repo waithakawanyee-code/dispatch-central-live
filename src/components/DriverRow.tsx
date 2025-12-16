@@ -146,7 +146,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               {content}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[120px]">
-              {(driver.status === "working" ? compactWorkingOptions : driver.status === "assigned" ? compactAssignedOptions : compactStatusOptions).map((option) => (
+              {(["working", "on-route"].includes(driver.status) ? compactWorkingOptions : driver.status === "assigned" ? compactAssignedOptions : compactStatusOptions).map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
@@ -264,7 +264,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[120px]">
-              {(driver.status === "working" ? workingStatusOptions : driver.status === "assigned" ? assignedStatusOptions : statusOptions).map((option) => (
+              {(["working", "on-route"].includes(driver.status) ? workingStatusOptions : driver.status === "assigned" ? assignedStatusOptions : statusOptions).map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
