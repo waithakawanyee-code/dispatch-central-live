@@ -121,6 +121,47 @@ export type Database = {
         }
         Relationships: []
       }
+      future_assignments: {
+        Row: {
+          assignment_date: string
+          created_at: string
+          created_by: string | null
+          driver_id: string
+          driver_name: string
+          id: string
+          report_time: string | null
+          vehicle: string | null
+        }
+        Insert: {
+          assignment_date: string
+          created_at?: string
+          created_by?: string | null
+          driver_id: string
+          driver_name: string
+          id?: string
+          report_time?: string | null
+          vehicle?: string | null
+        }
+        Update: {
+          assignment_date?: string
+          created_at?: string
+          created_by?: string | null
+          driver_id?: string
+          driver_name?: string
+          id?: string
+          report_time?: string | null
+          vehicle?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "future_assignments_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       status_history: {
         Row: {
           changed_at: string
