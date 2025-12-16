@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon } from "lucide-react";
+import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock } from "lucide-react";
 import { format, addDays, isSameDay, startOfDay, getDay } from "date-fns";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
@@ -58,7 +58,7 @@ const Drivers = () => {
   }, []);
 
   // Get drivers available on selected date based on their schedule
-  const getAvailableDriversForDate = useMemo(() => {
+  const getAvailableDriversWithSchedule = useMemo(() => {
     if (isToday) {
       return null; // Use actual driver statuses for today
     }
@@ -67,31 +67,39 @@ const Drivers = () => {
     const dayOfWeek = getDay(selectedDate);
     
     // Find schedules for this day that are NOT marked as off
-    const availableDriverIds = new Set<string>();
+    const scheduleMap = new Map<string, { start_time: string | null; end_time: string | null }>();
     
     schedules.forEach((schedule) => {
       if (schedule.day_of_week === dayOfWeek && !schedule.is_off) {
-        availableDriverIds.add(schedule.driver_id);
+        scheduleMap.set(schedule.driver_id, {
+          start_time: schedule.start_time,
+          end_time: schedule.end_time,
+        });
       }
     });
 
-    return drivers.filter((driver) => availableDriverIds.has(driver.id));
+    return drivers
+      .filter((driver) => scheduleMap.has(driver.id))
+      .map((driver) => ({
+        ...driver,
+        schedule: scheduleMap.get(driver.id)!,
+      }));
   }, [selectedDate, schedules, drivers, isToday]);
 
   // For future dates, all available drivers show as "unassigned"
   const displayDrivers = useMemo(() => {
     if (isToday) {
-      return drivers;
+      return drivers.map((d) => ({ ...d, schedule: null as { start_time: string | null; end_time: string | null } | null }));
     }
     
-    // For future dates, return available drivers with virtual "unassigned" status
-    return (getAvailableDriversForDate || []).map((driver) => ({
+    // For future dates, return available drivers with virtual "unassigned" status and schedule
+    return (getAvailableDriversWithSchedule || []).map((driver) => ({
       ...driver,
       status: "unassigned" as const,
       vehicle: null,
       report_time: null,
     }));
-  }, [isToday, getAvailableDriversForDate, drivers]);
+  }, [isToday, getAvailableDriversWithSchedule, drivers]);
 
   // Calculate stats based on displayed drivers
   const unassignedDrivers = displayDrivers.filter((d) => d.status === "unassigned" || d.status === "scheduled").length;
@@ -210,7 +218,7 @@ const Drivers = () => {
             </p>
             {isFutureDate && (
               <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">
-                Showing {getAvailableDriversForDate?.length || 0} scheduled drivers as unassigned
+                Showing {getAvailableDriversWithSchedule?.length || 0} scheduled drivers as unassigned
               </span>
             )}
           </div>
@@ -249,7 +257,7 @@ const Drivers = () => {
           </div>
 
           {isFutureDate ? (
-            /* Future Date View - Only show Unassigned */
+            /* Future Date View - Show drivers with schedule times */
             <div className="space-y-1">
               <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
                 <span>Scheduled for {format(selectedDate, "EEEE")}</span>
@@ -257,16 +265,25 @@ const Drivers = () => {
                   {unassignedDrivers}
                 </span>
               </h3>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-col gap-1">
                 {displayDrivers.map((driver) => (
-                  <DriverRow
+                  <div
                     key={driver.id}
-                    driver={driver}
-                    canEdit={false}
-                    isUpdated={false}
-                    availableVehicles={vehicles}
-                    compact
-                  />
+                    className="flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm"
+                  >
+                    <span className="h-2 w-2 rounded-full bg-slate-500 shrink-0" />
+                    <span className="font-medium text-foreground flex-1">{driver.name}</span>
+                    {driver.schedule && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
+                        <Clock className="h-3 w-3" />
+                        <span>
+                          {driver.schedule.start_time?.slice(0, 5) || "--:--"}
+                          {" - "}
+                          {driver.schedule.end_time?.slice(0, 5) || "--:--"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 ))}
                 {displayDrivers.length === 0 && (
                   <p className="text-xs text-muted-foreground italic py-2">No drivers scheduled for this day</p>
