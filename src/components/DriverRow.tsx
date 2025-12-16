@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, Phone, Clock } from "lucide-react";
+import { User, Phone, Clock, Truck } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import {
@@ -107,7 +107,10 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
         <div className="flex flex-col">
           <span className="font-mono font-semibold text-foreground">{driver.name}</span>
           {driver.vehicle && (
-            <span className="font-mono text-[10px] text-muted-foreground">{driver.vehicle}</span>
+            <span className="flex items-center gap-1 font-mono text-[10px] text-primary">
+              <Truck className="h-2.5 w-2.5" />
+              {driver.vehicle}
+            </span>
           )}
         </div>
       </div>
@@ -208,7 +211,10 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
         <div className="min-w-[120px] flex-1">
           <p className="text-sm font-medium text-foreground">{driver.name}</p>
           {driver.vehicle && (
-            <p className="font-mono text-[10px] text-primary">{driver.vehicle}</p>
+            <p className="flex items-center gap-1 font-mono text-[10px] text-primary">
+              <Truck className="h-2.5 w-2.5" />
+              {driver.vehicle}
+            </p>
           )}
         </div>
 
