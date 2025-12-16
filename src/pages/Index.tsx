@@ -1,4 +1,5 @@
-import { Users, Truck, AlertTriangle, Droplets, Clock } from "lucide-react";
+import { useState } from "react";
+import { Users, Truck, AlertTriangle, Droplets, Clock, ChevronDown, BarChart3 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
 import { DriverRow } from "@/components/DriverRow";
@@ -7,6 +8,7 @@ import { ScheduleRow } from "@/components/ScheduleRow";
 import { mockSchedule } from "@/data/mockData";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { useUserRole } from "@/hooks/useUserRole";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const Index = () => {
   const {
@@ -18,6 +20,7 @@ const Index = () => {
     updateVehicleCleanStatus,
   } = useDispatchData();
   const { isAdmin } = useUserRole();
+  const [statsOpen, setStatsOpen] = useState(false);
 
   // Calculate stats
   const availableDrivers = drivers.filter((d) => d.status === "available").length;
@@ -93,51 +96,62 @@ const Index = () => {
           </section>
         </div>
 
-        {/* Stats Overview */}
-        <section className="mb-6 grid gap-3 grid-cols-3 lg:grid-cols-6">
-          <StatsCard
-            title="Available"
-            value={availableDrivers}
-            subtitle="Ready"
-            icon={Users}
-            accentColor="primary"
-          />
-          <StatsCard
-            title="On Route"
-            value={onRouteDrivers}
-            subtitle="Active"
-            icon={Clock}
-            accentColor="accent"
-          />
-          <StatsCard
-            title="Total Drivers"
-            value={drivers.length}
-            subtitle="Registered"
-            icon={Users}
-            accentColor="primary"
-          />
-          <StatsCard
-            title="Active"
-            value={activeVehicles}
-            subtitle="In operation"
-            icon={Truck}
-            accentColor="primary"
-          />
-          <StatsCard
-            title="Out of Service"
-            value={outOfServiceVehicles}
-            subtitle="Attention"
-            icon={AlertTriangle}
-            accentColor="destructive"
-          />
-          <StatsCard
-            title="Needs Cleaning"
-            value={dirtyVehicles}
-            subtitle="At base"
-            icon={Droplets}
-            accentColor="accent"
-          />
-        </section>
+        {/* Stats Overview - Collapsible */}
+        <Collapsible open={statsOpen} onOpenChange={setStatsOpen} className="mb-6">
+          <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-border bg-card/50 px-3 py-2 hover:bg-card/80 transition-colors">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold text-foreground">Stats Overview</span>
+            </div>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${statsOpen ? 'rotate-180' : ''}`} />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-3">
+            <div className="grid gap-3 grid-cols-3 lg:grid-cols-6">
+              <StatsCard
+                title="Available"
+                value={availableDrivers}
+                subtitle="Ready"
+                icon={Users}
+                accentColor="primary"
+              />
+              <StatsCard
+                title="On Route"
+                value={onRouteDrivers}
+                subtitle="Active"
+                icon={Clock}
+                accentColor="accent"
+              />
+              <StatsCard
+                title="Total Drivers"
+                value={drivers.length}
+                subtitle="Registered"
+                icon={Users}
+                accentColor="primary"
+              />
+              <StatsCard
+                title="Active"
+                value={activeVehicles}
+                subtitle="In operation"
+                icon={Truck}
+                accentColor="primary"
+              />
+              <StatsCard
+                title="Out of Service"
+                value={outOfServiceVehicles}
+                subtitle="Attention"
+                icon={AlertTriangle}
+                accentColor="destructive"
+              />
+              <StatsCard
+                title="Needs Cleaning"
+                value={dirtyVehicles}
+                subtitle="At base"
+                icon={Droplets}
+                accentColor="accent"
+              />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Daily Schedule */}
         <section className="mt-6">
