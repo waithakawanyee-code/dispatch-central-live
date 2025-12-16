@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock, PhoneOff } from "lucide-react";
+import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock, PhoneOff, Truck, X } from "lucide-react";
 import { format, addDays, isSameDay, startOfDay, getDay } from "date-fns";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
@@ -10,8 +10,13 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriverSchedule = Database["public"]["Tables"]["driver_schedules"]["Row"];
@@ -24,7 +29,17 @@ interface CallOut {
   note: string | null;
 }
 
+interface FutureAssignment {
+  id: string;
+  driver_id: string;
+  driver_name: string;
+  assignment_date: string;
+  report_time: string | null;
+  vehicle: string | null;
+}
+
 const Drivers = () => {
+  const { toast } = useToast();
   const {
     drivers,
     vehicles,
@@ -40,6 +55,13 @@ const Drivers = () => {
   const [weekOffset, setWeekOffset] = useState(0);
   const [todayCallOuts, setTodayCallOuts] = useState<CallOut[]>([]);
   const [offDriversOpen, setOffDriversOpen] = useState(false);
+  const [futureAssignments, setFutureAssignments] = useState<FutureAssignment[]>([]);
+  
+  // Assign dialog state
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [assigningDriver, setAssigningDriver] = useState<{ id: string; name: string } | null>(null);
+  const [assignReportTime, setAssignReportTime] = useState("");
+  const [assignVehicle, setAssignVehicle] = useState("__none__");
 
   const today = startOfDay(new Date());
   const isToday = isSameDay(selectedDate, today);
@@ -77,6 +99,28 @@ const Drivers = () => {
     fetchData();
   }, []);
 
+  // Fetch future assignments when selected date changes
+  useEffect(() => {
+    if (!isFutureDate) {
+      setFutureAssignments([]);
+      return;
+    }
+    
+    const fetchFutureAssignments = async () => {
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      const { data, error } = await supabase
+        .from("future_assignments")
+        .select("*")
+        .eq("assignment_date", dateStr);
+      
+      if (!error && data) {
+        setFutureAssignments(data as FutureAssignment[]);
+      }
+    };
+    
+    fetchFutureAssignments();
+  }, [selectedDate, isFutureDate]);
+
   // Get drivers available on selected date based on their schedule
   const getAvailableDriversWithSchedule = useMemo(() => {
     if (isToday) {
@@ -106,20 +150,108 @@ const Drivers = () => {
       }));
   }, [selectedDate, schedules, drivers, isToday]);
 
-  // For future dates, all available drivers show as "unassigned"
+  // For future dates, incorporate future assignments
   const displayDrivers = useMemo(() => {
     if (isToday) {
       return drivers.map((d) => ({ ...d, schedule: null as { start_time: string | null; end_time: string | null } | null }));
     }
     
-    // For future dates, return available drivers with virtual "unassigned" status and schedule
-    return (getAvailableDriversWithSchedule || []).map((driver) => ({
-      ...driver,
-      status: "unassigned" as const,
-      vehicle: null,
-      report_time: null,
-    }));
-  }, [isToday, getAvailableDriversWithSchedule, drivers]);
+    // Create a map of assigned driver IDs
+    const assignedMap = new Map(futureAssignments.map(a => [a.driver_id, a]));
+    
+    // For future dates, return available drivers with their assignment status
+    return (getAvailableDriversWithSchedule || []).map((driver) => {
+      const assignment = assignedMap.get(driver.id);
+      if (assignment) {
+        return {
+          ...driver,
+          status: "assigned" as const,
+          vehicle: assignment.vehicle,
+          report_time: assignment.report_time,
+        };
+      }
+      return {
+        ...driver,
+        status: "unassigned" as const,
+        vehicle: null,
+        report_time: null,
+      };
+    });
+  }, [isToday, getAvailableDriversWithSchedule, drivers, futureAssignments]);
+
+  // Handler for assigning a driver for future date
+  const handleAssignFutureDriver = async () => {
+    if (!assigningDriver || !isFutureDate) return;
+    
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { data, error } = await supabase
+      .from("future_assignments")
+      .insert({
+        driver_id: assigningDriver.id,
+        driver_name: assigningDriver.name,
+        assignment_date: dateStr,
+        report_time: assignReportTime || null,
+        vehicle: assignVehicle === "__none__" ? null : assignVehicle,
+        created_by: user?.id || null,
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      toast({
+        title: "Error assigning driver",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else if (data) {
+      toast({
+        title: "Driver assigned",
+        description: `${assigningDriver.name} assigned for ${format(selectedDate, "EEEE, MMM d")}`,
+      });
+      setFutureAssignments([...futureAssignments, data as FutureAssignment]);
+    }
+    
+    setShowAssignDialog(false);
+    setAssigningDriver(null);
+    setAssignReportTime("");
+    setAssignVehicle("__none__");
+  };
+
+  // Handler for unassigning a driver for future date
+  const handleUnassignFutureDriver = async (driverId: string, driverName: string) => {
+    if (!isFutureDate) return;
+    
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    
+    const { error } = await supabase
+      .from("future_assignments")
+      .delete()
+      .eq("driver_id", driverId)
+      .eq("assignment_date", dateStr);
+    
+    if (error) {
+      toast({
+        title: "Error unassigning driver",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Driver unassigned",
+        description: `${driverName} unassigned from ${format(selectedDate, "EEEE, MMM d")}`,
+      });
+      setFutureAssignments(futureAssignments.filter(a => a.driver_id !== driverId));
+    }
+  };
+
+  const openAssignDialog = (driverId: string, driverName: string) => {
+    setAssigningDriver({ id: driverId, name: driverName });
+    setAssignReportTime("");
+    setAssignVehicle("__none__");
+    setShowAssignDialog(true);
+  };
 
   // Get drivers NOT scheduled for today (OFF drivers)
   const offDrivers = useMemo(() => {
@@ -324,7 +456,11 @@ const Drivers = () => {
                     .map((driver) => (
                       <div
                         key={driver.id}
-                        className="flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm"
+                        onClick={() => isAdmin && openAssignDialog(driver.id, driver.name)}
+                        className={cn(
+                          "flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm transition-colors",
+                          isAdmin && "cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-500/5"
+                        )}
                       >
                         <span className="h-2 w-2 rounded-full bg-slate-500 shrink-0" />
                         <span className="font-medium text-foreground flex-1">{driver.name}</span>
@@ -360,7 +496,7 @@ const Drivers = () => {
                     .map((driver) => (
                       <div
                         key={driver.id}
-                        className="flex items-center gap-3 rounded border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm"
+                        className="flex items-center gap-3 rounded border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm group"
                       >
                         <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
                         <span className="font-medium text-foreground flex-1">{driver.name}</span>
@@ -369,6 +505,22 @@ const Drivers = () => {
                             <Clock className="h-3 w-3" />
                             <span>{driver.report_time.slice(0, 5)}</span>
                           </div>
+                        )}
+                        {driver.vehicle && (
+                          <div className="flex items-center gap-1 text-xs text-primary font-mono">
+                            <Truck className="h-3 w-3" />
+                            <span>{driver.vehicle}</span>
+                          </div>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                            onClick={() => handleUnassignFutureDriver(driver.id, driver.name)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         )}
                       </div>
                     ))}
@@ -592,6 +744,55 @@ const Drivers = () => {
           </CollapsibleContent>
         </Collapsible>
       </main>
+
+      {/* Assign Dialog for Future Dates */}
+      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+        <DialogContent className="sm:max-w-[350px]">
+          <DialogHeader>
+            <DialogTitle>Assign {assigningDriver?.name}</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            Assign for {format(selectedDate, "EEEE, MMMM d, yyyy")}
+          </p>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="future-report-time">Report Time (optional)</Label>
+              <Input
+                id="future-report-time"
+                type="time"
+                value={assignReportTime}
+                onChange={(e) => setAssignReportTime(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="future-vehicle">Vehicle (optional)</Label>
+              <Select value={assignVehicle} onValueChange={setAssignVehicle}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select vehicle" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No vehicle</SelectItem>
+                  {vehicles
+                    .filter((v) => v.status === "active")
+                    .map((vehicle) => (
+                      <SelectItem key={vehicle.id} value={vehicle.unit}>
+                        {vehicle.unit}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAssignFutureDriver}>
+              Assign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
