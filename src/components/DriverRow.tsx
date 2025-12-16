@@ -1,4 +1,4 @@
-import { User, Phone } from "lucide-react";
+import { User, Phone, Clock } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import {
@@ -109,6 +109,13 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
           <p className="font-mono text-[10px] text-primary">{driver.vehicle}</p>
         )}
       </div>
+
+      {driver.status === "assigned" && driver.report_time && (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Clock className="h-3 w-3" />
+          <span className="font-mono">{driver.report_time.slice(0, 5)}</span>
+        </div>
+      )}
 
       {driver.phone && (
         <div className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
