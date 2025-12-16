@@ -39,6 +39,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface TimePunch {
   id: string;
@@ -53,6 +54,13 @@ interface TimePunch {
 interface Driver {
   id: string;
   name: string;
+}
+
+interface DriverHours {
+  driverId: string;
+  driverName: string;
+  totalMinutes: number;
+  sessions: { inTime: Date; outTime: Date | null }[];
 }
 
 export function TimePunchReport() {
@@ -122,6 +130,64 @@ export function TimePunchReport() {
     fetchPunches();
     fetchDrivers();
   }, [startDate, endDate]);
+
+  // Calculate total hours per driver
+  const driverHours: DriverHours[] = (() => {
+    const driverMap = new Map<string, { name: string; punches: TimePunch[] }>();
+    
+    // Group punches by driver
+    punches.forEach((punch) => {
+      if (!driverMap.has(punch.driver_id)) {
+        driverMap.set(punch.driver_id, { name: punch.driver_name, punches: [] });
+      }
+      driverMap.get(punch.driver_id)!.punches.push(punch);
+    });
+
+    const results: DriverHours[] = [];
+
+    driverMap.forEach((data, driverId) => {
+      // Sort punches by time ascending
+      const sortedPunches = [...data.punches].sort(
+        (a, b) => new Date(a.punch_time).getTime() - new Date(b.punch_time).getTime()
+      );
+
+      let totalMinutes = 0;
+      const sessions: { inTime: Date; outTime: Date | null }[] = [];
+      let currentIn: Date | null = null;
+
+      sortedPunches.forEach((punch) => {
+        if (punch.punch_type === "in") {
+          currentIn = new Date(punch.punch_time);
+        } else if (punch.punch_type === "out" && currentIn) {
+          const outTime = new Date(punch.punch_time);
+          const minutes = (outTime.getTime() - currentIn.getTime()) / (1000 * 60);
+          totalMinutes += minutes;
+          sessions.push({ inTime: currentIn, outTime });
+          currentIn = null;
+        }
+      });
+
+      // If still clocked in, mark as open session
+      if (currentIn) {
+        sessions.push({ inTime: currentIn, outTime: null });
+      }
+
+      results.push({
+        driverId,
+        driverName: data.name,
+        totalMinutes,
+        sessions,
+      });
+    });
+
+    return results.sort((a, b) => b.totalMinutes - a.totalMinutes);
+  })();
+
+  const formatHoursMinutes = (totalMinutes: number) => {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = Math.round(totalMinutes % 60);
+    return `${hours}h ${minutes}m`;
+  };
 
   const exportToCSV = () => {
     const headers = ["Driver Name", "Punch Type", "Punch Time", "Notes"];
@@ -289,6 +355,37 @@ export function TimePunchReport() {
           No time punches found for the selected date range.
         </div>
       ) : (
+        <>
+          {/* Hours Summary */}
+          <Card className="mb-4">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Hours Worked Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {driverHours.map((driver) => (
+                  <div
+                    key={driver.driverId}
+                    className="flex items-center justify-between p-2 rounded-md bg-muted/50"
+                  >
+                    <span className="font-mono text-sm truncate mr-2">{driver.driverName}</span>
+                    <span className="font-semibold text-sm whitespace-nowrap">
+                      {formatHoursMinutes(driver.totalMinutes)}
+                      {driver.sessions.some((s) => !s.outTime) && (
+                        <span className="ml-1 text-xs text-amber-500" title="Currently clocked in">●</span>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 pt-3 border-t flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Total (all drivers)</span>
+                <span className="font-bold">
+                  {formatHoursMinutes(driverHours.reduce((sum, d) => sum + d.totalMinutes, 0))}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
         <div className="rounded-md border">
           <Table>
             <TableHeader>
@@ -353,6 +450,7 @@ export function TimePunchReport() {
             </TableBody>
           </Table>
         </div>
+        </>
       )}
 
       <div className="text-xs text-muted-foreground">
