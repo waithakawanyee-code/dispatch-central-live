@@ -1,65 +1,96 @@
-import { Clock, Settings, LogOut, Shield, Calendar } from "lucide-react";
+import { Clock, Settings, LogOut, Shield, Calendar, Users, Truck, Monitor } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
 export function Header() {
   const [currentTime, setCurrentTime] = useState(new Date());
-  const {
-    user,
-    signOut
-  } = useAuth();
-  const {
-    role,
-    isAdmin
-  } = useUserRole();
+  const location = useLocation();
+  const { user, signOut } = useAuth();
+  const { role, isAdmin } = useUserRole();
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
   const formattedDate = currentTime.toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric"
   });
+
   const formattedTime = currentTime.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
     hour12: false
   });
-  return <header className="border-b border-border bg-card/50 backdrop-blur-sm">
+
+  const navLinks = [
+    { to: "/drivers", icon: Users, label: "Drivers" },
+    { to: "/vehicles", icon: Truck, label: "Vehicles" },
+    { to: "/display", icon: Monitor, label: "Display" },
+    { to: "/scheduler", icon: Calendar, label: "Schedule" },
+  ];
+
+  return (
+    <header className="border-b border-border bg-card/50 backdrop-blur-sm">
       <div className="flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-4">
           <div className="flex h-20 flex-col items-center justify-center rounded-lg bg-primary/20 px-4">
             <span className="font-bold text-primary text-3xl whitespace-nowrap">
-              {currentTime.toLocaleDateString("en-US", {
-              weekday: "long"
-            })}
+              {currentTime.toLocaleDateString("en-US", { weekday: "long" })}
             </span>
             <span className="text-muted-foreground text-sm">
               {currentTime.toLocaleDateString("en-US", {
-              month: "2-digit",
-              day: "2-digit",
-              year: "2-digit"
-            })}
+                month: "2-digit",
+                day: "2-digit",
+                year: "2-digit"
+              })}
             </span>
           </div>
+
+          {/* Navigation Links */}
+          <nav className="flex items-center gap-1">
+            {navLinks.map(({ to, icon: Icon, label }) => (
+              <Link
+                key={to}
+                to={to}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors",
+                  location.pathname === to
+                    ? "bg-primary text-primary-foreground"
+                    : "border border-border bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </Link>
+            ))}
+          </nav>
         </div>
 
         <div className="flex items-center gap-4">
-          <Link to="/scheduler" className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
-            <Calendar className="h-4 w-4" />
-            Schedule
-          </Link>
-
-          {isAdmin && <Link to="/admin" className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className={cn(
+                "flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors",
+                location.pathname === "/admin"
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-border bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              )}
+            >
               <Settings className="h-4 w-4" />
               Admin
-            </Link>}
+            </Link>
+          )}
 
           <div className="flex items-center gap-2">
             <span className="relative flex h-3 w-3">
@@ -93,5 +124,6 @@ export function Header() {
           </div>
         </div>
       </div>
-    </header>;
+    </header>
+  );
 }
