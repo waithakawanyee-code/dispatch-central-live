@@ -32,7 +32,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
     return (
       <div
         className={cn(
-          "flex items-center gap-2 rounded border border-border bg-card px-2 py-1 text-xs transition-all duration-200",
+          "flex flex-col rounded border border-border bg-card px-2 py-1 text-xs transition-all duration-200",
           "hover:border-primary/30",
           driver.status === "available" && "border-l-2 border-l-status-available",
           driver.status === "on-route" && "border-l-2 border-l-status-on-route",
@@ -47,7 +47,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
       >
         <span className="font-mono font-semibold text-foreground">{driver.name}</span>
         {driver.vehicle && (
-          <span className="font-mono text-muted-foreground">{driver.vehicle}</span>
+          <span className="font-mono text-[10px] text-muted-foreground">{driver.vehicle}</span>
         )}
       </div>
     );
