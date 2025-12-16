@@ -1,70 +1,58 @@
-import { Radio, Clock, Settings, LogOut, Shield, Calendar } from "lucide-react";
+import { Clock, Settings, LogOut, Shield, Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
 export function Header() {
   const [currentTime, setCurrentTime] = useState(new Date());
-  const { user, signOut } = useAuth();
-  const { role, isAdmin } = useUserRole();
-
+  const {
+    user,
+    signOut
+  } = useAuth();
+  const {
+    role,
+    isAdmin
+  } = useUserRole();
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-
   const formattedDate = currentTime.toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
     month: "long",
-    day: "numeric",
+    day: "numeric"
   });
-
   const formattedTime = currentTime.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hour12: false,
+    hour12: false
   });
-
-  return (
-    <header className="border-b border-border bg-card/50 backdrop-blur-sm">
+  return <header className="border-b border-border bg-card/50 backdrop-blur-sm">
       <div className="flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/20">
-            <Radio className="h-5 w-5 text-primary" />
+            
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">
-              DISPATCH CONTROL
-            </h1>
-            <p className="text-xs text-muted-foreground uppercase tracking-widest">
-              Fleet Status Monitor
-            </p>
+            
+            
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <Link
-            to="/scheduler"
-            className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          >
+          <Link to="/scheduler" className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
             <Calendar className="h-4 w-4" />
             Schedule
           </Link>
 
-          {isAdmin && (
-            <Link
-              to="/admin"
-              className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            >
+          {isAdmin && <Link to="/admin" className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
               <Settings className="h-4 w-4" />
               Admin
-            </Link>
-          )}
+            </Link>}
 
           <div className="flex items-center gap-2">
             <span className="relative flex h-3 w-3">
@@ -92,18 +80,11 @@ export function Header() {
                 {role || "dispatcher"}
               </Badge>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={signOut}
-              title="Sign Out"
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={signOut} title="Sign Out">
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
-    </header>
-  );
+    </header>;
 }
