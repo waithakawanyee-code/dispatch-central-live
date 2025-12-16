@@ -44,6 +44,39 @@ export type Database = {
         }
         Relationships: []
       }
+      status_history: {
+        Row: {
+          changed_at: string
+          entity_id: string
+          entity_name: string
+          entity_type: string
+          field_changed: string
+          id: string
+          new_value: string
+          old_value: string | null
+        }
+        Insert: {
+          changed_at?: string
+          entity_id: string
+          entity_name: string
+          entity_type: string
+          field_changed: string
+          id?: string
+          new_value: string
+          old_value?: string | null
+        }
+        Update: {
+          changed_at?: string
+          entity_id?: string
+          entity_name?: string
+          entity_type?: string
+          field_changed?: string
+          id?: string
+          new_value?: string
+          old_value?: string | null
+        }
+        Relationships: []
+      }
       vehicles: {
         Row: {
           clean_status: Database["public"]["Enums"]["clean_status"]

@@ -8,6 +8,24 @@ type DriverStatus = Database["public"]["Enums"]["driver_status"];
 type VehicleStatus = Database["public"]["Enums"]["vehicle_status"];
 type CleanStatus = Database["public"]["Enums"]["clean_status"];
 
+async function logStatusChange(
+  entityType: "driver" | "vehicle",
+  entityId: string,
+  entityName: string,
+  fieldChanged: string,
+  oldValue: string | null,
+  newValue: string
+) {
+  await supabase.from("status_history").insert({
+    entity_type: entityType,
+    entity_id: entityId,
+    entity_name: entityName,
+    field_changed: fieldChanged,
+    old_value: oldValue,
+    new_value: newValue,
+  });
+}
+
 export function useDispatchData() {
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
   const [vehicles, setVehicles] = useState<VehicleRow[]>([]);
@@ -71,30 +89,54 @@ export function useDispatchData() {
   }, []);
 
   const updateDriverStatus = async (driverId: string, newStatus: DriverStatus) => {
+    const driver = drivers.find((d) => d.id === driverId);
+    if (!driver) return;
+
+    const oldStatus = driver.status;
     const { error } = await supabase
       .from("drivers")
       .update({ status: newStatus, updated_at: new Date().toISOString() })
       .eq("id", driverId);
 
-    if (error) console.error("Failed to update driver status:", error);
+    if (error) {
+      console.error("Failed to update driver status:", error);
+    } else {
+      await logStatusChange("driver", driverId, driver.name, "status", oldStatus, newStatus);
+    }
   };
 
   const updateVehicleStatus = async (vehicleId: string, newStatus: VehicleStatus) => {
+    const vehicle = vehicles.find((v) => v.id === vehicleId);
+    if (!vehicle) return;
+
+    const oldStatus = vehicle.status;
     const { error } = await supabase
       .from("vehicles")
       .update({ status: newStatus, updated_at: new Date().toISOString() })
       .eq("id", vehicleId);
 
-    if (error) console.error("Failed to update vehicle status:", error);
+    if (error) {
+      console.error("Failed to update vehicle status:", error);
+    } else {
+      await logStatusChange("vehicle", vehicleId, vehicle.unit, "status", oldStatus, newStatus);
+    }
   };
 
   const updateVehicleCleanStatus = async (vehicleId: string, newCleanStatus: CleanStatus) => {
+    const vehicle = vehicles.find((v) => v.id === vehicleId);
+    if (!vehicle) return;
+
+    const oldStatus = vehicle.clean_status;
     const { error } = await supabase
       .from("vehicles")
       .update({ clean_status: newCleanStatus, updated_at: new Date().toISOString() })
       .eq("id", vehicleId);
 
-    if (error) console.error("Failed to update vehicle clean status:", error);
+    if (error) {
+      console.error("Failed to update vehicle clean status:", error);
+    } else {
+      await logStatusChange("vehicle", vehicleId, vehicle.unit, "clean_status", oldStatus, newCleanStatus);
+    }
   };
 
   return {
