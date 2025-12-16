@@ -39,6 +39,7 @@ const Drivers = () => {
   const [schedulesLoading, setSchedulesLoading] = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
   const [todayCallOuts, setTodayCallOuts] = useState<CallOut[]>([]);
+  const [offDriversOpen, setOffDriversOpen] = useState(false);
 
   const today = startOfDay(new Date());
   const isToday = isSameDay(selectedDate, today);
@@ -401,10 +402,11 @@ const Drivers = () => {
                   </div>
                 </div>
 
-                {/* OFF Drivers */}
-                <div className="space-y-1">
-                  <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                {/* OFF Drivers - Collapsible */}
+                <Collapsible open={offDriversOpen} onOpenChange={setOffDriversOpen}>
+                  <CollapsibleTrigger className="flex w-full items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1 hover:text-foreground transition-colors cursor-pointer">
                     <span className="flex items-center gap-1">
+                      <ChevronDown className={cn("h-3 w-3 transition-transform", !offDriversOpen && "-rotate-90")} />
                       OFF Drivers
                       {calledOutCount > 0 && (
                         <span className="rounded bg-destructive/20 text-destructive px-1 py-0.5 font-mono text-[9px]">
@@ -415,35 +417,37 @@ const Drivers = () => {
                     <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
                       {offDriverCount}
                     </span>
-                  </h3>
-                  <div className="flex flex-col gap-1">
-                    {offDrivers.map((driver) => {
-                      const calledOut = isCallOut(driver.id);
-                      const note = getCallOutNote(driver.id);
-                      return (
-                        <div
-                          key={driver.id}
-                          className={cn(
-                            "flex items-center gap-2 rounded border border-border bg-card px-2 py-1.5 text-xs",
-                            calledOut && "border-l-2 border-l-destructive bg-destructive/5"
-                          )}
-                        >
-                          <span className="h-2 w-2 rounded-full bg-status-offline shrink-0" />
-                          <span className="font-mono font-medium text-foreground flex-1">{driver.name}</span>
-                          {calledOut && (
-                            <span className="flex items-center gap-1 text-destructive" title={note || "Called out"}>
-                              <PhoneOff className="h-3 w-3" />
-                              <span className="text-[10px]">Called Out</span>
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {offDriverCount === 0 && (
-                      <p className="text-xs text-muted-foreground italic py-2">No OFF drivers</p>
-                    )}
-                  </div>
-                </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-1">
+                    <div className="flex flex-col gap-1">
+                      {offDrivers.map((driver) => {
+                        const calledOut = isCallOut(driver.id);
+                        const note = getCallOutNote(driver.id);
+                        return (
+                          <div
+                            key={driver.id}
+                            className={cn(
+                              "flex items-center gap-2 rounded border border-border bg-card px-2 py-1.5 text-xs",
+                              calledOut && "border-l-2 border-l-destructive bg-destructive/5"
+                            )}
+                          >
+                            <span className="h-2 w-2 rounded-full bg-status-offline shrink-0" />
+                            <span className="font-mono font-medium text-foreground flex-1">{driver.name}</span>
+                            {calledOut && (
+                              <span className="flex items-center gap-1 text-destructive" title={note || "Called out"}>
+                                <PhoneOff className="h-3 w-3" />
+                                <span className="text-[10px]">Called Out</span>
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {offDriverCount === 0 && (
+                        <p className="text-xs text-muted-foreground italic py-2">No OFF drivers</p>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
 
               {/* Right Column */}
