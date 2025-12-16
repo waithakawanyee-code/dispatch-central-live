@@ -92,9 +92,16 @@ const sizeConfig = {
   lg: "px-4 py-1.5 text-base",
 };
 
+const statusLabels: Record<string, string> = {
+  "on-route": "PUNCHED IN",
+  "offline": "PUNCHED OUT",
+  "scheduled": "NOT ASSIGNED",
+  "assigned": "ASSIGNED",
+};
+
 export function StatusBadge({ status, label, showPulse = false, size = "md" }: StatusBadgeProps) {
   const config = statusConfig[status];
-  const displayLabel = label || status.replace("-", " ").toUpperCase();
+  const displayLabel = label || statusLabels[status] || status.replace("-", " ").toUpperCase();
 
   return (
     <div
