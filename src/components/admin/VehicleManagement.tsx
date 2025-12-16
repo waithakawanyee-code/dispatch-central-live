@@ -78,6 +78,12 @@ export function VehicleManagement() {
     toast({ title: "Exported", description: `${vehicles.length} vehicles exported to CSV` });
   };
 
+  const handleDownloadTemplate = () => {
+    const template = "Unit,Driver,Mileage,Status,Clean Status\nV-109,Jane Smith,25000,active,clean";
+    downloadCSV(template, "vehicles-template.csv");
+    toast({ title: "Template Downloaded", description: "CSV template with example row" });
+  };
+
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -212,6 +218,10 @@ export function VehicleManagement() {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Manage Vehicles</h2>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-2" onClick={handleDownloadTemplate}>
+            <Download className="h-4 w-4" />
+            Template
+          </Button>
           <Button size="sm" variant="outline" className="gap-2" onClick={handleExport}>
             <Download className="h-4 w-4" />
             Export
