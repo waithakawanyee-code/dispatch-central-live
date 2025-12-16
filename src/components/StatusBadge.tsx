@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-type DriverStatus = "available" | "on-route" | "break" | "offline";
+type DriverStatus = "available" | "on-route" | "break" | "offline" | "off" | "scheduled" | "assigned" | "working";
 type VehicleStatus = "active" | "out-of-service";
 type CleanStatus = "clean" | "dirty";
 
@@ -11,7 +11,7 @@ interface StatusBadgeProps {
   size?: "sm" | "md" | "lg";
 }
 
-const statusConfig = {
+const statusConfig: Record<string, { bg: string; text: string; border: string; glow: string }> = {
   available: {
     bg: "bg-status-available/20",
     text: "text-status-available",
@@ -35,6 +35,30 @@ const statusConfig = {
     text: "text-status-offline",
     border: "border-status-offline/50",
     glow: "status-glow-offline",
+  },
+  off: {
+    bg: "bg-status-offline/20",
+    text: "text-status-offline",
+    border: "border-status-offline/50",
+    glow: "status-glow-offline",
+  },
+  scheduled: {
+    bg: "bg-status-available/20",
+    text: "text-status-available",
+    border: "border-status-available/50",
+    glow: "status-glow-available",
+  },
+  assigned: {
+    bg: "bg-blue-500/20",
+    text: "text-blue-500",
+    border: "border-blue-500/50",
+    glow: "status-glow-on-route",
+  },
+  working: {
+    bg: "bg-status-on-route/20",
+    text: "text-status-on-route",
+    border: "border-status-on-route/50",
+    glow: "status-glow-on-route",
   },
   active: {
     bg: "bg-status-active/20",
@@ -87,10 +111,12 @@ export function StatusBadge({ status, label, showPulse = false, size = "md" }: S
         <span
           className={cn(
             "h-2 w-2 rounded-full animate-pulse-dot",
-            status === "available" || status === "active" || status === "clean"
+            status === "available" || status === "active" || status === "clean" || status === "scheduled"
               ? "bg-status-available"
-              : status === "on-route"
+              : status === "on-route" || status === "working"
               ? "bg-status-on-route"
+              : status === "assigned"
+              ? "bg-blue-500"
               : status === "break" || status === "dirty"
               ? "bg-status-break"
               : status === "out-of-service"

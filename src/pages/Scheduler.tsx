@@ -6,6 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { format, addDays, startOfDay, isSameDay } from "date-fns";
+import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import type { Database } from "@/integrations/supabase/types";
+
+type DriverStatus = Database["public"]["Enums"]["driver_status"];
 
 interface Schedule {
   id: string;
@@ -19,12 +30,19 @@ interface Schedule {
 interface DriverWithSchedule {
   id: string;
   name: string;
-  status: string;
+  status: DriverStatus;
   schedule: Schedule | null;
 }
 
+const schedulerStatusOptions: { value: DriverStatus; label: string; color: string }[] = [
+  { value: "off", label: "Off", color: "text-muted-foreground" },
+  { value: "scheduled", label: "Scheduled", color: "text-status-available" },
+  { value: "assigned", label: "Assigned", color: "text-blue-500" },
+  { value: "working", label: "Working", color: "text-status-on-route" },
+];
+
 const Scheduler = () => {
-  const { drivers } = useDispatchData();
+  const { drivers, updateDriverStatus } = useDispatchData();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
   const [loading, setLoading] = useState(true);
@@ -43,6 +61,16 @@ const Scheduler = () => {
       setSchedules(data);
     }
     setLoading(false);
+  };
+
+  const handleStatusChange = async (driverId: string, newStatus: DriverStatus) => {
+    await updateDriverStatus(driverId, newStatus);
+    toast.success("Status updated");
+  };
+
+  const getStatusBadge = (status: DriverStatus) => {
+    const option = schedulerStatusOptions.find(o => o.value === status);
+    return option || { label: status, color: "text-muted-foreground" };
   };
 
   const getDayOfWeek = (date: Date) => date.getDay();
@@ -223,11 +251,38 @@ const Scheduler = () => {
                         </div>
                         <span className="font-medium">{driver.name}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span>
-                          {formatTime(driver.schedule?.start_time)} - {formatTime(driver.schedule?.end_time)}
-                        </span>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span>
+                            {formatTime(driver.schedule?.start_time)} - {formatTime(driver.schedule?.end_time)}
+                          </span>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className={cn(
+                              "px-3 py-1 rounded-md text-xs font-medium border cursor-pointer",
+                              getStatusBadge(driver.status).color,
+                              "bg-secondary/50 border-border hover:bg-secondary"
+                            )}>
+                              {getStatusBadge(driver.status).label}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {schedulerStatusOptions.map((option) => (
+                              <DropdownMenuItem
+                                key={option.value}
+                                onClick={() => handleStatusChange(driver.id, option.value)}
+                                className={cn(
+                                  "cursor-pointer",
+                                  driver.status === option.value && "bg-secondary"
+                                )}
+                              >
+                                <span className={option.color}>{option.label}</span>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   ))}
@@ -255,7 +310,34 @@ const Scheduler = () => {
                         </div>
                         <span className="font-medium text-muted-foreground">{driver.name}</span>
                       </div>
-                      <Badge variant="secondary">Day Off</Badge>
+                      <div className="flex items-center gap-4">
+                        <Badge variant="secondary">Day Off</Badge>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className={cn(
+                              "px-3 py-1 rounded-md text-xs font-medium border cursor-pointer",
+                              getStatusBadge(driver.status).color,
+                              "bg-secondary/50 border-border hover:bg-secondary"
+                            )}>
+                              {getStatusBadge(driver.status).label}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {schedulerStatusOptions.map((option) => (
+                              <DropdownMenuItem
+                                key={option.value}
+                                onClick={() => handleStatusChange(driver.id, option.value)}
+                                className={cn(
+                                  "cursor-pointer",
+                                  driver.status === option.value && "bg-secondary"
+                                )}
+                              >
+                                <span className={option.color}>{option.label}</span>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -282,7 +364,34 @@ const Scheduler = () => {
                         </div>
                         <span className="font-medium text-muted-foreground">{driver.name}</span>
                       </div>
-                      <span className="text-sm text-muted-foreground italic">Not scheduled</span>
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm text-muted-foreground italic">Not scheduled</span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className={cn(
+                              "px-3 py-1 rounded-md text-xs font-medium border cursor-pointer",
+                              getStatusBadge(driver.status).color,
+                              "bg-secondary/50 border-border hover:bg-secondary"
+                            )}>
+                              {getStatusBadge(driver.status).label}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {schedulerStatusOptions.map((option) => (
+                              <DropdownMenuItem
+                                key={option.value}
+                                onClick={() => handleStatusChange(driver.id, option.value)}
+                                className={cn(
+                                  "cursor-pointer",
+                                  driver.status === option.value && "bg-secondary"
+                                )}
+                              >
+                                <span className={option.color}>{option.label}</span>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                   ))}
                 </div>

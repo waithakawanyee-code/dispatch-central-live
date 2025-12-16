@@ -201,7 +201,15 @@ export type Database = {
     Enums: {
       app_role: "admin" | "dispatcher"
       clean_status: "clean" | "dirty"
-      driver_status: "available" | "on-route" | "break" | "offline"
+      driver_status:
+        | "available"
+        | "on-route"
+        | "break"
+        | "offline"
+        | "off"
+        | "scheduled"
+        | "assigned"
+        | "working"
       vehicle_status: "active" | "out-of-service"
     }
     CompositeTypes: {
@@ -332,7 +340,16 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "dispatcher"],
       clean_status: ["clean", "dirty"],
-      driver_status: ["available", "on-route", "break", "offline"],
+      driver_status: [
+        "available",
+        "on-route",
+        "break",
+        "offline",
+        "off",
+        "scheduled",
+        "assigned",
+        "working",
+      ],
       vehicle_status: ["active", "out-of-service"],
     },
   },
