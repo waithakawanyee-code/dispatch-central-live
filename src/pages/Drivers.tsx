@@ -354,7 +354,7 @@ const Drivers = () => {
                       {assignedDrivers}
                     </span>
                   </h3>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {displayDrivers
                       .filter((d) => d.status === "assigned")
                       .map((driver) => (
@@ -365,7 +365,7 @@ const Drivers = () => {
                           isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                           onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
                           availableVehicles={vehicles}
-                          compact
+                          mini
                         />
                       ))}
                     {assignedDrivers === 0 && (
@@ -460,7 +460,7 @@ const Drivers = () => {
                       {workingDrivers}
                     </span>
                   </h3>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {displayDrivers
                       .filter((d) => ["on-route", "working"].includes(d.status))
                       .map((driver) => (
@@ -471,7 +471,7 @@ const Drivers = () => {
                           isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                           onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
                           availableVehicles={vehicles}
-                          compact
+                          mini
                         />
                       ))}
                     {workingDrivers === 0 && (
