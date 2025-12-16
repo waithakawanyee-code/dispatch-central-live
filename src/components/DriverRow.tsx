@@ -66,7 +66,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
     const content = (
       <div
         className={cn(
-          "flex flex-col rounded border border-border bg-card px-2 py-1 text-xs transition-all duration-200",
+          "flex items-center gap-2 rounded border border-border bg-card px-2 py-1 text-xs transition-all duration-200",
           "hover:border-primary/30",
           canEdit && "cursor-pointer",
           driver.status === "available" && "border-l-2 border-l-status-available",
@@ -74,16 +74,31 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
           driver.status === "break" && "border-l-2 border-l-status-break",
           driver.status === "offline" && "border-l-2 border-l-status-offline opacity-60",
           driver.status === "off" && "border-l-2 border-l-status-offline opacity-60",
-          driver.status === "scheduled" && "border-l-2 border-l-status-break",
-          driver.status === "assigned" && "border-l-2 border-l-status-on-route",
+          driver.status === "scheduled" && "border-l-2 border-l-amber-500 bg-amber-500/10",
+          driver.status === "assigned" && "border-l-2 border-l-emerald-500 bg-emerald-500/10",
           driver.status === "working" && "border-l-2 border-l-status-available",
           isUpdated && "animate-row-flash"
         )}
       >
-        <span className="font-mono font-semibold text-foreground">{driver.name}</span>
-        {driver.vehicle && (
-          <span className="font-mono text-[10px] text-muted-foreground">{driver.vehicle}</span>
-        )}
+        <span
+          className={cn(
+            "h-2 w-2 rounded-full shrink-0",
+            driver.status === "scheduled" && "bg-amber-500",
+            driver.status === "assigned" && "bg-emerald-500",
+            driver.status === "available" && "bg-status-available",
+            driver.status === "on-route" && "bg-status-on-route",
+            driver.status === "break" && "bg-status-break",
+            driver.status === "offline" && "bg-status-offline",
+            driver.status === "off" && "bg-status-offline",
+            driver.status === "working" && "bg-status-available"
+          )}
+        />
+        <div className="flex flex-col">
+          <span className="font-mono font-semibold text-foreground">{driver.name}</span>
+          {driver.vehicle && (
+            <span className="font-mono text-[10px] text-muted-foreground">{driver.vehicle}</span>
+          )}
+        </div>
       </div>
     );
 
