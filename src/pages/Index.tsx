@@ -62,8 +62,11 @@ const Index = () => {
             <div className="grid grid-cols-2 gap-4">
               {/* Left Column - Not Started Yet */}
               <div className="space-y-2">
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-                  Not Started Yet
+                <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                  <span>Not Started Yet</span>
+                  <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                    {drivers.filter((d) => ["scheduled", "assigned"].includes(d.status)).length}
+                  </span>
                 </h3>
                 <div className="space-y-1">
                   {drivers
@@ -87,8 +90,11 @@ const Index = () => {
               <div className="flex flex-col gap-3">
                 {/* Top - Currently Clocked In */}
                 <div className="space-y-1">
-                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-                    Currently Clocked In
+                  <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                    <span>Currently Clocked In</span>
+                    <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                      {drivers.filter((d) => ["available", "on-route", "break", "working"].includes(d.status)).length}
+                    </span>
                   </h3>
                   <div className="flex flex-wrap gap-1">
                     {drivers
@@ -111,8 +117,11 @@ const Index = () => {
 
                 {/* Bottom - Clocked Out */}
                 <div className="space-y-1">
-                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-                    Clocked Out
+                  <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                    <span>Clocked Out</span>
+                    <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                      {drivers.filter((d) => ["offline", "off"].includes(d.status)).length}
+                    </span>
                   </h3>
                   <div className="flex flex-wrap gap-1">
                     {drivers
