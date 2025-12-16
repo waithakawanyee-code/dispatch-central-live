@@ -150,23 +150,23 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
     const content = (
       <div
         className={cn(
-          "flex items-center gap-2 rounded border border-border bg-card px-2 py-1 text-xs transition-all duration-200",
+          "flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm transition-all duration-200",
           "hover:border-primary/30",
           canEdit && "cursor-pointer",
-          driver.status === "available" && "border-l-2 border-l-status-available",
-          driver.status === "on-route" && "border-l-2 border-l-status-on-route",
-          driver.status === "break" && "border-l-2 border-l-status-break",
-          driver.status === "offline" && "border-l-2 border-l-status-offline opacity-60",
-          driver.status === "off" && "border-l-2 border-l-status-offline opacity-60",
-          driver.status === "scheduled" && "border-l-2 border-l-amber-500 bg-amber-500/10",
-          driver.status === "assigned" && "border-l-2 border-l-emerald-500 bg-emerald-500/10",
-          driver.status === "working" && "border-l-2 border-l-status-available",
+          driver.status === "available" && "border-l-4 border-l-status-available",
+          driver.status === "on-route" && "border-l-4 border-l-status-on-route",
+          driver.status === "break" && "border-l-4 border-l-status-break",
+          driver.status === "offline" && "border-l-4 border-l-status-offline opacity-60",
+          driver.status === "off" && "border-l-4 border-l-status-offline opacity-60",
+          driver.status === "scheduled" && "border-l-4 border-l-amber-500 bg-amber-500/10",
+          driver.status === "assigned" && "border-l-4 border-l-emerald-500 bg-emerald-500/10",
+          driver.status === "working" && "border-l-4 border-l-status-available",
           isUpdated && "animate-row-flash"
         )}
       >
         <span
           className={cn(
-            "h-2 w-2 rounded-full shrink-0",
+            "h-3 w-3 rounded-full shrink-0",
             driver.status === "scheduled" && "bg-amber-500",
             driver.status === "assigned" && "bg-emerald-500",
             driver.status === "available" && "bg-status-available",
@@ -177,11 +177,11 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
             driver.status === "working" && "bg-status-available"
           )}
         />
-        <div className="flex flex-col">
-          <span className="font-mono font-semibold text-foreground">{driver.name}</span>
+        <div className="flex flex-col gap-0.5">
+          <span className="font-mono font-semibold text-foreground text-base">{driver.name}</span>
           {driver.vehicle && (
-            <span className="flex items-center gap-1 font-mono text-[10px] text-primary">
-              <Truck className="h-2.5 w-2.5" />
+            <span className="flex items-center gap-1.5 font-mono text-xs text-primary">
+              <Truck className="h-3.5 w-3.5" />
               {driver.vehicle}
             </span>
           )}
