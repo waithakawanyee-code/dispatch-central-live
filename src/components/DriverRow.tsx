@@ -83,14 +83,41 @@ const compactPunchedOutOptions: { value: DriverStatus; label: string }[] = [
   { value: "unassigned", label: "Reset" },
 ];
 
+interface TimePunch {
+  id: string;
+  punch_type: string;
+  punch_time: string;
+}
+
 export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, availableVehicles = [] }: DriverRowProps) {
   const { toast } = useToast();
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showOffDialog, setShowOffDialog] = useState(false);
+  const [showPunchTimesDialog, setShowPunchTimesDialog] = useState(false);
+  const [punchTimes, setPunchTimes] = useState<TimePunch[]>([]);
+  const [loadingPunches, setLoadingPunches] = useState(false);
   const [reportTime, setReportTime] = useState(driver.report_time?.slice(0, 5) || "");
   const [selectedVehicle, setSelectedVehicle] = useState(driver.vehicle || "__none__");
   const [isCallOut, setIsCallOut] = useState(false);
   const [callOutNote, setCallOutNote] = useState("");
+
+  const fetchPunchTimes = async () => {
+    setLoadingPunches(true);
+    const today = new Date().toISOString().split('T')[0];
+    const { data, error } = await supabase
+      .from("time_punches")
+      .select("id, punch_type, punch_time")
+      .eq("driver_id", driver.id)
+      .gte("punch_time", `${today}T00:00:00`)
+      .lte("punch_time", `${today}T23:59:59`)
+      .order("punch_time", { ascending: true });
+
+    if (!error && data) {
+      setPunchTimes(data);
+    }
+    setLoadingPunches(false);
+    setShowPunchTimesDialog(true);
+  };
 
   const handleStatusSelect = (status: DriverStatus) => {
     if (status === "assigned") {
@@ -103,6 +130,12 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
       setShowOffDialog(true);
     } else {
       onStatusChange?.(status);
+    }
+  };
+
+  const handlePunchedOutClick = () => {
+    if (["punched-out", "offline"].includes(driver.status)) {
+      fetchPunchTimes();
     }
   };
 
@@ -221,13 +254,22 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
             <DropdownMenuTrigger asChild>
               {content}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-[120px]">
+            <DropdownMenuContent align="start" className="min-w-[140px]">
+              {["punched-out", "offline"].includes(driver.status) && (
+                <DropdownMenuItem
+                  onClick={handlePunchedOutClick}
+                  className="cursor-pointer text-sm"
+                >
+                  <Clock className="h-4 w-4 mr-2" />
+                  <span>View Times</span>
+                </DropdownMenuItem>
+              )}
               {(["punched-out", "offline", "off"].includes(driver.status) ? compactPunchedOutOptions : ["working", "on-route"].includes(driver.status) ? compactWorkingOptions : driver.status === "assigned" ? compactAssignedOptions : compactUnassignedOptions).map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
                   className={cn(
-                    "cursor-pointer text-xs",
+                    "cursor-pointer text-sm",
                     driver.status === option.value && "bg-secondary"
                   )}
                 >
@@ -327,6 +369,53 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={showPunchTimesDialog} onOpenChange={setShowPunchTimesDialog}>
+            <DialogContent className="sm:max-w-[350px]">
+              <DialogHeader>
+                <DialogTitle>{driver.name} - Today's Punches</DialogTitle>
+                <DialogDescription>
+                  Punch in and out times for today
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                {loadingPunches ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  </div>
+                ) : punchTimes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No punch records for today</p>
+                ) : (
+                  <div className="space-y-2">
+                    {punchTimes.map((punch) => (
+                      <div
+                        key={punch.id}
+                        className={cn(
+                          "flex items-center justify-between rounded-lg border px-4 py-3",
+                          punch.punch_type === "in" ? "border-emerald-500/30 bg-emerald-500/10" : "border-destructive/30 bg-destructive/10"
+                        )}
+                      >
+                        <span className={cn(
+                          "font-medium text-sm",
+                          punch.punch_type === "in" ? "text-emerald-600" : "text-destructive"
+                        )}>
+                          {punch.punch_type === "in" ? "Punch In" : "Punch Out"}
+                        </span>
+                        <span className="font-mono text-base font-semibold">
+                          {new Date(punch.punch_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowPunchTimesDialog(false)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </>
       );
     }
@@ -382,13 +471,22 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                 <StatusBadge status={driver.status} showPulse={driver.status !== "offline"} size="sm" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[120px]">
+            <DropdownMenuContent align="end" className="min-w-[140px]">
+              {["punched-out", "offline"].includes(driver.status) && (
+                <DropdownMenuItem
+                  onClick={handlePunchedOutClick}
+                  className="cursor-pointer text-sm"
+                >
+                  <Clock className="h-4 w-4 mr-2" />
+                  <span>View Times</span>
+                </DropdownMenuItem>
+              )}
               {(["punched-out", "offline", "off"].includes(driver.status) ? punchedOutStatusOptions : ["working", "on-route"].includes(driver.status) ? workingStatusOptions : driver.status === "assigned" ? assignedStatusOptions : unassignedStatusOptions).map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
                   className={cn(
-                    "cursor-pointer text-xs",
+                    "cursor-pointer text-sm",
                     driver.status === option.value && "bg-secondary"
                   )}
                 >
@@ -489,6 +587,53 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
             </Button>
             <Button onClick={handleConfirmOff}>
               Confirm OFF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPunchTimesDialog} onOpenChange={setShowPunchTimesDialog}>
+        <DialogContent className="sm:max-w-[350px]">
+          <DialogHeader>
+            <DialogTitle>{driver.name} - Today's Punches</DialogTitle>
+            <DialogDescription>
+              Punch in and out times for today
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {loadingPunches ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            ) : punchTimes.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No punch records for today</p>
+            ) : (
+              <div className="space-y-2">
+                {punchTimes.map((punch) => (
+                  <div
+                    key={punch.id}
+                    className={cn(
+                      "flex items-center justify-between rounded-lg border px-4 py-3",
+                      punch.punch_type === "in" ? "border-emerald-500/30 bg-emerald-500/10" : "border-destructive/30 bg-destructive/10"
+                    )}
+                  >
+                    <span className={cn(
+                      "font-medium text-sm",
+                      punch.punch_type === "in" ? "text-emerald-600" : "text-destructive"
+                    )}>
+                      {punch.punch_type === "in" ? "Punch In" : "Punch Out"}
+                    </span>
+                    <span className="font-mono text-base font-semibold">
+                      {new Date(punch.punch_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPunchTimesDialog(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
