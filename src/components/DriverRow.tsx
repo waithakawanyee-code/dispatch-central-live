@@ -177,9 +177,34 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
             driver.status === "working" && "bg-status-available"
           )}
         />
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-0.5 flex-1">
           <span className="font-mono font-semibold text-foreground text-base">{driver.name}</span>
-          {driver.vehicle && (
+          {/* Show phone for unassigned/scheduled drivers */}
+          {(driver.status === "unassigned" || driver.status === "scheduled") && driver.phone && (
+            <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+              <Phone className="h-3 w-3" />
+              {driver.phone}
+            </span>
+          )}
+          {/* Show vehicle or report time for assigned drivers */}
+          {driver.status === "assigned" && (
+            <div className="flex items-center gap-3 text-xs">
+              {driver.report_time && (
+                <span className="flex items-center gap-1.5 font-mono text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  {driver.report_time.slice(0, 5)}
+                </span>
+              )}
+              {driver.vehicle && (
+                <span className="flex items-center gap-1.5 font-mono text-primary">
+                  <Truck className="h-3 w-3" />
+                  {driver.vehicle}
+                </span>
+              )}
+            </div>
+          )}
+          {/* Show vehicle for working drivers */}
+          {["working", "on-route"].includes(driver.status) && driver.vehicle && (
             <span className="flex items-center gap-1.5 font-mono text-xs text-primary">
               <Truck className="h-3.5 w-3.5" />
               {driver.vehicle}
