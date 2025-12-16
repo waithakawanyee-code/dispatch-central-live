@@ -61,6 +61,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          report_time: string | null
           status: Database["public"]["Enums"]["driver_status"]
           updated_at: string
           vehicle: string | null
@@ -70,6 +71,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          report_time?: string | null
           status?: Database["public"]["Enums"]["driver_status"]
           updated_at?: string
           vehicle?: string | null
@@ -79,6 +81,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          report_time?: string | null
           status?: Database["public"]["Enums"]["driver_status"]
           updated_at?: string
           vehicle?: string | null
