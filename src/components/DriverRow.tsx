@@ -57,6 +57,10 @@ const workingStatusOptions: { value: DriverStatus; label: string }[] = [
   { value: "punched-out", label: "Punch Out" },
 ];
 
+const punchedOutStatusOptions: { value: DriverStatus; label: string }[] = [
+  { value: "unassigned", label: "Reset to Unassigned" },
+];
+
 const compactStatusOptions: { value: DriverStatus; label: string }[] = [
   { value: "unassigned", label: "Unassigned" },
   { value: "assigned", label: "Assigned" },
@@ -69,6 +73,10 @@ const compactAssignedOptions: { value: DriverStatus; label: string }[] = [
 
 const compactWorkingOptions: { value: DriverStatus; label: string }[] = [
   { value: "punched-out", label: "Punch Out" },
+];
+
+const compactPunchedOutOptions: { value: DriverStatus; label: string }[] = [
+  { value: "unassigned", label: "Reset" },
 ];
 
 export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, availableVehicles = [] }: DriverRowProps) {
@@ -146,7 +154,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               {content}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[120px]">
-              {(["working", "on-route"].includes(driver.status) ? compactWorkingOptions : driver.status === "assigned" ? compactAssignedOptions : compactStatusOptions).map((option) => (
+              {(["punched-out", "offline", "off"].includes(driver.status) ? compactPunchedOutOptions : ["working", "on-route"].includes(driver.status) ? compactWorkingOptions : driver.status === "assigned" ? compactAssignedOptions : compactStatusOptions).map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
@@ -264,7 +272,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[120px]">
-              {(["working", "on-route"].includes(driver.status) ? workingStatusOptions : driver.status === "assigned" ? assignedStatusOptions : statusOptions).map((option) => (
+              {(["punched-out", "offline", "off"].includes(driver.status) ? punchedOutStatusOptions : ["working", "on-route"].includes(driver.status) ? workingStatusOptions : driver.status === "assigned" ? assignedStatusOptions : statusOptions).map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
