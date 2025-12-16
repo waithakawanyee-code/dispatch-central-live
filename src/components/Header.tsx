@@ -77,8 +77,11 @@ export function Header() {
             <p className="text-xs text-muted-foreground">{formattedDate}</p>
           </div>
 
-          <div className="flex items-center gap-3 border-l border-border pl-4">
-            <div className="text-right">
+          <div className="group relative flex items-center border-l border-border pl-4">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={signOut} title="Sign Out">
+              <LogOut className="h-4 w-4" />
+            </Button>
+            <div className="absolute right-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-right bg-card/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-border whitespace-nowrap">
               <span className="block text-xs text-muted-foreground truncate max-w-[150px]" title={user?.email || ""}>
                 {user?.email}
               </span>
@@ -87,9 +90,6 @@ export function Header() {
                 {role || "dispatcher"}
               </Badge>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={signOut} title="Sign Out">
-              <LogOut className="h-4 w-4" />
-            </Button>
           </div>
         </div>
       </div>
