@@ -68,8 +68,11 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
     }
   };
 
+  const vehicleValue = selectedVehicle === "__none__" ? undefined : selectedVehicle;
+  const canAssign = reportTime.trim() !== "" || vehicleValue !== undefined;
+
   const handleAssign = () => {
-    const vehicleValue = selectedVehicle === "__none__" ? undefined : selectedVehicle;
+    if (!canAssign) return;
     onStatusChange?.("assigned", reportTime || undefined, vehicleValue);
     setShowAssignDialog(false);
   };
@@ -145,19 +148,21 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               <DialogHeader>
                 <DialogTitle>Assign {driver.name}</DialogTitle>
               </DialogHeader>
+              <p className="text-xs text-muted-foreground">
+                Either report time or vehicle is required.
+              </p>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="report-time-compact">Report Time (optional)</Label>
+                  <Label htmlFor="report-time-compact">Report Time</Label>
                   <Input
                     id="report-time-compact"
                     type="time"
                     value={reportTime}
                     onChange={(e) => setReportTime(e.target.value)}
-                    placeholder="Leave empty if not set"
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="vehicle-compact">Vehicle (optional)</Label>
+                  <Label htmlFor="vehicle-compact">Vehicle</Label>
                   <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select vehicle" />
@@ -179,7 +184,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                 <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleAssign}>
+                <Button onClick={handleAssign} disabled={!canAssign}>
                   Assign
                 </Button>
               </DialogFooter>
@@ -266,9 +271,12 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
           <DialogHeader>
             <DialogTitle>Assign {driver.name}</DialogTitle>
           </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            Either report time or vehicle is required.
+          </p>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="report-time-full">Report Time (optional)</Label>
+              <Label htmlFor="report-time-full">Report Time</Label>
               <Input
                 id="report-time-full"
                 type="time"
@@ -277,7 +285,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="vehicle-full">Vehicle (optional)</Label>
+              <Label htmlFor="vehicle-full">Vehicle</Label>
               <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select vehicle" />
@@ -299,7 +307,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
             <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAssign}>
+            <Button onClick={handleAssign} disabled={!canAssign}>
               Assign
             </Button>
           </DialogFooter>
