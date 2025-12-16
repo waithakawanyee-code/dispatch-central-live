@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -25,6 +26,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriverStatus = Database["public"]["Enums"]["driver_status"];
@@ -79,15 +84,23 @@ const compactPunchedOutOptions: { value: DriverStatus; label: string }[] = [
 ];
 
 export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, availableVehicles = [] }: DriverRowProps) {
+  const { toast } = useToast();
   const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [showOffDialog, setShowOffDialog] = useState(false);
   const [reportTime, setReportTime] = useState(driver.report_time?.slice(0, 5) || "");
   const [selectedVehicle, setSelectedVehicle] = useState(driver.vehicle || "__none__");
+  const [isCallOut, setIsCallOut] = useState(false);
+  const [callOutNote, setCallOutNote] = useState("");
 
   const handleStatusSelect = (status: DriverStatus) => {
     if (status === "assigned") {
       setReportTime(driver.report_time?.slice(0, 5) || "");
       setSelectedVehicle(driver.vehicle || "__none__");
       setShowAssignDialog(true);
+    } else if (status === "off") {
+      setIsCallOut(false);
+      setCallOutNote("");
+      setShowOffDialog(true);
     } else {
       onStatusChange?.(status);
     }
@@ -100,6 +113,37 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
     if (!canAssign) return;
     onStatusChange?.("assigned", reportTime || undefined, vehicleValue);
     setShowAssignDialog(false);
+  };
+
+  const handleConfirmOff = async () => {
+    // If it's a call out, record it
+    if (isCallOut) {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error } = await supabase.from("call_outs").insert({
+        driver_id: driver.id,
+        driver_name: driver.name,
+        note: callOutNote.trim() || null,
+        created_by: user?.id || null,
+      });
+
+      if (error) {
+        toast({
+          title: "Error recording call out",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Call out recorded",
+          description: `${driver.name} marked as called out`,
+        });
+      }
+    }
+
+    onStatusChange?.("off");
+    setShowOffDialog(false);
+    setIsCallOut(false);
+    setCallOutNote("");
   };
 
   if (compact) {
@@ -211,6 +255,49 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                 </Button>
                 <Button onClick={handleAssign} disabled={!canAssign}>
                   Assign
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showOffDialog} onOpenChange={setShowOffDialog}>
+            <DialogContent className="sm:max-w-[350px]">
+              <DialogHeader>
+                <DialogTitle>Mark {driver.name} as OFF</DialogTitle>
+                <DialogDescription>
+                  Did the driver call out?
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="call-out-compact"
+                    checked={isCallOut}
+                    onCheckedChange={(checked) => setIsCallOut(checked === true)}
+                  />
+                  <Label htmlFor="call-out-compact" className="text-sm font-normal">
+                    Yes, driver called out
+                  </Label>
+                </div>
+                {isCallOut && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="call-out-note-compact">Note (optional)</Label>
+                    <Textarea
+                      id="call-out-note-compact"
+                      placeholder="Reason for call out..."
+                      value={callOutNote}
+                      onChange={(e) => setCallOutNote(e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowOffDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleConfirmOff}>
+                  Confirm OFF
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -334,6 +421,49 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
             </Button>
             <Button onClick={handleAssign} disabled={!canAssign}>
               Assign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showOffDialog} onOpenChange={setShowOffDialog}>
+        <DialogContent className="sm:max-w-[350px]">
+          <DialogHeader>
+            <DialogTitle>Mark {driver.name} as OFF</DialogTitle>
+            <DialogDescription>
+              Did the driver call out?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="call-out-full"
+                checked={isCallOut}
+                onCheckedChange={(checked) => setIsCallOut(checked === true)}
+              />
+              <Label htmlFor="call-out-full" className="text-sm font-normal">
+                Yes, driver called out
+              </Label>
+            </div>
+            {isCallOut && (
+              <div className="grid gap-2">
+                <Label htmlFor="call-out-note-full">Note (optional)</Label>
+                <Textarea
+                  id="call-out-note-full"
+                  placeholder="Reason for call out..."
+                  value={callOutNote}
+                  onChange={(e) => setCallOutNote(e.target.value)}
+                  rows={2}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOffDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmOff}>
+              Confirm OFF
             </Button>
           </DialogFooter>
         </DialogContent>
