@@ -1,6 +1,12 @@
 import { Truck, Wrench, Droplets, MapPin } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type VehicleStatus = "active" | "out-of-service";
 type CleanStatus = "clean" | "dirty";
@@ -18,9 +24,21 @@ interface Vehicle {
 
 interface VehicleRowProps {
   vehicle: Vehicle;
+  onStatusChange?: (newStatus: VehicleStatus) => void;
+  onCleanStatusChange?: (newCleanStatus: CleanStatus) => void;
 }
 
-export function VehicleRow({ vehicle }: VehicleRowProps) {
+const vehicleStatusOptions: { value: VehicleStatus; label: string }[] = [
+  { value: "active", label: "Active" },
+  { value: "out-of-service", label: "Out of Service" },
+];
+
+const cleanStatusOptions: { value: CleanStatus; label: string }[] = [
+  { value: "clean", label: "Clean" },
+  { value: "dirty", label: "Dirty" },
+];
+
+export function VehicleRow({ vehicle, onStatusChange, onCleanStatusChange }: VehicleRowProps) {
   const isAtBase = vehicle.location === "at-base";
 
   return (
@@ -56,10 +74,29 @@ export function VehicleRow({ vehicle }: VehicleRowProps) {
       </div>
 
       {isAtBase && (
-        <div className="flex items-center gap-1.5">
-          <Droplets className="h-3 w-3 text-muted-foreground" />
-          <StatusBadge status={vehicle.cleanStatus} size="sm" />
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex cursor-pointer items-center gap-1.5 focus:outline-none">
+              <Droplets className="h-3 w-3 text-muted-foreground" />
+              <StatusBadge status={vehicle.cleanStatus} size="sm" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[100px]">
+            {cleanStatusOptions.map((option) => (
+              <DropdownMenuItem
+                key={option.value}
+                onClick={() => onCleanStatusChange?.(option.value)}
+                className={cn(
+                  "cursor-pointer text-xs",
+                  vehicle.cleanStatus === option.value && "bg-secondary"
+                )}
+              >
+                <StatusBadge status={option.value} size="sm" />
+                <span className="ml-2">{option.label}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
 
       {vehicle.assignedDriver && (
@@ -69,7 +106,28 @@ export function VehicleRow({ vehicle }: VehicleRowProps) {
       )}
 
       <div className="ml-auto">
-        <StatusBadge status={vehicle.status} showPulse={vehicle.status === "active"} size="sm" />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="cursor-pointer focus:outline-none">
+              <StatusBadge status={vehicle.status} showPulse={vehicle.status === "active"} size="sm" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[130px]">
+            {vehicleStatusOptions.map((option) => (
+              <DropdownMenuItem
+                key={option.value}
+                onClick={() => onStatusChange?.(option.value)}
+                className={cn(
+                  "cursor-pointer text-xs",
+                  vehicle.status === option.value && "bg-secondary"
+                )}
+              >
+                <StatusBadge status={option.value} size="sm" />
+                <span className="ml-2">{option.label}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

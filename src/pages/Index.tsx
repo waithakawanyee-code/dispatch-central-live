@@ -1,19 +1,41 @@
+import { useState } from "react";
 import { Users, Truck, AlertTriangle, Droplets, Clock } from "lucide-react";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
 import { DriverRow } from "@/components/DriverRow";
 import { VehicleRow } from "@/components/VehicleRow";
 import { ScheduleRow } from "@/components/ScheduleRow";
-import { mockDrivers, mockVehicles, mockSchedule } from "@/data/mockData";
+import { mockDrivers as initialDrivers, mockVehicles as initialVehicles, mockSchedule } from "@/data/mockData";
 
 const Index = () => {
+  const [drivers, setDrivers] = useState(initialDrivers);
+  const [vehicles, setVehicles] = useState(initialVehicles);
+
   // Calculate stats
-  const availableDrivers = mockDrivers.filter((d) => d.status === "available").length;
-  const onRouteDrivers = mockDrivers.filter((d) => d.status === "on-route").length;
-  const activeVehicles = mockVehicles.filter((v) => v.status === "active").length;
-  const outOfServiceVehicles = mockVehicles.filter((v) => v.status === "out-of-service").length;
-  const vehiclesAtBase = mockVehicles.filter((v) => v.location === "at-base");
+  const availableDrivers = drivers.filter((d) => d.status === "available").length;
+  const onRouteDrivers = drivers.filter((d) => d.status === "on-route").length;
+  const activeVehicles = vehicles.filter((v) => v.status === "active").length;
+  const outOfServiceVehicles = vehicles.filter((v) => v.status === "out-of-service").length;
+  const vehiclesAtBase = vehicles.filter((v) => v.location === "at-base");
   const dirtyVehicles = vehiclesAtBase.filter((v) => v.cleanStatus === "dirty").length;
+
+  const handleDriverStatusChange = (driverId: string, newStatus: "available" | "on-route" | "break" | "offline") => {
+    setDrivers(prev => prev.map(driver => 
+      driver.id === driverId ? { ...driver, status: newStatus } : driver
+    ));
+  };
+
+  const handleVehicleStatusChange = (vehicleId: string, newStatus: "active" | "out-of-service") => {
+    setVehicles(prev => prev.map(vehicle => 
+      vehicle.id === vehicleId ? { ...vehicle, status: newStatus } : vehicle
+    ));
+  };
+
+  const handleVehicleCleanStatusChange = (vehicleId: string, newCleanStatus: "clean" | "dirty") => {
+    setVehicles(prev => prev.map(vehicle => 
+      vehicle.id === vehicleId ? { ...vehicle, cleanStatus: newCleanStatus } : vehicle
+    ));
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -43,7 +65,7 @@ const Index = () => {
           />
           <StatsCard
             title="Total Drivers"
-            value={mockDrivers.length}
+            value={drivers.length}
             subtitle="Registered"
             icon={Users}
             accentColor="primary"
@@ -81,12 +103,16 @@ const Index = () => {
                 Driver Status
               </h2>
               <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                {mockDrivers.length} TOTAL
+                {drivers.length} TOTAL
               </span>
             </div>
             <div className="space-y-2">
-              {mockDrivers.map((driver) => (
-                <DriverRow key={driver.id} driver={driver} />
+              {drivers.map((driver) => (
+                <DriverRow 
+                  key={driver.id} 
+                  driver={driver} 
+                  onStatusChange={(newStatus) => handleDriverStatusChange(driver.id, newStatus)}
+                />
               ))}
             </div>
           </section>
@@ -99,12 +125,17 @@ const Index = () => {
                 Vehicle Status
               </h2>
               <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                {mockVehicles.length} TOTAL
+                {vehicles.length} TOTAL
               </span>
             </div>
             <div className="space-y-2">
-              {mockVehicles.map((vehicle) => (
-                <VehicleRow key={vehicle.id} vehicle={vehicle} />
+              {vehicles.map((vehicle) => (
+                <VehicleRow 
+                  key={vehicle.id} 
+                  vehicle={vehicle}
+                  onStatusChange={(newStatus) => handleVehicleStatusChange(vehicle.id, newStatus)}
+                  onCleanStatusChange={(newCleanStatus) => handleVehicleCleanStatusChange(vehicle.id, newCleanStatus)}
+                />
               ))}
             </div>
           </section>
