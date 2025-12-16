@@ -1,41 +1,39 @@
-import { useState } from "react";
 import { Users, Truck, AlertTriangle, Droplets, Clock } from "lucide-react";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
 import { DriverRow } from "@/components/DriverRow";
 import { VehicleRow } from "@/components/VehicleRow";
 import { ScheduleRow } from "@/components/ScheduleRow";
-import { mockDrivers as initialDrivers, mockVehicles as initialVehicles, mockSchedule } from "@/data/mockData";
+import { mockSchedule } from "@/data/mockData";
+import { useDispatchData } from "@/hooks/useDispatchData";
 
 const Index = () => {
-  const [drivers, setDrivers] = useState(initialDrivers);
-  const [vehicles, setVehicles] = useState(initialVehicles);
+  const {
+    drivers,
+    vehicles,
+    loading,
+    updateDriverStatus,
+    updateVehicleStatus,
+    updateVehicleCleanStatus,
+  } = useDispatchData();
 
   // Calculate stats
   const availableDrivers = drivers.filter((d) => d.status === "available").length;
   const onRouteDrivers = drivers.filter((d) => d.status === "on-route").length;
   const activeVehicles = vehicles.filter((v) => v.status === "active").length;
   const outOfServiceVehicles = vehicles.filter((v) => v.status === "out-of-service").length;
-  const vehiclesAtBase = vehicles.filter((v) => v.location === "at-base");
-  const dirtyVehicles = vehiclesAtBase.filter((v) => v.cleanStatus === "dirty").length;
+  const dirtyVehicles = vehicles.filter((v) => v.clean_status === "dirty").length;
 
-  const handleDriverStatusChange = (driverId: string, newStatus: "available" | "on-route" | "break" | "offline") => {
-    setDrivers(prev => prev.map(driver => 
-      driver.id === driverId ? { ...driver, status: newStatus } : driver
-    ));
-  };
-
-  const handleVehicleStatusChange = (vehicleId: string, newStatus: "active" | "out-of-service") => {
-    setVehicles(prev => prev.map(vehicle => 
-      vehicle.id === vehicleId ? { ...vehicle, status: newStatus } : vehicle
-    ));
-  };
-
-  const handleVehicleCleanStatusChange = (vehicleId: string, newCleanStatus: "clean" | "dirty") => {
-    setVehicles(prev => prev.map(vehicle => 
-      vehicle.id === vehicleId ? { ...vehicle, cleanStatus: newCleanStatus } : vehicle
-    ));
-  };
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
+          <p className="text-sm text-muted-foreground">Loading dispatch data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -108,10 +106,10 @@ const Index = () => {
             </div>
             <div className="space-y-2">
               {drivers.map((driver) => (
-                <DriverRow 
-                  key={driver.id} 
-                  driver={driver} 
-                  onStatusChange={(newStatus) => handleDriverStatusChange(driver.id, newStatus)}
+                <DriverRow
+                  key={driver.id}
+                  driver={driver}
+                  onStatusChange={(newStatus) => updateDriverStatus(driver.id, newStatus)}
                 />
               ))}
             </div>
@@ -130,11 +128,11 @@ const Index = () => {
             </div>
             <div className="space-y-2">
               {vehicles.map((vehicle) => (
-                <VehicleRow 
-                  key={vehicle.id} 
+                <VehicleRow
+                  key={vehicle.id}
                   vehicle={vehicle}
-                  onStatusChange={(newStatus) => handleVehicleStatusChange(vehicle.id, newStatus)}
-                  onCleanStatusChange={(newCleanStatus) => handleVehicleCleanStatusChange(vehicle.id, newCleanStatus)}
+                  onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
+                  onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
                 />
               ))}
             </div>
