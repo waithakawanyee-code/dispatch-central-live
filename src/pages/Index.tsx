@@ -98,7 +98,8 @@ const Index = () => {
                           driver={driver}
                           canEdit={isAdmin}
                           isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                          onStatusChange={(newStatus, reportTime) => updateDriverStatus(driver.id, newStatus, reportTime)}
+                          onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
+                          availableVehicles={vehicles}
                           compact
                         />
                       ))}
@@ -113,23 +114,24 @@ const Index = () => {
                   <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
                     <span>Unassigned</span>
                     <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
-                      {drivers.filter((d) => d.status === "scheduled").length}
+                      {drivers.filter((d) => d.status === "unassigned" || d.status === "scheduled").length}
                     </span>
                   </h3>
                   <div className="flex flex-wrap gap-1">
                     {drivers
-                      .filter((d) => d.status === "scheduled")
+                      .filter((d) => d.status === "unassigned" || d.status === "scheduled")
                       .map((driver) => (
                         <DriverRow
                           key={driver.id}
                           driver={driver}
                           canEdit={isAdmin}
                           isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                          onStatusChange={(newStatus, reportTime) => updateDriverStatus(driver.id, newStatus, reportTime)}
+                          onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
+                          availableVehicles={vehicles}
                           compact
                         />
                       ))}
-                    {drivers.filter((d) => d.status === "scheduled").length === 0 && (
+                    {drivers.filter((d) => d.status === "unassigned" || d.status === "scheduled").length === 0 && (
                       <p className="text-xs text-muted-foreground italic py-2">No unassigned drivers</p>
                     )}
                   </div>
@@ -138,10 +140,10 @@ const Index = () => {
 
               {/* Right Column - Split Top/Bottom */}
               <div className="flex flex-col gap-3">
-                {/* Top - Punched In */}
+                {/* Top - Working */}
                 <div className="space-y-1">
                   <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-                    <span>Punched In</span>
+                    <span>Working</span>
                     <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
                       {drivers.filter((d) => ["on-route", "working"].includes(d.status)).length}
                     </span>
@@ -155,12 +157,13 @@ const Index = () => {
                           driver={driver}
                           canEdit={isAdmin}
                           isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                          onStatusChange={(newStatus, reportTime) => updateDriverStatus(driver.id, newStatus, reportTime)}
+                          onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
+                          availableVehicles={vehicles}
                           compact
                         />
                       ))}
                     {drivers.filter((d) => ["on-route", "working"].includes(d.status)).length === 0 && (
-                      <p className="text-xs text-muted-foreground italic py-2">No drivers punched in</p>
+                      <p className="text-xs text-muted-foreground italic py-2">No drivers working</p>
                     )}
                   </div>
                 </div>
@@ -170,23 +173,24 @@ const Index = () => {
                   <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
                     <span>Punched Out</span>
                     <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
-                      {drivers.filter((d) => ["offline", "off"].includes(d.status)).length}
+                      {drivers.filter((d) => ["offline", "off", "punched-out"].includes(d.status)).length}
                     </span>
                   </h3>
                   <div className="flex flex-wrap gap-1">
                     {drivers
-                      .filter((d) => ["offline", "off"].includes(d.status))
+                      .filter((d) => ["offline", "off", "punched-out"].includes(d.status))
                       .map((driver) => (
                         <DriverRow
                           key={driver.id}
                           driver={driver}
                           canEdit={isAdmin}
                           isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                          onStatusChange={(newStatus, reportTime) => updateDriverStatus(driver.id, newStatus, reportTime)}
+                          onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
+                          availableVehicles={vehicles}
                           compact
                         />
                       ))}
-                    {drivers.filter((d) => ["offline", "off"].includes(d.status)).length === 0 && (
+                    {drivers.filter((d) => ["offline", "off", "punched-out"].includes(d.status)).length === 0 && (
                       <p className="text-xs text-muted-foreground italic py-2">No drivers punched out</p>
                     )}
                   </div>

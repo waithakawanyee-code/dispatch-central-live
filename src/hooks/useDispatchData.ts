@@ -132,21 +132,23 @@ export function useDispatchData() {
     };
   }, []);
 
-  const updateDriverStatus = async (driverId: string, newStatus: DriverStatus, reportTime?: string) => {
+  const updateDriverStatus = async (driverId: string, newStatus: DriverStatus, reportTime?: string, vehicle?: string) => {
     const driver = drivers.find((d) => d.id === driverId);
     if (!driver) return;
 
     const oldStatus = driver.status;
-    const updateData: { status: DriverStatus; updated_at: string; report_time?: string | null } = {
+    const updateData: { status: DriverStatus; updated_at: string; report_time?: string | null; vehicle?: string | null } = {
       status: newStatus,
       updated_at: new Date().toISOString(),
     };
 
-    // Set report_time when assigning, clear it for other statuses
-    if (newStatus === "assigned" && reportTime) {
-      updateData.report_time = reportTime;
-    } else if (newStatus !== "assigned") {
+    // Set report_time and vehicle when assigning, clear them for other statuses
+    if (newStatus === "assigned") {
+      updateData.report_time = reportTime || null;
+      updateData.vehicle = vehicle || null;
+    } else if (newStatus === "unassigned" || newStatus === "punched-out") {
       updateData.report_time = null;
+      updateData.vehicle = null;
     }
 
     const { error } = await supabase
