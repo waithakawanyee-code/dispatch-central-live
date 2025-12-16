@@ -59,16 +59,78 @@ const Index = () => {
                 {drivers.length} TOTAL
               </span>
             </div>
-            <div className="space-y-2">
-              {drivers.map((driver) => (
-                <DriverRow
-                  key={driver.id}
-                  driver={driver}
-                  canEdit={isAdmin}
-                  isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                  onStatusChange={(newStatus) => updateDriverStatus(driver.id, newStatus)}
-                />
-              ))}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Left Column - Not Started Yet */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                  Not Started Yet
+                </h3>
+                <div className="space-y-1">
+                  {drivers
+                    .filter((d) => ["scheduled", "assigned"].includes(d.status))
+                    .map((driver) => (
+                      <DriverRow
+                        key={driver.id}
+                        driver={driver}
+                        canEdit={isAdmin}
+                        isUpdated={recentlyUpdatedDrivers.has(driver.id)}
+                        onStatusChange={(newStatus) => updateDriverStatus(driver.id, newStatus)}
+                      />
+                    ))}
+                  {drivers.filter((d) => ["scheduled", "assigned"].includes(d.status)).length === 0 && (
+                    <p className="text-xs text-muted-foreground italic py-2">No drivers waiting</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column - Split Top/Bottom */}
+              <div className="flex flex-col gap-4">
+                {/* Top - Currently Clocked In */}
+                <div className="space-y-2 flex-1">
+                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                    Currently Clocked In
+                  </h3>
+                  <div className="space-y-1">
+                    {drivers
+                      .filter((d) => ["available", "on-route", "break", "working"].includes(d.status))
+                      .map((driver) => (
+                        <DriverRow
+                          key={driver.id}
+                          driver={driver}
+                          canEdit={isAdmin}
+                          isUpdated={recentlyUpdatedDrivers.has(driver.id)}
+                          onStatusChange={(newStatus) => updateDriverStatus(driver.id, newStatus)}
+                        />
+                      ))}
+                    {drivers.filter((d) => ["available", "on-route", "break", "working"].includes(d.status)).length === 0 && (
+                      <p className="text-xs text-muted-foreground italic py-2">No drivers clocked in</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Bottom - Clocked Out */}
+                <div className="space-y-2 flex-1">
+                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                    Clocked Out
+                  </h3>
+                  <div className="space-y-1">
+                    {drivers
+                      .filter((d) => ["offline", "off"].includes(d.status))
+                      .map((driver) => (
+                        <DriverRow
+                          key={driver.id}
+                          driver={driver}
+                          canEdit={isAdmin}
+                          isUpdated={recentlyUpdatedDrivers.has(driver.id)}
+                          onStatusChange={(newStatus) => updateDriverStatus(driver.id, newStatus)}
+                        />
+                      ))}
+                    {drivers.filter((d) => ["offline", "off"].includes(d.status)).length === 0 && (
+                      <p className="text-xs text-muted-foreground italic py-2">No drivers clocked out</p>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
