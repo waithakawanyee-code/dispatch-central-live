@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Pencil, Trash2, X, Check } from "lucide-react";
+import { useState, useRef } from "react";
+import { Plus, Pencil, Trash2, X, Check, Download, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { StatusBadge } from "@/components/StatusBadge";
+import { parseCSV, generateCSV, downloadCSV } from "@/lib/csv";
 import type { Database } from "@/integrations/supabase/types";
 
 type VehicleStatus = Database["public"]["Enums"]["vehicle_status"];
@@ -53,12 +54,83 @@ const initialFormData: VehicleFormData = {
   clean_status: "clean",
 };
 
+const validStatuses: VehicleStatus[] = ["active", "out-of-service"];
+const validCleanStatuses: CleanStatus[] = ["clean", "dirty"];
+
 export function VehicleManagement() {
   const { vehicles } = useDispatchData();
   const { toast } = useToast();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<VehicleFormData>(initialFormData);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = () => {
+    const csv = generateCSV(vehicles, [
+      { key: "unit", header: "Unit" },
+      { key: "driver", header: "Driver" },
+      { key: "mileage", header: "Mileage" },
+      { key: "status", header: "Status" },
+      { key: "clean_status", header: "Clean Status" },
+    ]);
+    downloadCSV(csv, `vehicles-${new Date().toISOString().split("T")[0]}.csv`);
+    toast({ title: "Exported", description: `${vehicles.length} vehicles exported to CSV` });
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const rows = parseCSV<{
+        unit: string;
+        driver?: string;
+        mileage?: string;
+        status?: string;
+        clean_status?: string;
+      }>(text);
+
+      if (rows.length === 0) {
+        toast({ title: "Error", description: "No valid data found in CSV", variant: "destructive" });
+        return;
+      }
+
+      const validRows = rows
+        .filter(row => row.unit?.trim())
+        .map(row => ({
+          unit: row.unit.trim(),
+          driver: row.driver?.trim() || null,
+          mileage: row.mileage ? parseInt(row.mileage) : null,
+          status: (validStatuses.includes(row.status as VehicleStatus) ? row.status : "active") as VehicleStatus,
+          clean_status: (validCleanStatuses.includes(row.clean_status as CleanStatus) ? row.clean_status : "clean") as CleanStatus,
+        }));
+
+      if (validRows.length === 0) {
+        toast({ title: "Error", description: "No valid vehicles found (unit is required)", variant: "destructive" });
+        return;
+      }
+
+      const { error } = await supabase.from("vehicles").insert(validRows);
+
+      if (error) {
+        if (error.code === "23505") {
+          toast({ title: "Error", description: "Some vehicle units already exist", variant: "destructive" });
+        } else {
+          toast({ title: "Error", description: "Failed to import vehicles", variant: "destructive" });
+        }
+      } else {
+        toast({ title: "Success", description: `${validRows.length} vehicles imported successfully` });
+      }
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to parse CSV file", variant: "destructive" });
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleAdd = async () => {
     if (!formData.unit.trim()) {
@@ -139,83 +211,110 @@ export function VehicleManagement() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Manage Vehicles</h2>
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Vehicle
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Vehicle</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="unit">Unit ID *</Label>
-                <Input
-                  id="unit"
-                  value={formData.unit}
-                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                  placeholder="V-109"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="driver">Assigned Driver</Label>
-                <Input
-                  id="driver"
-                  value={formData.driver}
-                  onChange={(e) => setFormData({ ...formData, driver: e.target.value })}
-                  placeholder="Driver name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mileage">Mileage</Label>
-                <Input
-                  id="mileage"
-                  type="number"
-                  value={formData.mileage}
-                  onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
-                  placeholder="50000"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-2" onClick={handleExport}>
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={handleImport}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-2"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+          >
+            <Upload className="h-4 w-4" />
+            {importing ? "Importing..." : "Import"}
+          </Button>
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Vehicle
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Vehicle</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value: VehicleStatus) => setFormData({ ...formData, status: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="out-of-service">Out of Service</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="unit">Unit ID *</Label>
+                  <Input
+                    id="unit"
+                    value={formData.unit}
+                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                    placeholder="V-109"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="clean_status">Clean Status</Label>
-                  <Select
-                    value={formData.clean_status}
-                    onValueChange={(value: CleanStatus) => setFormData({ ...formData, clean_status: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="clean">Clean</SelectItem>
-                      <SelectItem value="dirty">Dirty</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="driver">Assigned Driver</Label>
+                  <Input
+                    id="driver"
+                    value={formData.driver}
+                    onChange={(e) => setFormData({ ...formData, driver: e.target.value })}
+                    placeholder="Driver name"
+                  />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mileage">Mileage</Label>
+                  <Input
+                    id="mileage"
+                    type="number"
+                    value={formData.mileage}
+                    onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
+                    placeholder="50000"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status</Label>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(value: VehicleStatus) => setFormData({ ...formData, status: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="out-of-service">Out of Service</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="clean_status">Clean Status</Label>
+                    <Select
+                      value={formData.clean_status}
+                      onValueChange={(value: CleanStatus) => setFormData({ ...formData, clean_status: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="clean">Clean</SelectItem>
+                        <SelectItem value="dirty">Dirty</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button onClick={handleAdd} className="w-full">Add Vehicle</Button>
               </div>
-              <Button onClick={handleAdd} className="w-full">Add Vehicle</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
+      <p className="text-xs text-muted-foreground">
+        CSV format: Unit, Driver, Mileage, Status (active/out-of-service), Clean Status (clean/dirty)
+      </p>
 
       <div className="rounded-lg border border-border bg-card">
         <div className="grid grid-cols-[100px_1fr_100px_100px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground">
