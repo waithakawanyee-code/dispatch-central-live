@@ -1,8 +1,8 @@
-import { Users, Truck, CheckCircle, AlertTriangle, Droplets, Clock } from "lucide-react";
+import { Users, Truck, AlertTriangle, Droplets, Clock } from "lucide-react";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
-import { DriverCard } from "@/components/DriverCard";
-import { VehicleCard } from "@/components/VehicleCard";
+import { DriverRow } from "@/components/DriverRow";
+import { VehicleRow } from "@/components/VehicleRow";
 import { ScheduleRow } from "@/components/ScheduleRow";
 import { mockDrivers, mockVehicles, mockSchedule } from "@/data/mockData";
 
@@ -24,20 +24,20 @@ const Index = () => {
 
       <Header />
 
-      <main className="p-6">
+      <main className="p-4">
         {/* Stats Overview */}
-        <section className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+        <section className="mb-6 grid gap-3 grid-cols-3 lg:grid-cols-6">
           <StatsCard
-            title="Available Drivers"
+            title="Available"
             value={availableDrivers}
-            subtitle="Ready for dispatch"
+            subtitle="Ready"
             icon={Users}
             accentColor="primary"
           />
           <StatsCard
             title="On Route"
             value={onRouteDrivers}
-            subtitle="Currently active"
+            subtitle="Active"
             icon={Clock}
             accentColor="accent"
           />
@@ -49,7 +49,7 @@ const Index = () => {
             accentColor="primary"
           />
           <StatsCard
-            title="Active Vehicles"
+            title="Active"
             value={activeVehicles}
             subtitle="In operation"
             icon={Truck}
@@ -58,7 +58,7 @@ const Index = () => {
           <StatsCard
             title="Out of Service"
             value={outOfServiceVehicles}
-            subtitle="Needs attention"
+            subtitle="Attention"
             icon={AlertTriangle}
             accentColor="destructive"
           />
@@ -71,58 +71,59 @@ const Index = () => {
           />
         </section>
 
-        <div className="grid gap-8 xl:grid-cols-2">
-          {/* Driver Status Board */}
-          <section>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-                <Users className="h-5 w-5 text-primary" />
+        {/* Driver & Vehicle Status - Side by Side */}
+        <div className="grid gap-4 xl:grid-cols-2">
+          {/* Driver Status */}
+          <section className="rounded-lg border border-border bg-card/50 p-3">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Users className="h-4 w-4 text-primary" />
                 Driver Status
               </h2>
-              <span className="rounded bg-secondary px-2 py-1 font-mono text-xs text-muted-foreground">
+              <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
                 {mockDrivers.length} TOTAL
               </span>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
               {mockDrivers.map((driver) => (
-                <DriverCard key={driver.id} driver={driver} />
+                <DriverRow key={driver.id} driver={driver} />
               ))}
             </div>
           </section>
 
-          {/* Vehicle Status Board */}
-          <section>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-                <Truck className="h-5 w-5 text-primary" />
+          {/* Vehicle Status */}
+          <section className="rounded-lg border border-border bg-card/50 p-3">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Truck className="h-4 w-4 text-primary" />
                 Vehicle Status
               </h2>
-              <span className="rounded bg-secondary px-2 py-1 font-mono text-xs text-muted-foreground">
+              <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
                 {mockVehicles.length} TOTAL
               </span>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
               {mockVehicles.map((vehicle) => (
-                <VehicleCard key={vehicle.id} vehicle={vehicle} />
+                <VehicleRow key={vehicle.id} vehicle={vehicle} />
               ))}
             </div>
           </section>
         </div>
 
         {/* Daily Schedule */}
-        <section className="mt-8">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Clock className="h-5 w-5 text-primary" />
+        <section className="mt-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Clock className="h-4 w-4 text-primary" />
               Today's Schedule
             </h2>
-            <span className="rounded bg-secondary px-2 py-1 font-mono text-xs text-muted-foreground">
+            <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
               {mockSchedule.length} SHIFTS
             </span>
           </div>
 
           {/* Schedule Header */}
-          <div className="mb-2 grid grid-cols-[1fr_120px_120px_1fr_100px] gap-4 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <div className="mb-2 grid grid-cols-[1fr_120px_120px_1fr_100px] gap-4 px-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             <span>Driver</span>
             <span>Vehicle</span>
             <span>Shift</span>
@@ -130,7 +131,7 @@ const Index = () => {
             <span>Status</span>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {mockSchedule.map((entry) => (
               <ScheduleRow
                 key={entry.id}
