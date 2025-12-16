@@ -158,6 +158,31 @@ export function useDispatchData() {
       console.error("Failed to update driver status:", error);
     } else {
       await logStatusChange("driver", driverId, driver.name, "status", oldStatus, newStatus);
+      
+      // Record punch in/out when status changes to on-route or offline
+      if (newStatus === "on-route" && oldStatus !== "on-route") {
+        await recordTimePunch(driverId, driver.name, "in");
+      } else if (newStatus === "offline" && oldStatus !== "offline" && oldStatus !== "scheduled") {
+        // Only record punch out if driver was previously working (not just scheduled)
+        await recordTimePunch(driverId, driver.name, "out");
+      }
+    }
+  };
+
+  const recordTimePunch = async (driverId: string, driverName: string, punchType: "in" | "out") => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { error } = await supabase
+      .from("time_punches")
+      .insert({
+        driver_id: driverId,
+        driver_name: driverName,
+        punch_type: punchType,
+        punched_by: user?.id,
+      });
+
+    if (error) {
+      console.error(`Failed to record punch ${punchType}:`, error);
     }
   };
 
