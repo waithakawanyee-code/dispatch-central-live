@@ -70,20 +70,12 @@ const Index = () => {
                 <span>Assigned</span>
               </div>
               <div className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-status-available" />
-                <span>Available</span>
-              </div>
-              <div className="flex items-center gap-1">
                 <span className="h-2 w-2 rounded-full bg-status-on-route" />
-                <span>On Route</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-status-break" />
-                <span>Break</span>
+                <span>Punched In</span>
               </div>
               <div className="flex items-center gap-1">
                 <span className="h-2 w-2 rounded-full bg-status-offline" />
-                <span>Offline</span>
+                <span>Punched Out</span>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -146,17 +138,17 @@ const Index = () => {
 
               {/* Right Column - Split Top/Bottom */}
               <div className="flex flex-col gap-3">
-                {/* Top - Currently Clocked In */}
+                {/* Top - Punched In */}
                 <div className="space-y-1">
                   <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-                    <span>Currently Clocked In</span>
+                    <span>Punched In</span>
                     <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
-                      {drivers.filter((d) => ["available", "on-route", "break", "working"].includes(d.status)).length}
+                      {drivers.filter((d) => ["on-route", "working"].includes(d.status)).length}
                     </span>
                   </h3>
                   <div className="flex flex-wrap gap-1">
                     {drivers
-                      .filter((d) => ["available", "on-route", "break", "working"].includes(d.status))
+                      .filter((d) => ["on-route", "working"].includes(d.status))
                       .map((driver) => (
                         <DriverRow
                           key={driver.id}
@@ -167,16 +159,16 @@ const Index = () => {
                           compact
                         />
                       ))}
-                    {drivers.filter((d) => ["available", "on-route", "break", "working"].includes(d.status)).length === 0 && (
-                      <p className="text-xs text-muted-foreground italic py-2">No drivers clocked in</p>
+                    {drivers.filter((d) => ["on-route", "working"].includes(d.status)).length === 0 && (
+                      <p className="text-xs text-muted-foreground italic py-2">No drivers punched in</p>
                     )}
                   </div>
                 </div>
 
-                {/* Bottom - Clocked Out */}
+                {/* Bottom - Punched Out */}
                 <div className="space-y-1">
                   <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-                    <span>Clocked Out</span>
+                    <span>Punched Out</span>
                     <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
                       {drivers.filter((d) => ["offline", "off"].includes(d.status)).length}
                     </span>
@@ -195,7 +187,7 @@ const Index = () => {
                         />
                       ))}
                     {drivers.filter((d) => ["offline", "off"].includes(d.status)).length === 0 && (
-                      <p className="text-xs text-muted-foreground italic py-2">No drivers clocked out</p>
+                      <p className="text-xs text-muted-foreground italic py-2">No drivers punched out</p>
                     )}
                   </div>
                 </div>
