@@ -53,6 +53,10 @@ const assignedStatusOptions: { value: DriverStatus; label: string }[] = [
   { value: "unassigned", label: "Unassign" },
 ];
 
+const workingStatusOptions: { value: DriverStatus; label: string }[] = [
+  { value: "punched-out", label: "Punch Out" },
+];
+
 const compactStatusOptions: { value: DriverStatus; label: string }[] = [
   { value: "unassigned", label: "Unassigned" },
   { value: "assigned", label: "Assigned" },
@@ -61,6 +65,10 @@ const compactStatusOptions: { value: DriverStatus; label: string }[] = [
 const compactAssignedOptions: { value: DriverStatus; label: string }[] = [
   { value: "working", label: "Punch In" },
   { value: "unassigned", label: "Unassign" },
+];
+
+const compactWorkingOptions: { value: DriverStatus; label: string }[] = [
+  { value: "punched-out", label: "Punch Out" },
 ];
 
 export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, availableVehicles = [] }: DriverRowProps) {
@@ -138,7 +146,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               {content}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[120px]">
-              {(driver.status === "assigned" ? compactAssignedOptions : compactStatusOptions).map((option) => (
+              {(driver.status === "working" ? compactWorkingOptions : driver.status === "assigned" ? compactAssignedOptions : compactStatusOptions).map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
@@ -256,7 +264,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[120px]">
-              {(driver.status === "assigned" ? assignedStatusOptions : statusOptions).map((option) => (
+              {(driver.status === "working" ? workingStatusOptions : driver.status === "assigned" ? assignedStatusOptions : statusOptions).map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
