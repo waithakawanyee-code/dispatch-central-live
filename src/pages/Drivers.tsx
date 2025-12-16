@@ -1,11 +1,20 @@
-import { useState } from "react";
-import { Users, BarChart3, ChevronDown } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon } from "lucide-react";
+import { format, addDays, isSameDay, startOfDay, getDay } from "date-fns";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
 import { DriverRow } from "@/components/DriverRow";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type DriverSchedule = Database["public"]["Tables"]["driver_schedules"]["Row"];
 
 const Drivers = () => {
   const {
@@ -17,14 +26,80 @@ const Drivers = () => {
   } = useDispatchData();
   const { isAdmin } = useUserRole();
   const [statsOpen, setStatsOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
+  const [schedules, setSchedules] = useState<DriverSchedule[]>([]);
+  const [schedulesLoading, setSchedulesLoading] = useState(true);
+  const [weekOffset, setWeekOffset] = useState(0);
 
-  // Calculate stats
-  const unassignedDrivers = drivers.filter((d) => d.status === "unassigned" || d.status === "scheduled").length;
-  const assignedDrivers = drivers.filter((d) => d.status === "assigned").length;
-  const workingDrivers = drivers.filter((d) => ["on-route", "working"].includes(d.status)).length;
-  const punchedOutDrivers = drivers.filter((d) => ["offline", "off", "punched-out"].includes(d.status)).length;
+  const today = startOfDay(new Date());
+  const isToday = isSameDay(selectedDate, today);
+  const isFutureDate = selectedDate > today;
 
-  if (loading) {
+  // Generate week days based on offset
+  const weekDays = useMemo(() => {
+    const startDate = addDays(today, weekOffset * 7);
+    return Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
+  }, [weekOffset]);
+
+  // Fetch driver schedules
+  useEffect(() => {
+    const fetchSchedules = async () => {
+      setSchedulesLoading(true);
+      const { data, error } = await supabase
+        .from("driver_schedules")
+        .select("*");
+      
+      if (!error && data) {
+        setSchedules(data);
+      }
+      setSchedulesLoading(false);
+    };
+    fetchSchedules();
+  }, []);
+
+  // Get drivers available on selected date based on their schedule
+  const getAvailableDriversForDate = useMemo(() => {
+    if (isToday) {
+      return null; // Use actual driver statuses for today
+    }
+
+    // day_of_week: 0 = Sunday, 1 = Monday, etc.
+    const dayOfWeek = getDay(selectedDate);
+    
+    // Find schedules for this day that are NOT marked as off
+    const availableDriverIds = new Set<string>();
+    
+    schedules.forEach((schedule) => {
+      if (schedule.day_of_week === dayOfWeek && !schedule.is_off) {
+        availableDriverIds.add(schedule.driver_id);
+      }
+    });
+
+    return drivers.filter((driver) => availableDriverIds.has(driver.id));
+  }, [selectedDate, schedules, drivers, isToday]);
+
+  // For future dates, all available drivers show as "unassigned"
+  const displayDrivers = useMemo(() => {
+    if (isToday) {
+      return drivers;
+    }
+    
+    // For future dates, return available drivers with virtual "unassigned" status
+    return (getAvailableDriversForDate || []).map((driver) => ({
+      ...driver,
+      status: "unassigned" as const,
+      vehicle: null,
+      report_time: null,
+    }));
+  }, [isToday, getAvailableDriversForDate, drivers]);
+
+  // Calculate stats based on displayed drivers
+  const unassignedDrivers = displayDrivers.filter((d) => d.status === "unassigned" || d.status === "scheduled").length;
+  const assignedDrivers = displayDrivers.filter((d) => d.status === "assigned").length;
+  const workingDrivers = displayDrivers.filter((d) => ["on-route", "working"].includes(d.status)).length;
+  const punchedOutDrivers = displayDrivers.filter((d) => ["offline", "off", "punched-out"].includes(d.status)).length;
+
+  if (loading || schedulesLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
@@ -48,6 +123,99 @@ const Drivers = () => {
           <p className="text-sm text-muted-foreground">Manage driver status and assignments</p>
         </div>
 
+        {/* Date Selector */}
+        <section className="rounded-lg border border-border bg-card/50 p-3 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setWeekOffset((prev) => prev - 1)}
+                disabled={weekOffset === 0}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-xs font-medium text-muted-foreground">
+                {format(weekDays[0], "MMM d")} - {format(weekDays[6], "MMM d, yyyy")}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setWeekOffset((prev) => prev + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 gap-1">
+                  <CalendarIcon className="h-3 w-3" />
+                  <span className="text-xs">Calendar</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setSelectedDate(startOfDay(date));
+                      // Adjust week offset to show the selected date's week
+                      const daysDiff = Math.floor((startOfDay(date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                      setWeekOffset(Math.floor(daysDiff / 7));
+                    }
+                  }}
+                  disabled={(date) => startOfDay(date) < today}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Day Buttons */}
+          <div className="flex gap-1">
+            {weekDays.map((date) => {
+              const isSelected = isSameDay(date, selectedDate);
+              const isPast = date < today;
+              const isCurrentDay = isSameDay(date, today);
+              
+              return (
+                <Button
+                  key={date.toISOString()}
+                  variant={isSelected ? "default" : "outline"}
+                  size="sm"
+                  className={cn(
+                    "flex-1 flex flex-col h-auto py-1.5 px-1",
+                    isPast && "opacity-50 cursor-not-allowed",
+                    isCurrentDay && !isSelected && "border-primary"
+                  )}
+                  onClick={() => !isPast && setSelectedDate(date)}
+                  disabled={isPast}
+                >
+                  <span className="text-[10px] font-medium">{format(date, "EEE")}</span>
+                  <span className="text-sm font-bold">{format(date, "d")}</span>
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* Selected Date Info */}
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-sm font-medium text-foreground">
+              {isToday ? "Today" : format(selectedDate, "EEEE, MMMM d, yyyy")}
+            </p>
+            {isFutureDate && (
+              <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">
+                Showing {getAvailableDriversForDate?.length || 0} scheduled drivers as unassigned
+              </span>
+            )}
+          </div>
+        </section>
+
         {/* Driver Status */}
         <section className="rounded-lg border border-border bg-card/50 p-3 mb-6">
           <div className="mb-2 flex items-center justify-between">
@@ -56,7 +224,7 @@ const Drivers = () => {
               Driver Status
             </h2>
             <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-              {drivers.length} TOTAL
+              {displayDrivers.length} TOTAL
             </span>
           </div>
           
@@ -80,125 +248,153 @@ const Drivers = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Left Column */}
-            <div className="flex flex-col gap-3">
-              {/* Assigned */}
-              <div className="space-y-1">
-                <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-                  <span>Assigned</span>
-                  <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
-                    {assignedDrivers}
-                  </span>
-                </h3>
-                <div className="flex flex-wrap gap-1">
-                  {drivers
-                    .filter((d) => d.status === "assigned")
-                    .map((driver) => (
-                      <DriverRow
-                        key={driver.id}
-                        driver={driver}
-                        canEdit={isAdmin}
-                        isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                        onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
-                        availableVehicles={vehicles}
-                        compact
-                      />
-                    ))}
-                  {assignedDrivers === 0 && (
-                    <p className="text-xs text-muted-foreground italic py-2">No assigned drivers</p>
-                  )}
+          {isFutureDate ? (
+            /* Future Date View - Only show Unassigned */
+            <div className="space-y-1">
+              <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                <span>Scheduled for {format(selectedDate, "EEEE")}</span>
+                <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                  {unassignedDrivers}
+                </span>
+              </h3>
+              <div className="flex flex-wrap gap-1">
+                {displayDrivers.map((driver) => (
+                  <DriverRow
+                    key={driver.id}
+                    driver={driver}
+                    canEdit={false}
+                    isUpdated={false}
+                    availableVehicles={vehicles}
+                    compact
+                  />
+                ))}
+                {displayDrivers.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic py-2">No drivers scheduled for this day</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* Today View - Full Status Grid */
+            <div className="grid grid-cols-2 gap-4">
+              {/* Left Column */}
+              <div className="flex flex-col gap-3">
+                {/* Assigned */}
+                <div className="space-y-1">
+                  <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                    <span>Assigned</span>
+                    <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                      {assignedDrivers}
+                    </span>
+                  </h3>
+                  <div className="flex flex-wrap gap-1">
+                    {displayDrivers
+                      .filter((d) => d.status === "assigned")
+                      .map((driver) => (
+                        <DriverRow
+                          key={driver.id}
+                          driver={driver}
+                          canEdit={isAdmin}
+                          isUpdated={recentlyUpdatedDrivers.has(driver.id)}
+                          onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
+                          availableVehicles={vehicles}
+                          compact
+                        />
+                      ))}
+                    {assignedDrivers === 0 && (
+                      <p className="text-xs text-muted-foreground italic py-2">No assigned drivers</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Unassigned */}
+                <div className="space-y-1">
+                  <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                    <span>Unassigned</span>
+                    <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                      {unassignedDrivers}
+                    </span>
+                  </h3>
+                  <div className="flex flex-wrap gap-1">
+                    {displayDrivers
+                      .filter((d) => d.status === "unassigned" || d.status === "scheduled")
+                      .map((driver) => (
+                        <DriverRow
+                          key={driver.id}
+                          driver={driver}
+                          canEdit={isAdmin}
+                          isUpdated={recentlyUpdatedDrivers.has(driver.id)}
+                          onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
+                          availableVehicles={vehicles}
+                          compact
+                        />
+                      ))}
+                    {unassignedDrivers === 0 && (
+                      <p className="text-xs text-muted-foreground italic py-2">No unassigned drivers</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Unassigned */}
-              <div className="space-y-1">
-                <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-                  <span>Unassigned</span>
-                  <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
-                    {unassignedDrivers}
-                  </span>
-                </h3>
-                <div className="flex flex-wrap gap-1">
-                  {drivers
-                    .filter((d) => d.status === "unassigned" || d.status === "scheduled")
-                    .map((driver) => (
-                      <DriverRow
-                        key={driver.id}
-                        driver={driver}
-                        canEdit={isAdmin}
-                        isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                        onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
-                        availableVehicles={vehicles}
-                        compact
-                      />
-                    ))}
-                  {unassignedDrivers === 0 && (
-                    <p className="text-xs text-muted-foreground italic py-2">No unassigned drivers</p>
-                  )}
+              {/* Right Column */}
+              <div className="flex flex-col gap-3">
+                {/* Working */}
+                <div className="space-y-1">
+                  <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                    <span>Working</span>
+                    <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                      {workingDrivers}
+                    </span>
+                  </h3>
+                  <div className="flex flex-wrap gap-1">
+                    {displayDrivers
+                      .filter((d) => ["on-route", "working"].includes(d.status))
+                      .map((driver) => (
+                        <DriverRow
+                          key={driver.id}
+                          driver={driver}
+                          canEdit={isAdmin}
+                          isUpdated={recentlyUpdatedDrivers.has(driver.id)}
+                          onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
+                          availableVehicles={vehicles}
+                          compact
+                        />
+                      ))}
+                    {workingDrivers === 0 && (
+                      <p className="text-xs text-muted-foreground italic py-2">No drivers working</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Punched Out */}
+                <div className="space-y-1">
+                  <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                    <span>Punched Out</span>
+                    <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                      {punchedOutDrivers}
+                    </span>
+                  </h3>
+                  <div className="flex flex-wrap gap-1">
+                    {displayDrivers
+                      .filter((d) => ["offline", "off", "punched-out"].includes(d.status))
+                      .map((driver) => (
+                        <DriverRow
+                          key={driver.id}
+                          driver={driver}
+                          canEdit={isAdmin}
+                          isUpdated={recentlyUpdatedDrivers.has(driver.id)}
+                          onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
+                          availableVehicles={vehicles}
+                          compact
+                        />
+                      ))}
+                    {punchedOutDrivers === 0 && (
+                      <p className="text-xs text-muted-foreground italic py-2">No drivers punched out</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-
-            {/* Right Column */}
-            <div className="flex flex-col gap-3">
-              {/* Working */}
-              <div className="space-y-1">
-                <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-                  <span>Working</span>
-                  <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
-                    {workingDrivers}
-                  </span>
-                </h3>
-                <div className="flex flex-wrap gap-1">
-                  {drivers
-                    .filter((d) => ["on-route", "working"].includes(d.status))
-                    .map((driver) => (
-                      <DriverRow
-                        key={driver.id}
-                        driver={driver}
-                        canEdit={isAdmin}
-                        isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                        onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
-                        availableVehicles={vehicles}
-                        compact
-                      />
-                    ))}
-                  {workingDrivers === 0 && (
-                    <p className="text-xs text-muted-foreground italic py-2">No drivers working</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Punched Out */}
-              <div className="space-y-1">
-                <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-                  <span>Punched Out</span>
-                  <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
-                    {punchedOutDrivers}
-                  </span>
-                </h3>
-                <div className="flex flex-wrap gap-1">
-                  {drivers
-                    .filter((d) => ["offline", "off", "punched-out"].includes(d.status))
-                    .map((driver) => (
-                      <DriverRow
-                        key={driver.id}
-                        driver={driver}
-                        canEdit={isAdmin}
-                        isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                        onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
-                        availableVehicles={vehicles}
-                        compact
-                      />
-                    ))}
-                  {punchedOutDrivers === 0 && (
-                    <p className="text-xs text-muted-foreground italic py-2">No drivers punched out</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
         </section>
 
         {/* Stats Overview - Collapsible */}
