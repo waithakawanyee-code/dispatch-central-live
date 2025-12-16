@@ -308,37 +308,74 @@ const Drivers = () => {
           </div>
 
           {isFutureDate ? (
-            /* Future Date View - Show drivers with schedule times */
-            <div className="space-y-1">
-              <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-                <span>Scheduled for {format(selectedDate, "EEEE")}</span>
-                <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
-                  {unassignedDrivers}
-                </span>
-              </h3>
-              <div className="flex flex-col gap-1">
-                {displayDrivers.map((driver) => (
-                  <div
-                    key={driver.id}
-                    className="flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm"
-                  >
-                    <span className="h-2 w-2 rounded-full bg-slate-500 shrink-0" />
-                    <span className="font-medium text-foreground flex-1">{driver.name}</span>
-                    {driver.schedule && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
-                        <Clock className="h-3 w-3" />
-                        <span>
-                          {driver.schedule.start_time?.slice(0, 5) || "--:--"}
-                          {" - "}
-                          {driver.schedule.end_time?.slice(0, 5) || "--:--"}
-                        </span>
+            /* Future Date View - Two Column Layout */
+            <div className="grid grid-cols-2 gap-6">
+              {/* Left Column - Scheduled/Unassigned */}
+              <div className="space-y-2">
+                <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
+                  <span>Scheduled</span>
+                  <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
+                    {displayDrivers.filter(d => d.status === "unassigned").length}
+                  </span>
+                </h3>
+                <div className="flex flex-col gap-1">
+                  {displayDrivers
+                    .filter(d => d.status === "unassigned")
+                    .map((driver) => (
+                      <div
+                        key={driver.id}
+                        className="flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm"
+                      >
+                        <span className="h-2 w-2 rounded-full bg-slate-500 shrink-0" />
+                        <span className="font-medium text-foreground flex-1">{driver.name}</span>
+                        {driver.schedule && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
+                            <Clock className="h-3 w-3" />
+                            <span>
+                              {driver.schedule.start_time?.slice(0, 5) || "--:--"}
+                              {" - "}
+                              {driver.schedule.end_time?.slice(0, 5) || "--:--"}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))}
-                {displayDrivers.length === 0 && (
-                  <p className="text-xs text-muted-foreground italic py-2">No drivers scheduled for this day</p>
-                )}
+                    ))}
+                  {displayDrivers.filter(d => d.status === "unassigned").length === 0 && (
+                    <p className="text-xs text-muted-foreground italic py-2">No drivers scheduled for this day</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column - Assigned */}
+              <div className="space-y-2">
+                <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
+                  <span>Assigned</span>
+                  <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
+                    {displayDrivers.filter(d => d.status === "assigned").length}
+                  </span>
+                </h3>
+                <div className="flex flex-col gap-1">
+                  {displayDrivers
+                    .filter(d => d.status === "assigned")
+                    .map((driver) => (
+                      <div
+                        key={driver.id}
+                        className="flex items-center gap-3 rounded border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm"
+                      >
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="font-medium text-foreground flex-1">{driver.name}</span>
+                        {driver.report_time && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
+                            <Clock className="h-3 w-3" />
+                            <span>{driver.report_time.slice(0, 5)}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  {displayDrivers.filter(d => d.status === "assigned").length === 0 && (
+                    <p className="text-xs text-muted-foreground italic py-2">No drivers assigned yet</p>
+                  )}
+                </div>
               </div>
             </div>
           ) : (
