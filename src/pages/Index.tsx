@@ -84,13 +84,13 @@ const Index = () => {
               </div>
 
               {/* Right Column - Split Top/Bottom */}
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3">
                 {/* Top - Currently Clocked In */}
-                <div className="space-y-2 flex-1">
+                <div className="space-y-1">
                   <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
                     Currently Clocked In
                   </h3>
-                  <div className="space-y-1">
+                  <div className="flex flex-wrap gap-1">
                     {drivers
                       .filter((d) => ["available", "on-route", "break", "working"].includes(d.status))
                       .map((driver) => (
@@ -100,6 +100,7 @@ const Index = () => {
                           canEdit={isAdmin}
                           isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                           onStatusChange={(newStatus) => updateDriverStatus(driver.id, newStatus)}
+                          compact
                         />
                       ))}
                     {drivers.filter((d) => ["available", "on-route", "break", "working"].includes(d.status)).length === 0 && (
@@ -109,11 +110,11 @@ const Index = () => {
                 </div>
 
                 {/* Bottom - Clocked Out */}
-                <div className="space-y-2 flex-1">
+                <div className="space-y-1">
                   <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
                     Clocked Out
                   </h3>
-                  <div className="space-y-1">
+                  <div className="flex flex-wrap gap-1">
                     {drivers
                       .filter((d) => ["offline", "off"].includes(d.status))
                       .map((driver) => (
@@ -123,6 +124,7 @@ const Index = () => {
                           canEdit={isAdmin}
                           isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                           onStatusChange={(newStatus) => updateDriverStatus(driver.id, newStatus)}
+                          compact
                         />
                       ))}
                     {drivers.filter((d) => ["offline", "off"].includes(d.status)).length === 0 && (
