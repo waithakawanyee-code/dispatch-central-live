@@ -31,6 +31,8 @@ export function useDispatchData() {
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
   const [vehicles, setVehicles] = useState<VehicleRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recentlyUpdatedDrivers, setRecentlyUpdatedDrivers] = useState<Set<string>>(new Set());
+  const [recentlyUpdatedVehicles, setRecentlyUpdatedVehicles] = useState<Set<string>>(new Set());
   const isInitialLoad = useRef(true);
 
   // Fetch initial data
@@ -68,6 +70,17 @@ export function useDispatchData() {
             if (!isInitialLoad.current && oldDriver.status !== newDriver.status) {
               playAlertForStatus(newDriver.status);
             }
+            // Flash the updated row
+            if (!isInitialLoad.current) {
+              setRecentlyUpdatedDrivers((prev) => new Set(prev).add(newDriver.id));
+              setTimeout(() => {
+                setRecentlyUpdatedDrivers((prev) => {
+                  const next = new Set(prev);
+                  next.delete(newDriver.id);
+                  return next;
+                });
+              }, 1500);
+            }
             setDrivers((prev) =>
               prev.map((d) => (d.id === newDriver.id ? newDriver : d))
             );
@@ -90,6 +103,17 @@ export function useDispatchData() {
               playAlertForStatus(newVehicle.status);
             } else if (!isInitialLoad.current && oldVehicle.clean_status !== newVehicle.clean_status) {
               playAlertForStatus(newVehicle.clean_status);
+            }
+            // Flash the updated row
+            if (!isInitialLoad.current) {
+              setRecentlyUpdatedVehicles((prev) => new Set(prev).add(newVehicle.id));
+              setTimeout(() => {
+                setRecentlyUpdatedVehicles((prev) => {
+                  const next = new Set(prev);
+                  next.delete(newVehicle.id);
+                  return next;
+                });
+              }, 1500);
             }
             setVehicles((prev) =>
               prev.map((v) => (v.id === newVehicle.id ? newVehicle : v))
@@ -163,6 +187,8 @@ export function useDispatchData() {
     drivers,
     vehicles,
     loading,
+    recentlyUpdatedDrivers,
+    recentlyUpdatedVehicles,
     updateDriverStatus,
     updateVehicleStatus,
     updateVehicleCleanStatus,

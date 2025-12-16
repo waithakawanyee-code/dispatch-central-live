@@ -18,6 +18,7 @@ interface VehicleRowProps {
   onStatusChange?: (newStatus: VehicleStatus) => void;
   onCleanStatusChange?: (newCleanStatus: CleanStatus) => void;
   canEdit?: boolean;
+  isUpdated?: boolean;
 }
 
 const vehicleStatusOptions: { value: VehicleStatus; label: string }[] = [
@@ -30,14 +31,15 @@ const cleanStatusOptions: { value: CleanStatus; label: string }[] = [
   { value: "dirty", label: "Dirty" },
 ];
 
-export function VehicleRow({ vehicle, onStatusChange, onCleanStatusChange, canEdit = true }: VehicleRowProps) {
+export function VehicleRow({ vehicle, onStatusChange, onCleanStatusChange, canEdit = true, isUpdated = false }: VehicleRowProps) {
   return (
     <div
       className={cn(
         "flex items-center gap-4 rounded-lg border border-border bg-card px-3 py-2 transition-all duration-200",
         "hover:border-primary/30",
         vehicle.status === "active" && "border-l-4 border-l-status-active",
-        vehicle.status === "out-of-service" && "border-l-4 border-l-status-out-of-service"
+        vehicle.status === "out-of-service" && "border-l-4 border-l-status-out-of-service",
+        isUpdated && "animate-row-flash"
       )}
     >
       <div

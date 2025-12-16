@@ -80,11 +80,16 @@ export default {
           "0%, 100%": { transform: "scale(1)", opacity: "1" },
           "50%": { transform: "scale(1.2)", opacity: "0.7" },
         },
+        "row-flash": {
+          "0%": { backgroundColor: "hsl(var(--primary) / 0.3)" },
+          "100%": { backgroundColor: "transparent" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-dot": "pulse-dot 1.5s ease-in-out infinite",
+        "row-flash": "row-flash 1.5s ease-out",
       },
     },
   },

@@ -16,6 +16,7 @@ interface DriverRowProps {
   driver: DriverRow;
   onStatusChange?: (newStatus: DriverStatus) => void;
   canEdit?: boolean;
+  isUpdated?: boolean;
 }
 
 const statusOptions: { value: DriverStatus; label: string }[] = [
@@ -25,7 +26,7 @@ const statusOptions: { value: DriverStatus; label: string }[] = [
   { value: "offline", label: "Offline" },
 ];
 
-export function DriverRow({ driver, onStatusChange, canEdit = true }: DriverRowProps) {
+export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false }: DriverRowProps) {
   return (
     <div
       className={cn(
@@ -34,7 +35,8 @@ export function DriverRow({ driver, onStatusChange, canEdit = true }: DriverRowP
         driver.status === "available" && "border-l-4 border-l-status-available",
         driver.status === "on-route" && "border-l-4 border-l-status-on-route",
         driver.status === "break" && "border-l-4 border-l-status-break",
-        driver.status === "offline" && "border-l-4 border-l-status-offline opacity-60"
+        driver.status === "offline" && "border-l-4 border-l-status-offline opacity-60",
+        isUpdated && "animate-row-flash"
       )}
     >
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary">
