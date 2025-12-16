@@ -1,11 +1,12 @@
 import { Link, Navigate } from "react-router-dom";
-import { ArrowLeft, Users, Truck, History, ShieldAlert, UserCog, Calendar } from "lucide-react";
+import { ArrowLeft, Users, Truck, History, ShieldAlert, UserCog, Calendar, Clock } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DriverManagement } from "@/components/admin/DriverManagement";
 import { VehicleManagement } from "@/components/admin/VehicleManagement";
 import { HistoryLog } from "@/components/admin/HistoryLog";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { ScheduleManagement } from "@/components/admin/ScheduleManagement";
+import { TimePunchReport } from "@/components/admin/TimePunchReport";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 
@@ -74,6 +75,10 @@ const Admin = () => {
               <UserCog className="h-4 w-4" />
               Users
             </TabsTrigger>
+            <TabsTrigger value="timepunch" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Time Punches
+            </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-2">
               <History className="h-4 w-4" />
               History
@@ -94,6 +99,10 @@ const Admin = () => {
 
           <TabsContent value="users">
             <UserManagement />
+          </TabsContent>
+
+          <TabsContent value="timepunch">
+            <TimePunchReport />
           </TabsContent>
 
           <TabsContent value="history">

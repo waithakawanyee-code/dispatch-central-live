@@ -121,6 +121,47 @@ export type Database = {
         }
         Relationships: []
       }
+      time_punches: {
+        Row: {
+          created_at: string
+          driver_id: string
+          driver_name: string
+          id: string
+          notes: string | null
+          punch_time: string
+          punch_type: string
+          punched_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          driver_id: string
+          driver_name: string
+          id?: string
+          notes?: string | null
+          punch_time?: string
+          punch_type: string
+          punched_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          driver_id?: string
+          driver_name?: string
+          id?: string
+          notes?: string | null
+          punch_time?: string
+          punch_type?: string
+          punched_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_punches_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
