@@ -4,8 +4,6 @@ import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
 import { DriverRow } from "@/components/DriverRow";
 import { VehicleRow } from "@/components/VehicleRow";
-import { ScheduleRow } from "@/components/ScheduleRow";
-import { mockSchedule } from "@/data/mockData";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -153,37 +151,6 @@ const Index = () => {
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Daily Schedule */}
-        <section className="mt-6">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Clock className="h-4 w-4 text-primary" />
-              Today's Schedule
-            </h2>
-            <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-              {mockSchedule.length} SHIFTS
-            </span>
-          </div>
-
-          {/* Schedule Header */}
-          <div className="mb-2 grid grid-cols-[1fr_120px_120px_1fr_100px] gap-4 px-4 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            <span>Driver</span>
-            <span>Vehicle</span>
-            <span>Shift</span>
-            <span>Route</span>
-            <span>Status</span>
-          </div>
-
-          <div className="space-y-1.5">
-            {mockSchedule.map((entry) => (
-              <ScheduleRow
-                key={entry.id}
-                entry={entry}
-                isActive={entry.status === "on-route"}
-              />
-            ))}
-          </div>
-        </section>
       </main>
     </div>
   );
