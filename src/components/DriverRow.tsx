@@ -295,6 +295,8 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
           canEdit && "cursor-pointer",
           driver.status === "unassigned" && "border-slate-500/30",
           driver.status === "scheduled" && "border-amber-500/30 bg-amber-500/5",
+          driver.status === "assigned" && "border-emerald-500/30 bg-emerald-500/5",
+          ["working", "on-route"].includes(driver.status) && "border-status-available/30 bg-status-available/5",
           ["offline", "punched-out"].includes(driver.status) && "border-status-offline/30 opacity-70",
           isUpdated && "animate-row-flash"
         )}
@@ -304,12 +306,22 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
             "h-1.5 w-1.5 rounded-full shrink-0",
             driver.status === "scheduled" && "bg-amber-500",
             driver.status === "unassigned" && "bg-slate-500",
+            driver.status === "assigned" && "bg-emerald-500",
+            ["working", "on-route"].includes(driver.status) && "bg-status-available",
             ["offline", "punched-out"].includes(driver.status) && "bg-status-offline"
           )}
         />
         <span className="font-mono font-medium text-foreground truncate max-w-[100px]">{driver.name}</span>
       </div>
     );
+
+    // Determine which options to show based on status
+    const getMiniOptions = () => {
+      if (["punched-out", "offline", "off"].includes(driver.status)) return compactPunchedOutOptions;
+      if (["working", "on-route"].includes(driver.status)) return compactWorkingOptions;
+      if (driver.status === "assigned") return compactAssignedOptions;
+      return compactUnassignedOptions;
+    };
 
     if (canEdit) {
       return (
@@ -328,7 +340,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                   <span>View Times</span>
                 </DropdownMenuItem>
               )}
-              {(["punched-out", "offline", "off"].includes(driver.status) ? compactPunchedOutOptions : compactUnassignedOptions).map((option) => (
+              {getMiniOptions().map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
