@@ -51,6 +51,7 @@ import type { Database } from "@/integrations/supabase/types";
 type VehicleStatus = Database["public"]["Enums"]["vehicle_status"];
 type CleanStatus = Database["public"]["Enums"]["clean_status"];
 type VehicleType = Database["public"]["Enums"]["vehicle_type"];
+type VehicleClassification = "house" | "take_home";
 
 // Vehicle types with CDL requirements
 export const VEHICLE_TYPES: { value: VehicleType; label: string; requiresCdl: boolean }[] = [
@@ -75,6 +76,8 @@ interface VehicleFormData {
   clean_status: CleanStatus;
   vehicle_type: VehicleType | "";
   notes: string;
+  classification: VehicleClassification;
+  assigned_driver_id: string;
 }
 
 const initialFormData: VehicleFormData = {
@@ -84,6 +87,8 @@ const initialFormData: VehicleFormData = {
   clean_status: "clean",
   vehicle_type: "",
   notes: "",
+  classification: "house",
+  assigned_driver_id: "",
 };
 
 const validStatuses: VehicleStatus[] = ["active", "out-of-service"];
@@ -223,6 +228,8 @@ export function VehicleManagement() {
       status: formData.status,
       clean_status: formData.clean_status,
       notes: formData.notes.trim() || null,
+      classification: formData.classification,
+      assigned_driver_id: formData.assigned_driver_id || null,
     });
 
     if (error) {
@@ -253,6 +260,8 @@ export function VehicleManagement() {
         status: formData.status,
         clean_status: formData.clean_status,
         notes: formData.notes.trim() || null,
+        classification: formData.classification,
+        assigned_driver_id: formData.assigned_driver_id || null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id);
@@ -286,6 +295,8 @@ export function VehicleManagement() {
       status: vehicle.status,
       clean_status: vehicle.clean_status,
       notes: (vehicle as any).notes || "",
+      classification: (vehicle as any).classification || "house",
+      assigned_driver_id: (vehicle as any).assigned_driver_id || "",
     });
   };
 
@@ -432,6 +443,48 @@ export function VehicleManagement() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>Classification</Label>
+                  <Select
+                    value={formData.classification}
+                    onValueChange={(value: VehicleClassification) => {
+                      setFormData({ 
+                        ...formData, 
+                        classification: value,
+                        assigned_driver_id: value === "house" ? "" : formData.assigned_driver_id
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="house">House (Fleet)</SelectItem>
+                      <SelectItem value="take_home">Take Home</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {formData.classification === "take_home" && (
+                  <div className="space-y-2">
+                    <Label>Take-Home Driver</Label>
+                    <Select
+                      value={formData.assigned_driver_id}
+                      onValueChange={(value) => setFormData({ ...formData, assigned_driver_id: value === "_none" ? "" : value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select driver" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">No driver assigned</SelectItem>
+                        {allDrivers.filter(d => d.is_active).map(driver => (
+                          <SelectItem key={driver.id} value={driver.id}>
+                            {driver.name} {driver.has_cdl && <span className="text-muted-foreground">(CDL)</span>}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>

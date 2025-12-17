@@ -322,6 +322,8 @@ export type Database = {
       }
       vehicles: {
         Row: {
+          assigned_driver_id: string | null
+          classification: Database["public"]["Enums"]["vehicle_classification"]
           clean_status: Database["public"]["Enums"]["clean_status"]
           created_at: string
           driver: string | null
@@ -334,6 +336,8 @@ export type Database = {
           vehicle_type: Database["public"]["Enums"]["vehicle_type"] | null
         }
         Insert: {
+          assigned_driver_id?: string | null
+          classification?: Database["public"]["Enums"]["vehicle_classification"]
           clean_status?: Database["public"]["Enums"]["clean_status"]
           created_at?: string
           driver?: string | null
@@ -346,6 +350,8 @@ export type Database = {
           vehicle_type?: Database["public"]["Enums"]["vehicle_type"] | null
         }
         Update: {
+          assigned_driver_id?: string | null
+          classification?: Database["public"]["Enums"]["vehicle_classification"]
           clean_status?: Database["public"]["Enums"]["clean_status"]
           created_at?: string
           driver?: string | null
@@ -357,7 +363,15 @@ export type Database = {
           updated_at?: string
           vehicle_type?: Database["public"]["Enums"]["vehicle_type"] | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_assigned_driver_id_fkey"
+            columns: ["assigned_driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -399,6 +413,7 @@ export type Database = {
         | "working"
         | "unassigned"
         | "punched-out"
+      vehicle_classification: "house" | "take_home"
       vehicle_status: "active" | "out-of-service"
       vehicle_type:
         | "sedan_volvo"
@@ -554,6 +569,7 @@ export const Constants = {
         "unassigned",
         "punched-out",
       ],
+      vehicle_classification: ["house", "take_home"],
       vehicle_status: ["active", "out-of-service"],
       vehicle_type: [
         "sedan_volvo",
