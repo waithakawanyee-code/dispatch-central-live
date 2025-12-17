@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfWeek, endOfWeek, addWeeks, eachDayOfInterval } from "date-fns";
-import { Clock, Download, ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { Clock, Download, ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, Calendar, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -388,6 +388,106 @@ export function TimePunchReport() {
     window.URL.revokeObjectURL(url);
   };
 
+  const exportWeeklyToCSV = () => {
+    const headers = ["Driver", ...weekDays.map(d => format(d, "EEE MM/dd")), "Total"];
+    const rows = weeklyDriverHours.map((driver) => {
+      const dailyCells = weekDays.map((day) => {
+        const dateStr = format(day, "yyyy-MM-dd");
+        const minutes = driver.dailyHours[dateStr] || 0;
+        return minutes > 0 ? formatHoursMinutes(minutes) : "";
+      });
+      return [driver.driverName, ...dailyCells, formatHoursMinutes(driver.weekTotal)];
+    });
+
+    // Add total row
+    const totalRow = ["Total", ...weekDays.map((day) => {
+      const dateStr = format(day, "yyyy-MM-dd");
+      const dayTotal = weeklyDriverHours.reduce((sum, d) => sum + (d.dailyHours[dateStr] || 0), 0);
+      return dayTotal > 0 ? formatHoursMinutes(dayTotal) : "";
+    }), formatHoursMinutes(weeklyDriverHours.reduce((sum, d) => sum + d.weekTotal, 0))];
+    rows.push(totalRow);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `weekly-hours-${format(currentWeekStart, "yyyy-MM-dd")}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const exportWeeklyToPDF = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast({ title: "Error", description: "Please allow popups to export PDF", variant: "destructive" });
+      return;
+    }
+
+    const totalHours = weeklyDriverHours.reduce((sum, d) => sum + d.weekTotal, 0);
+
+    const tableRows = weeklyDriverHours.map((driver) => {
+      const dailyCells = weekDays.map((day) => {
+        const dateStr = format(day, "yyyy-MM-dd");
+        const minutes = driver.dailyHours[dateStr] || 0;
+        return `<td style="text-align:center;padding:8px;border:1px solid #ddd;">${minutes > 0 ? formatHoursMinutes(minutes) : "-"}</td>`;
+      }).join("");
+      return `<tr><td style="padding:8px;border:1px solid #ddd;font-weight:500;">${driver.driverName}</td>${dailyCells}<td style="text-align:center;padding:8px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">${formatHoursMinutes(driver.weekTotal)}</td></tr>`;
+    }).join("");
+
+    const totalRowCells = weekDays.map((day) => {
+      const dateStr = format(day, "yyyy-MM-dd");
+      const dayTotal = weeklyDriverHours.reduce((sum, d) => sum + (d.dailyHours[dateStr] || 0), 0);
+      return `<td style="text-align:center;padding:8px;border:1px solid #ddd;font-weight:bold;">${dayTotal > 0 ? formatHoursMinutes(dayTotal) : "-"}</td>`;
+    }).join("");
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Weekly Time Report - ${format(currentWeekStart, "MMM d")} - ${format(currentWeekEnd, "MMM d, yyyy")}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { font-size: 18px; margin-bottom: 5px; }
+          h2 { font-size: 14px; color: #666; margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          th { background: #f0f0f0; padding: 8px; border: 1px solid #ddd; text-align: center; }
+          @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+        </style>
+      </head>
+      <body>
+        <h1>Weekly Time Punch Report</h1>
+        <h2>${format(currentWeekStart, "MMMM d")} - ${format(currentWeekEnd, "MMMM d, yyyy")}</h2>
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:left;">Driver</th>
+              ${weekDays.map(d => `<th>${format(d, "EEE")}<br/>${format(d, "M/d")}</th>`).join("")}
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+            <tr style="background:#e8e8e8;font-weight:bold;">
+              <td style="padding:8px;border:1px solid #ddd;">Total</td>
+              ${totalRowCells}
+              <td style="text-align:center;padding:8px;border:1px solid #ddd;">${formatHoursMinutes(totalHours)}</td>
+            </tr>
+          </tbody>
+        </table>
+        <script>window.onload = function() { window.print(); }</script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   const openEditDialog = (punch: TimePunch) => {
     setEditingPunch(punch);
     const punchDate = new Date(punch.punch_time);
@@ -526,14 +626,34 @@ export function TimePunchReport() {
                 <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">Current Week</span>
               )}
             </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setWeekOffset((prev) => prev + 1)}
-              disabled={weekOffset >= 0}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportWeeklyToCSV}
+                disabled={weeklyDriverHours.length === 0}
+              >
+                <Download className="h-4 w-4 mr-1" />
+                CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportWeeklyToPDF}
+                disabled={weeklyDriverHours.length === 0}
+              >
+                <FileText className="h-4 w-4 mr-1" />
+                PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setWeekOffset((prev) => prev + 1)}
+                disabled={weekOffset >= 0}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {weeklyLoading ? (
