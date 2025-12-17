@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, UserCheck, UserX } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, UserCheck, UserX, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -725,6 +725,11 @@ export function DriverManagement() {
                       )}
                     </button>
                     {driver.name}
+                    {(driver as any).default_vehicle && (
+                      <span title={`Take-home: ${(driver as any).default_vehicle}`}>
+                        <Home className="h-3.5 w-3.5 text-primary" />
+                      </span>
+                    )}
                     {hasNotes && (
                       <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />
                     )}

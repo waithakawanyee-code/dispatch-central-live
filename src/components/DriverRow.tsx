@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, Phone, Clock, Truck, Pencil, Trash2, Check, X, Plus, Award } from "lucide-react";
+import { User, Phone, Clock, Truck, Pencil, Trash2, Check, X, Plus, Award, Home } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import {
@@ -343,6 +343,9 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
           )}
         />
         <span className="font-mono font-medium text-foreground truncate max-w-[100px]">{driver.name}</span>
+        {(driver as any).default_vehicle && (
+          <Home className="h-3 w-3 text-primary shrink-0" />
+        )}
         {driver.has_cdl && (
           <span className="text-[9px] font-semibold text-primary bg-primary/10 px-1 rounded">CDL</span>
         )}
@@ -1030,6 +1033,11 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
         <div className="min-w-[120px] flex-1">
           <p className="flex items-center gap-2 text-sm font-medium text-foreground">
             {driver.name}
+            {(driver as any).default_vehicle && (
+              <span title={`Take-home: ${(driver as any).default_vehicle}`}>
+                <Home className="h-3.5 w-3.5 text-primary" />
+              </span>
+            )}
             {driver.has_cdl && (
               <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
             )}
