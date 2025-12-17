@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search, SlidersHorizontal } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search, SlidersHorizontal, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -49,6 +50,7 @@ interface DriverFormData {
   phone: string;
   is_active: boolean;
   has_cdl: boolean;
+  notes: string;
 }
 
 const initialFormData: DriverFormData = {
@@ -57,6 +59,7 @@ const initialFormData: DriverFormData = {
   phone: "",
   is_active: true,
   has_cdl: false,
+  notes: "",
 };
 
 export function DriverManagement() {
@@ -224,6 +227,7 @@ export function DriverManagement() {
       phone: formData.phone.trim() || null,
       is_active: formData.is_active,
       has_cdl: formData.has_cdl,
+      notes: formData.notes.trim() || null,
     });
 
     if (error) {
@@ -249,6 +253,7 @@ export function DriverManagement() {
         phone: formData.phone.trim() || null,
         is_active: formData.is_active,
         has_cdl: formData.has_cdl,
+        notes: formData.notes.trim() || null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id);
@@ -280,6 +285,7 @@ export function DriverManagement() {
       phone: driver.phone || "",
       is_active: (driver as any).is_active !== false,
       has_cdl: (driver as any).has_cdl === true,
+      notes: (driver as any).notes || "",
     });
   };
 
@@ -445,6 +451,16 @@ export function DriverManagement() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Additional notes..."
+                    rows={2}
+                  />
+                </div>
                 <Button onClick={handleAdd} className="w-full">Add Driver</Button>
               </div>
             </DialogContent>
@@ -533,7 +549,14 @@ export function DriverManagement() {
                 </>
               ) : (
                 <>
-                  <span className={`font-medium ${isInactive ? "line-through text-muted-foreground" : ""}`}>{driver.name}</span>
+                  <span className={`font-medium flex items-center gap-1.5 ${isInactive ? "line-through text-muted-foreground" : ""}`}>
+                    {driver.name}
+                    {(driver as any).notes && (
+                      <span title={(driver as any).notes}>
+                        <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />
+                      </span>
+                    )}
+                  </span>
                   <span className={`font-mono text-xs ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.code || "-"}</span>
                   <span className="font-mono text-muted-foreground">{driver.phone || "-"}</span>
                   

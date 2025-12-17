@@ -93,6 +93,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          notes: string | null
           phone: string | null
           report_time: string | null
           status: Database["public"]["Enums"]["driver_status"]
@@ -106,6 +107,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          notes?: string | null
           phone?: string | null
           report_time?: string | null
           status?: Database["public"]["Enums"]["driver_status"]
@@ -119,6 +121,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          notes?: string | null
           phone?: string | null
           report_time?: string | null
           status?: Database["public"]["Enums"]["driver_status"]
