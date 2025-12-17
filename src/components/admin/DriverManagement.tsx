@@ -51,7 +51,7 @@ const initialFormData: DriverFormData = {
 };
 
 export function DriverManagement() {
-  const { drivers } = useDispatchData();
+  const { allDrivers: drivers } = useDispatchData();
   const { toast } = useToast();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
