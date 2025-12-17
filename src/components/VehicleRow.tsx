@@ -81,12 +81,6 @@ export function VehicleRow({ vehicle, onStatusChange, onCleanStatusChange, canEd
         )}
       </div>
 
-      {vehicle.mileage && (
-        <span className="hidden font-mono text-[10px] text-muted-foreground md:inline">
-          {vehicle.mileage.toLocaleString()} mi
-        </span>
-      )}
-
       {canEdit ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

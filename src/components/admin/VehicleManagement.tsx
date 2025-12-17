@@ -70,7 +70,6 @@ export const VEHICLE_TYPES: { value: VehicleType; label: string; requiresCdl: bo
 interface VehicleFormData {
   unit: string;
   driver: string;
-  mileage: string;
   status: VehicleStatus;
   clean_status: CleanStatus;
   vehicle_type: VehicleType | "";
@@ -79,7 +78,6 @@ interface VehicleFormData {
 const initialFormData: VehicleFormData = {
   unit: "",
   driver: "",
-  mileage: "",
   status: "active",
   clean_status: "clean",
   vehicle_type: "",
@@ -138,7 +136,6 @@ export function VehicleManagement() {
       { key: "unit", header: "Unit" },
       { key: "vehicle_type", header: "Vehicle Type" },
       { key: "driver", header: "Driver" },
-      { key: "mileage", header: "Mileage" },
       { key: "status", header: "Status" },
       { key: "clean_status", header: "Clean Status" },
     ]);
@@ -147,7 +144,7 @@ export function VehicleManagement() {
   };
 
   const handleDownloadTemplate = () => {
-    const template = "Unit,Vehicle Type,Driver,Mileage,Status,Clean Status\nV-109,sedan_volvo,Jane Smith,25000,active,clean";
+    const template = "Unit,Vehicle Type,Driver,Status,Clean Status\nV-109,sedan_volvo,Jane Smith,active,clean";
     downloadCSV(template, "vehicles-template.csv");
     toast({ title: "Template Downloaded", description: "CSV template with example row" });
   };
@@ -163,7 +160,6 @@ export function VehicleManagement() {
         unit: string;
         vehicle_type?: string;
         driver?: string;
-        mileage?: string;
         status?: string;
         clean_status?: string;
       }>(text);
@@ -179,7 +175,6 @@ export function VehicleManagement() {
           unit: row.unit.trim(),
           vehicle_type: validVehicleTypes.includes(row.vehicle_type as VehicleType) ? row.vehicle_type as VehicleType : null,
           driver: row.driver?.trim() || null,
-          mileage: row.mileage ? parseInt(row.mileage) : null,
           status: (validStatuses.includes(row.status as VehicleStatus) ? row.status : "active") as VehicleStatus,
           clean_status: (validCleanStatuses.includes(row.clean_status as CleanStatus) ? row.clean_status : "clean") as CleanStatus,
         }));
@@ -218,7 +213,6 @@ export function VehicleManagement() {
       unit: formData.unit.trim(),
       vehicle_type: formData.vehicle_type || null,
       driver: formData.driver.trim() || null,
-      mileage: formData.mileage ? parseInt(formData.mileage) : null,
       status: formData.status,
       clean_status: formData.clean_status,
     });
@@ -248,7 +242,6 @@ export function VehicleManagement() {
         unit: formData.unit.trim(),
         vehicle_type: formData.vehicle_type || null,
         driver: formData.driver.trim() || null,
-        mileage: formData.mileage ? parseInt(formData.mileage) : null,
         status: formData.status,
         clean_status: formData.clean_status,
         updated_at: new Date().toISOString(),
@@ -280,7 +273,6 @@ export function VehicleManagement() {
       unit: vehicle.unit,
       vehicle_type: vehicle.vehicle_type || "",
       driver: vehicle.driver || "",
-      mileage: vehicle.mileage?.toString() || "",
       status: vehicle.status,
       clean_status: vehicle.clean_status,
     });
@@ -403,16 +395,6 @@ export function VehicleManagement() {
                       )}
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="mileage">Mileage</Label>
-                  <Input
-                    id="mileage"
-                    type="number"
-                    value={formData.mileage}
-                    onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
-                    placeholder="50000"
-                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="vehicle_type">Vehicle Type</Label>
@@ -538,7 +520,6 @@ export function VehicleManagement() {
           <span>Unit</span>
           <span>Type</span>
           <span>Driver</span>
-          <span>Mileage</span>
           <span>Status</span>
           <span>Clean</span>
           <span className="text-right">Actions</span>
@@ -552,7 +533,7 @@ export function VehicleManagement() {
           paginatedVehicles.map((vehicle) => (
             <div
               key={vehicle.id}
-              className="grid grid-cols-[32px_80px_110px_1fr_80px_90px_80px_90px] gap-3 border-b border-border px-4 py-3 text-sm last:border-0 items-center"
+              className="grid grid-cols-[32px_80px_110px_1fr_90px_80px_90px] gap-3 border-b border-border px-4 py-3 text-sm last:border-0 items-center"
             >
               <Checkbox
                 checked={selectedIds.has(vehicle.id)}
@@ -604,12 +585,6 @@ export function VehicleManagement() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Input
-                    type="number"
-                    value={formData.mileage}
-                    onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
-                    className="h-8"
-                  />
                   <Select
                     value={formData.status}
                     onValueChange={(value: VehicleStatus) => setFormData({ ...formData, status: value })}
@@ -654,9 +629,6 @@ export function VehicleManagement() {
                         <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
                       </span>
                     )}
-                  </span>
-                  <span className="font-mono text-muted-foreground">
-                    {vehicle.mileage ? vehicle.mileage.toLocaleString() : "-"}
                   </span>
                   <StatusBadge status={vehicle.status} size="sm" />
                   <StatusBadge status={vehicle.clean_status} size="sm" />
