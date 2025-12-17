@@ -664,13 +664,16 @@ export function DriverManagement() {
                         className="text-sm"
                         autoFocus
                       />
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => saveNotes(driver.id)}>
-                          Save
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={cancelEditNotes}>
-                          Cancel
-                        </Button>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">Esc to cancel • Ctrl+Enter to save</p>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => saveNotes(driver.id)}>
+                            Save
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={cancelEditNotes}>
+                            Cancel
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ) : (
