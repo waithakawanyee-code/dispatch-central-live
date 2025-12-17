@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, UserCheck, UserX } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, UserCheck, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -78,6 +78,8 @@ export function DriverManagement() {
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [editingNotesValue, setEditingNotesValue] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -179,6 +181,13 @@ export function DriverManagement() {
       return 0;
     });
 
+  // Pagination
+  const totalPages = Math.ceil(filteredDrivers.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedDrivers = filteredDrivers.slice(startIndex, startIndex + pageSize);
+
+  // Reset to page 1 when filters change
+  const resetPage = () => setCurrentPage(1);
   const handleExport = () => {
     const exportData = drivers.map(d => ({
       ...d,
@@ -584,6 +593,9 @@ export function DriverManagement() {
               <DropdownMenuLabel>Selection</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuRadioGroup value="">
+                <DropdownMenuRadioItem value="all-page" onClick={() => setSelectedIds(new Set(paginatedDrivers.map((d) => d.id)))}>
+                  Select page ({paginatedDrivers.length})
+                </DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="all-filtered" onClick={() => setSelectedIds(new Set(filteredDrivers.map((d) => d.id)))}>
                   Select all filtered ({filteredDrivers.length})
                 </DropdownMenuRadioItem>
@@ -612,7 +624,7 @@ export function DriverManagement() {
               : "No drivers match the selected filters."}
           </div>
         ) : (
-          filteredDrivers.map((driver) => {
+          paginatedDrivers.map((driver) => {
             const isInactive = (driver as any).is_active === false;
             const hasNotes = !!(driver as any).notes;
             const isExpanded = expandedIds.has(driver.id);
@@ -784,6 +796,51 @@ export function DriverManagement() {
               )}
             </div>
           )})
+        )}
+        
+        {/* Pagination Controls */}
+        {filteredDrivers.length > 0 && (
+          <div className="flex items-center justify-between border-t border-border px-4 py-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Show</span>
+              <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
+                <SelectTrigger className="h-8 w-[70px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+              <span>per page</span>
+            </div>
+            
+            <div className="flex items-center gap-1 text-sm">
+              <span className="text-muted-foreground mr-2">
+                {startIndex + 1}-{Math.min(startIndex + pageSize, filteredDrivers.length)} of {filteredDrivers.length}
+              </span>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </div>
