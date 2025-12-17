@@ -19,8 +19,10 @@ const Vehicles = () => {
   const [statsOpen, setStatsOpen] = useState(false);
 
   // Calculate stats
-  const activeVehicles = vehicles.filter((v) => v.status === "active").length;
-  const outOfServiceVehicles = vehicles.filter((v) => v.status === "out-of-service").length;
+  const activeVehicles = vehicles.filter((v) => v.status === "active");
+  const unassignedVehicles = activeVehicles.filter((v) => !v.driver);
+  const assignedVehicles = activeVehicles.filter((v) => v.driver);
+  const outOfServiceVehicles = vehicles.filter((v) => v.status === "out-of-service");
   const cleanVehicles = vehicles.filter((v) => v.clean_status === "clean").length;
   const dirtyVehicles = vehicles.filter((v) => v.clean_status === "dirty").length;
 
@@ -48,28 +50,20 @@ const Vehicles = () => {
           <p className="text-sm text-muted-foreground">Manage vehicle status and maintenance</p>
         </div>
 
-        {/* Assigned Vehicles */}
-        <section className="rounded-lg border border-border bg-card/50 p-3 mb-6">
+        {/* Active Vehicles - Two Columns */}
+        <section className="rounded-lg border border-border bg-card/50 p-3 mb-4">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <Truck className="h-4 w-4 text-primary" />
-              Assigned Vehicles
+              Active Vehicles
             </h2>
             <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-              {vehicles.length} TOTAL
+              {activeVehicles.length} TOTAL
             </span>
           </div>
 
           {/* Color Legend */}
           <div className="mb-3 flex flex-wrap gap-3 text-[10px] text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-status-active" />
-              <span>Active</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-status-out-of-service" />
-              <span>Out of Service</span>
-            </div>
             <div className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-status-clean" />
               <span>Clean</span>
@@ -80,18 +74,17 @@ const Vehicles = () => {
             </div>
           </div>
 
-          {/* Active Vehicles */}
-          <div className="space-y-2 mb-4">
-            <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-              <span>Active</span>
-              <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
-                {activeVehicles}
-              </span>
-            </h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Unassigned Vehicles */}
             <div className="space-y-2">
-              {vehicles
-                .filter((v) => v.status === "active")
-                .map((vehicle) => (
+              <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                <span>Unassigned</span>
+                <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                  {unassignedVehicles.length}
+                </span>
+              </h3>
+              <div className="space-y-2">
+                {unassignedVehicles.map((vehicle) => (
                   <VehicleRow
                     key={vehicle.id}
                     vehicle={vehicle}
@@ -101,37 +94,64 @@ const Vehicles = () => {
                     onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
                   />
                 ))}
-              {activeVehicles === 0 && (
-                <p className="text-xs text-muted-foreground italic py-2">No active vehicles</p>
-              )}
+                {unassignedVehicles.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic py-2">No unassigned vehicles</p>
+                )}
+              </div>
+            </div>
+
+            {/* Assigned Vehicles */}
+            <div className="space-y-2">
+              <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+                <span>Assigned</span>
+                <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                  {assignedVehicles.length}
+                </span>
+              </h3>
+              <div className="space-y-2">
+                {assignedVehicles.map((vehicle) => (
+                  <VehicleRow
+                    key={vehicle.id}
+                    vehicle={vehicle}
+                    canEdit={isAdmin}
+                    isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
+                    onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
+                    onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
+                  />
+                ))}
+                {assignedVehicles.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic py-2">No assigned vehicles</p>
+                )}
+              </div>
             </div>
           </div>
+        </section>
 
-          {/* Out of Service Vehicles */}
+        {/* Out of Service Vehicles */}
+        <section className="rounded-lg border border-border bg-card/50 p-3 mb-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              Out of Service
+            </h2>
+            <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+              {outOfServiceVehicles.length}
+            </span>
+          </div>
           <div className="space-y-2">
-            <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-              <span>Out of Service</span>
-              <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
-                {outOfServiceVehicles}
-              </span>
-            </h3>
-            <div className="space-y-2">
-              {vehicles
-                .filter((v) => v.status === "out-of-service")
-                .map((vehicle) => (
-                  <VehicleRow
-                    key={vehicle.id}
-                    vehicle={vehicle}
-                    canEdit={isAdmin}
-                    isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
-                    onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
-                    onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
-                  />
-                ))}
-              {outOfServiceVehicles === 0 && (
-                <p className="text-xs text-muted-foreground italic py-2">No out of service vehicles</p>
-              )}
-            </div>
+            {outOfServiceVehicles.map((vehicle) => (
+              <VehicleRow
+                key={vehicle.id}
+                vehicle={vehicle}
+                canEdit={isAdmin}
+                isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
+                onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
+                onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
+              />
+            ))}
+            {outOfServiceVehicles.length === 0 && (
+              <p className="text-xs text-muted-foreground italic py-2">No out of service vehicles</p>
+            )}
           </div>
         </section>
 
@@ -148,14 +168,14 @@ const Vehicles = () => {
             <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
               <StatsCard
                 title="Active"
-                value={activeVehicles}
+                value={activeVehicles.length}
                 subtitle="In operation"
                 icon={Truck}
                 accentColor="primary"
               />
               <StatsCard
                 title="Out of Service"
-                value={outOfServiceVehicles}
+                value={outOfServiceVehicles.length}
                 subtitle="Attention"
                 icon={AlertTriangle}
                 accentColor="destructive"
