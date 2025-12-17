@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -47,6 +49,23 @@ import type { Database } from "@/integrations/supabase/types";
 
 type VehicleStatus = Database["public"]["Enums"]["vehicle_status"];
 type CleanStatus = Database["public"]["Enums"]["clean_status"];
+type VehicleType = Database["public"]["Enums"]["vehicle_type"];
+
+// Vehicle types with CDL requirements
+export const VEHICLE_TYPES: { value: VehicleType; label: string; requiresCdl: boolean }[] = [
+  { value: "sedan_volvo", label: "Sedan-Volvo", requiresCdl: false },
+  { value: "sedan_aviator", label: "Sedan Aviator", requiresCdl: false },
+  { value: "suv", label: "SUV", requiresCdl: false },
+  { value: "exec_transit", label: "Exec Transit", requiresCdl: false },
+  { value: "sprinter_limo", label: "Sprinter Limo", requiresCdl: false },
+  { value: "stretch_limo", label: "Stretch Limo", requiresCdl: false },
+  { value: "28_shuttle", label: "28 Shuttle", requiresCdl: true },
+  { value: "37_shuttle", label: "37 Shuttle", requiresCdl: true },
+  { value: "39_shuttle", label: "39 Shuttle", requiresCdl: true },
+  { value: "56_mc", label: "56 MC", requiresCdl: true },
+  { value: "32_limo_bus", label: "32-Limo Bus", requiresCdl: true },
+  { value: "trolley", label: "Trolley", requiresCdl: true },
+];
 
 interface VehicleFormData {
   unit: string;
@@ -54,6 +73,7 @@ interface VehicleFormData {
   mileage: string;
   status: VehicleStatus;
   clean_status: CleanStatus;
+  vehicle_type: VehicleType | "";
 }
 
 const initialFormData: VehicleFormData = {
@@ -62,10 +82,12 @@ const initialFormData: VehicleFormData = {
   mileage: "",
   status: "active",
   clean_status: "clean",
+  vehicle_type: "",
 };
 
 const validStatuses: VehicleStatus[] = ["active", "out-of-service"];
 const validCleanStatuses: CleanStatus[] = ["clean", "dirty"];
+const validVehicleTypes: VehicleType[] = VEHICLE_TYPES.map(t => t.value);
 
 export function VehicleManagement() {
   const { vehicles } = useDispatchData();
@@ -114,6 +136,7 @@ export function VehicleManagement() {
   const handleExport = () => {
     const csv = generateCSV(vehicles, [
       { key: "unit", header: "Unit" },
+      { key: "vehicle_type", header: "Vehicle Type" },
       { key: "driver", header: "Driver" },
       { key: "mileage", header: "Mileage" },
       { key: "status", header: "Status" },
@@ -124,7 +147,7 @@ export function VehicleManagement() {
   };
 
   const handleDownloadTemplate = () => {
-    const template = "Unit,Driver,Mileage,Status,Clean Status\nV-109,Jane Smith,25000,active,clean";
+    const template = "Unit,Vehicle Type,Driver,Mileage,Status,Clean Status\nV-109,sedan_volvo,Jane Smith,25000,active,clean";
     downloadCSV(template, "vehicles-template.csv");
     toast({ title: "Template Downloaded", description: "CSV template with example row" });
   };
@@ -138,6 +161,7 @@ export function VehicleManagement() {
       const text = await file.text();
       const rows = parseCSV<{
         unit: string;
+        vehicle_type?: string;
         driver?: string;
         mileage?: string;
         status?: string;
@@ -153,6 +177,7 @@ export function VehicleManagement() {
         .filter(row => row.unit?.trim())
         .map(row => ({
           unit: row.unit.trim(),
+          vehicle_type: validVehicleTypes.includes(row.vehicle_type as VehicleType) ? row.vehicle_type as VehicleType : null,
           driver: row.driver?.trim() || null,
           mileage: row.mileage ? parseInt(row.mileage) : null,
           status: (validStatuses.includes(row.status as VehicleStatus) ? row.status : "active") as VehicleStatus,
@@ -191,6 +216,7 @@ export function VehicleManagement() {
 
     const { error } = await supabase.from("vehicles").insert({
       unit: formData.unit.trim(),
+      vehicle_type: formData.vehicle_type || null,
       driver: formData.driver.trim() || null,
       mileage: formData.mileage ? parseInt(formData.mileage) : null,
       status: formData.status,
@@ -220,6 +246,7 @@ export function VehicleManagement() {
       .from("vehicles")
       .update({
         unit: formData.unit.trim(),
+        vehicle_type: formData.vehicle_type || null,
         driver: formData.driver.trim() || null,
         mileage: formData.mileage ? parseInt(formData.mileage) : null,
         status: formData.status,
@@ -251,11 +278,18 @@ export function VehicleManagement() {
     setEditingId(vehicle.id);
     setFormData({
       unit: vehicle.unit,
+      vehicle_type: vehicle.vehicle_type || "",
       driver: vehicle.driver || "",
       mileage: vehicle.mileage?.toString() || "",
       status: vehicle.status,
       clean_status: vehicle.clean_status,
     });
+  };
+
+  const getVehicleTypeLabel = (type: VehicleType | null) => {
+    if (!type) return "-";
+    const found = VEHICLE_TYPES.find(t => t.value === type);
+    return found?.label || type;
   };
 
   return (
@@ -328,6 +362,31 @@ export function VehicleManagement() {
                     placeholder="50000"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="vehicle_type">Vehicle Type</Label>
+                  <Select
+                    value={formData.vehicle_type}
+                    onValueChange={(value: VehicleType) => setFormData({ ...formData, vehicle_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Non-CDL</SelectLabel>
+                        {VEHICLE_TYPES.filter(t => !t.requiresCdl).map(t => (
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>CDL Required</SelectLabel>
+                        {VEHICLE_TYPES.filter(t => t.requiresCdl).map(t => (
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
@@ -369,7 +428,7 @@ export function VehicleManagement() {
 
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-          CSV format: Unit, Driver, Mileage, Status (active/out-of-service), Clean Status (clean/dirty)
+          CSV format: Unit, Vehicle Type (e.g. sedan_volvo), Driver, Mileage, Status, Clean Status
         </p>
         {selectedIds.size > 0 && (
           <div className="flex items-center gap-2">
@@ -390,7 +449,7 @@ export function VehicleManagement() {
       </div>
 
       <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[32px_100px_1fr_100px_100px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+        <div className="grid grid-cols-[32px_80px_110px_1fr_80px_90px_80px_90px] gap-3 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center justify-center">
@@ -419,6 +478,7 @@ export function VehicleManagement() {
             </DropdownMenuContent>
           </DropdownMenu>
           <span>Unit</span>
+          <span>Type</span>
           <span>Driver</span>
           <span>Mileage</span>
           <span>Status</span>
@@ -434,7 +494,7 @@ export function VehicleManagement() {
           paginatedVehicles.map((vehicle) => (
             <div
               key={vehicle.id}
-              className="grid grid-cols-[32px_100px_1fr_100px_100px_100px_100px] gap-4 border-b border-border px-4 py-3 text-sm last:border-0 items-center"
+              className="grid grid-cols-[32px_80px_110px_1fr_80px_90px_80px_90px] gap-3 border-b border-border px-4 py-3 text-sm last:border-0 items-center"
             >
               <Checkbox
                 checked={selectedIds.has(vehicle.id)}
@@ -448,6 +508,28 @@ export function VehicleManagement() {
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                     className="h-8"
                   />
+                  <Select
+                    value={formData.vehicle_type}
+                    onValueChange={(value: VehicleType) => setFormData({ ...formData, vehicle_type: value })}
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Non-CDL</SelectLabel>
+                        {VEHICLE_TYPES.filter(t => !t.requiresCdl).map(t => (
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>CDL Required</SelectLabel>
+                        {VEHICLE_TYPES.filter(t => t.requiresCdl).map(t => (
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                   <Input
                     value={formData.driver}
                     onChange={(e) => setFormData({ ...formData, driver: e.target.value })}
@@ -495,6 +577,7 @@ export function VehicleManagement() {
               ) : (
                 <>
                   <span className="font-mono font-medium">{vehicle.unit}</span>
+                  <span className="text-xs text-muted-foreground truncate">{getVehicleTypeLabel(vehicle.vehicle_type)}</span>
                   <span className="text-muted-foreground">{vehicle.driver || "-"}</span>
                   <span className="font-mono text-muted-foreground">
                     {vehicle.mileage ? vehicle.mileage.toLocaleString() : "-"}

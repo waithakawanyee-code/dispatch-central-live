@@ -276,6 +276,7 @@ export type Database = {
           status: Database["public"]["Enums"]["vehicle_status"]
           unit: string
           updated_at: string
+          vehicle_type: Database["public"]["Enums"]["vehicle_type"] | null
         }
         Insert: {
           clean_status?: Database["public"]["Enums"]["clean_status"]
@@ -286,6 +287,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["vehicle_status"]
           unit: string
           updated_at?: string
+          vehicle_type?: Database["public"]["Enums"]["vehicle_type"] | null
         }
         Update: {
           clean_status?: Database["public"]["Enums"]["clean_status"]
@@ -296,6 +298,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["vehicle_status"]
           unit?: string
           updated_at?: string
+          vehicle_type?: Database["public"]["Enums"]["vehicle_type"] | null
         }
         Relationships: []
       }
@@ -340,6 +343,19 @@ export type Database = {
         | "unassigned"
         | "punched-out"
       vehicle_status: "active" | "out-of-service"
+      vehicle_type:
+        | "sedan_volvo"
+        | "sedan_aviator"
+        | "suv"
+        | "exec_transit"
+        | "sprinter_limo"
+        | "stretch_limo"
+        | "28_shuttle"
+        | "37_shuttle"
+        | "39_shuttle"
+        | "56_mc"
+        | "32_limo_bus"
+        | "trolley"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -482,6 +498,20 @@ export const Constants = {
         "punched-out",
       ],
       vehicle_status: ["active", "out-of-service"],
+      vehicle_type: [
+        "sedan_volvo",
+        "sedan_aviator",
+        "suv",
+        "exec_transit",
+        "sprinter_limo",
+        "stretch_limo",
+        "28_shuttle",
+        "37_shuttle",
+        "39_shuttle",
+        "56_mc",
+        "32_limo_bus",
+        "trolley",
+      ],
     },
   },
 } as const
