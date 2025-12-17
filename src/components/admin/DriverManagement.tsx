@@ -60,12 +60,15 @@ export function DriverManagement() {
   const [formData, setFormData] = useState<DriverFormData>(initialFormData);
   const [importing, setImporting] = useState(false);
   const [cdlFilter, setCdlFilter] = useState<"all" | "cdl" | "non-cdl">("all");
+  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredDrivers = drivers.filter((driver) => {
-    if (cdlFilter === "all") return true;
-    if (cdlFilter === "cdl") return (driver as any).has_cdl === true;
-    return (driver as any).has_cdl !== true;
+    const matchesCdl = cdlFilter === "all" || 
+      (cdlFilter === "cdl" ? (driver as any).has_cdl === true : (driver as any).has_cdl !== true);
+    const matchesActive = activeFilter === "all" || 
+      (activeFilter === "active" ? (driver as any).is_active !== false : (driver as any).is_active === false);
+    return matchesCdl && matchesActive;
   });
 
   const handleExport = () => {
@@ -266,9 +269,19 @@ export function DriverManagement() {
               <SelectValue placeholder="Filter CDL" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="all">All CDL</SelectItem>
               <SelectItem value="cdl">CDL Only</SelectItem>
               <SelectItem value="non-cdl">Non-CDL Only</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={activeFilter} onValueChange={(v) => setActiveFilter(v as typeof activeFilter)}>
+            <SelectTrigger className="w-32 h-8">
+              <SelectValue placeholder="Filter Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active Only</SelectItem>
+              <SelectItem value="inactive">Inactive Only</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -402,7 +415,9 @@ export function DriverManagement() {
         
         {filteredDrivers.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-            {cdlFilter === "all" ? "No drivers found. Add your first driver above." : `No ${cdlFilter === "cdl" ? "CDL" : "Non-CDL"} drivers found.`}
+            {cdlFilter === "all" && activeFilter === "all" 
+              ? "No drivers found. Add your first driver above." 
+              : "No drivers match the selected filters."}
           </div>
         ) : (
           filteredDrivers.map((driver) => {
