@@ -40,6 +40,7 @@ interface DriverFormData {
   phone: string;
   vehicle: string;
   is_active: boolean;
+  has_cdl: boolean;
 }
 
 const initialFormData: DriverFormData = {
@@ -48,6 +49,7 @@ const initialFormData: DriverFormData = {
   phone: "",
   vehicle: "",
   is_active: true,
+  has_cdl: false,
 };
 
 export function DriverManagement() {
@@ -62,7 +64,8 @@ export function DriverManagement() {
   const handleExport = () => {
     const exportData = drivers.map(d => ({
       ...d,
-      is_active: (d as any).is_active !== false ? "Active" : "Inactive"
+      is_active: (d as any).is_active !== false ? "Active" : "Inactive",
+      has_cdl: (d as any).has_cdl ? "CDL" : "Non-CDL"
     }));
     const csv = generateCSV(exportData, [
       { key: "name", header: "Name" },
@@ -70,15 +73,16 @@ export function DriverManagement() {
       { key: "phone", header: "Phone" },
       { key: "vehicle", header: "Vehicle" },
       { key: "is_active", header: "Status" },
+      { key: "has_cdl", header: "CDL" },
     ]);
     downloadCSV(csv, `drivers-${new Date().toISOString().split("T")[0]}.csv`);
     toast({ title: "Exported", description: `${drivers.length} drivers exported to CSV` });
   };
 
   const handleDownloadTemplate = () => {
-    const template = "Name,Code,Phone,Vehicle,Active,Mon_In,Mon_Out,Tue_In,Tue_Out,Wed_In,Wed_Out,Thu_In,Thu_Out,Fri_In,Fri_Out,Sat_In,Sat_Out,Sun_In,Sun_Out\nJohn Doe,JDOE,555-0123,V-101,yes,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,OFF,,OFF,";
+    const template = "Name,Code,Phone,Vehicle,Active,CDL,Mon_In,Mon_Out,Tue_In,Tue_Out,Wed_In,Wed_Out,Thu_In,Thu_Out,Fri_In,Fri_Out,Sat_In,Sat_Out,Sun_In,Sun_Out\nJohn Doe,JDOE,555-0123,V-101,yes,yes,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,OFF,,OFF,";
     downloadCSV(template, "drivers-template.csv");
-    toast({ title: "Template Downloaded", description: "CSV template with schedule columns (Code is 4-letter identifier, Active: yes/no)" });
+    toast({ title: "Template Downloaded", description: "CSV template with schedule columns (CDL: yes/no)" });
   };
 
   const dayMapping: Record<string, number> = {
@@ -114,6 +118,7 @@ export function DriverManagement() {
             phone: row.Phone?.trim() || null,
             vehicle: row.Vehicle?.trim() || null,
             is_active: row.Active?.toLowerCase() !== "no" && row.Active?.toLowerCase() !== "inactive",
+            has_cdl: row.CDL?.toLowerCase() === "yes" || row.CDL?.toLowerCase() === "cdl",
           })
           .select("id")
           .single();
@@ -182,6 +187,7 @@ export function DriverManagement() {
       phone: formData.phone.trim() || null,
       vehicle: formData.vehicle.trim() || null,
       is_active: formData.is_active,
+      has_cdl: formData.has_cdl,
     });
 
     if (error) {
@@ -207,6 +213,7 @@ export function DriverManagement() {
         phone: formData.phone.trim() || null,
         vehicle: formData.vehicle.trim() || null,
         is_active: formData.is_active,
+        has_cdl: formData.has_cdl,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id);
@@ -238,6 +245,7 @@ export function DriverManagement() {
       phone: driver.phone || "",
       vehicle: driver.vehicle || "",
       is_active: (driver as any).is_active !== false,
+      has_cdl: (driver as any).has_cdl === true,
     });
   };
 
@@ -336,6 +344,21 @@ export function DriverManagement() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="has_cdl">License Type</Label>
+                  <Select
+                    value={formData.has_cdl ? "cdl" : "non-cdl"}
+                    onValueChange={(value) => setFormData({ ...formData, has_cdl: value === "cdl" })}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cdl">CDL</SelectItem>
+                      <SelectItem value="non-cdl">Non-CDL</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Button onClick={handleAdd} className="w-full">Add Driver</Button>
               </div>
             </DialogContent>
@@ -348,11 +371,12 @@ export function DriverManagement() {
       </p>
 
       <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[1fr_60px_100px_80px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground">
+        <div className="grid grid-cols-[1fr_60px_100px_80px_70px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground">
           <span>Name</span>
           <span>Code</span>
           <span>Phone</span>
           <span>Vehicle</span>
+          <span>CDL</span>
           <span>Status</span>
           <span className="text-right">Actions</span>
         </div>
@@ -367,7 +391,7 @@ export function DriverManagement() {
             return (
             <div
               key={driver.id}
-              className={`grid grid-cols-[1fr_60px_100px_80px_100px_100px] gap-4 border-b border-border px-4 py-3 text-sm last:border-0 ${isInactive ? "bg-muted/30 opacity-60" : ""}`}
+              className={`grid grid-cols-[1fr_60px_100px_80px_70px_100px_100px] gap-4 border-b border-border px-4 py-3 text-sm last:border-0 ${isInactive ? "bg-muted/30 opacity-60" : ""}`}
             >
               {editingId === driver.id ? (
                 <>
@@ -392,6 +416,18 @@ export function DriverManagement() {
                     onChange={(e) => setFormData({ ...formData, vehicle: e.target.value })}
                     className="h-8"
                   />
+                  <Select
+                    value={formData.has_cdl ? "cdl" : "non-cdl"}
+                    onValueChange={(value) => setFormData({ ...formData, has_cdl: value === "cdl" })}
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cdl">CDL</SelectItem>
+                      <SelectItem value="non-cdl">Non-CDL</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Select
                     value={formData.is_active ? "active" : "inactive"}
                     onValueChange={(value) => setFormData({ ...formData, is_active: value === "active" })}
@@ -419,6 +455,9 @@ export function DriverManagement() {
                   <span className={`font-mono text-xs ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.code || "-"}</span>
                   <span className="font-mono text-muted-foreground">{driver.phone || "-"}</span>
                   <span className={`font-mono ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.vehicle || "-"}</span>
+                  <Badge variant={(driver as any).has_cdl ? "default" : "outline"} className="text-xs">
+                    {(driver as any).has_cdl ? "CDL" : "Non-CDL"}
+                  </Badge>
                   <Badge variant={isInactive ? "secondary" : "default"} className="text-xs">
                     {isInactive ? "Inactive" : "Active"}
                   </Badge>
