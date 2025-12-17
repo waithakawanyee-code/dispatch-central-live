@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Download, Upload, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,7 +64,14 @@ export function VehicleManagement() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<VehicleFormData>(initialFormData);
   const [importing, setImporting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Pagination
+  const totalPages = Math.ceil(vehicles.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedVehicles = vehicles.slice(startIndex, startIndex + pageSize);
 
   const handleExport = () => {
     const csv = generateCSV(vehicles, [
@@ -341,7 +348,7 @@ export function VehicleManagement() {
             No vehicles found. Add your first vehicle above.
           </div>
         ) : (
-          vehicles.map((vehicle) => (
+          paginatedVehicles.map((vehicle) => (
             <div
               key={vehicle.id}
               className="grid grid-cols-[100px_1fr_100px_100px_100px_100px] gap-4 border-b border-border px-4 py-3 text-sm last:border-0"
@@ -434,6 +441,51 @@ export function VehicleManagement() {
               )}
             </div>
           ))
+        )}
+        
+        {/* Pagination Controls */}
+        {vehicles.length > 0 && (
+          <div className="flex items-center justify-between border-t border-border px-4 py-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Show</span>
+              <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
+                <SelectTrigger className="h-8 w-[70px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+              <span>per page</span>
+            </div>
+            
+            <div className="flex items-center gap-1 text-sm">
+              <span className="text-muted-foreground mr-2">
+                {startIndex + 1}-{Math.min(startIndex + pageSize, vehicles.length)} of {vehicles.length}
+              </span>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </div>
