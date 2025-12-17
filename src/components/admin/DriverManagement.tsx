@@ -569,12 +569,34 @@ export function DriverManagement() {
       </div>
 
       <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[32px_1fr_60px_100px_70px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground">
-          <Checkbox
-            checked={filteredDrivers.length > 0 && selectedIds.size === filteredDrivers.length}
-            onCheckedChange={toggleSelectAll}
-            aria-label="Select all"
-          />
+        <div className="grid grid-cols-[32px_1fr_60px_100px_70px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center justify-center">
+                <Checkbox
+                  checked={filteredDrivers.length > 0 && selectedIds.size === filteredDrivers.length}
+                  className="pointer-events-none"
+                  aria-label="Select all"
+                />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuLabel>Selection</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup value="">
+                <DropdownMenuRadioItem value="all-filtered" onClick={() => setSelectedIds(new Set(filteredDrivers.map((d) => d.id)))}>
+                  Select all filtered ({filteredDrivers.length})
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="all-drivers" onClick={() => setSelectedIds(new Set(drivers.map((d) => d.id)))}>
+                  Select all drivers ({drivers.length})
+                </DropdownMenuRadioItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioItem value="none" onClick={() => setSelectedIds(new Set())}>
+                  Clear selection
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <span>Name</span>
           <span>Code</span>
           <span>Phone</span>
