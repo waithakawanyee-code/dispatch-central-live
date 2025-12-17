@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Download, Upload, ChevronLeft, ChevronRight, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,11 +28,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { StatusBadge } from "@/components/StatusBadge";
 import { parseCSV, generateCSV, downloadCSV } from "@/lib/csv";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { Database } from "@/integrations/supabase/types";
 
 type VehicleStatus = Database["public"]["Enums"]["vehicle_status"];
@@ -66,12 +76,40 @@ export function VehicleManagement() {
   const [importing, setImporting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Pagination
   const totalPages = Math.ceil(vehicles.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedVehicles = vehicles.slice(startIndex, startIndex + pageSize);
+
+  const toggleSelectVehicle = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const bulkSetStatus = async (status: VehicleStatus) => {
+    if (selectedIds.size === 0) return;
+    const { error } = await supabase
+      .from("vehicles")
+      .update({ status, updated_at: new Date().toISOString() })
+      .in("id", Array.from(selectedIds));
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to update vehicles", variant: "destructive" });
+    } else {
+      toast({ title: "Success", description: `${selectedIds.size} vehicle(s) set to ${status}` });
+      setSelectedIds(new Set());
+    }
+  };
 
   const handleExport = () => {
     const csv = generateCSV(vehicles, [
@@ -329,12 +367,57 @@ export function VehicleManagement() {
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        CSV format: Unit, Driver, Mileage, Status (active/out-of-service), Clean Status (clean/dirty)
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          CSV format: Unit, Driver, Mileage, Status (active/out-of-service), Clean Status (clean/dirty)
+        </p>
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
+            <Button size="sm" variant="outline" onClick={() => bulkSetStatus("active")}>
+              <CheckCircle className="h-4 w-4 mr-1" />
+              Set Active
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => bulkSetStatus("out-of-service")}>
+              <XCircle className="h-4 w-4 mr-1" />
+              Out of Service
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+              Clear
+            </Button>
+          </div>
+        )}
+      </div>
 
       <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[100px_1fr_100px_100px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground">
+        <div className="grid grid-cols-[32px_100px_1fr_100px_100px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center justify-center">
+                <Checkbox
+                  checked={paginatedVehicles.length > 0 && selectedIds.size === vehicles.length}
+                  className="pointer-events-none"
+                  aria-label="Select all"
+                />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuLabel>Selection</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup value="">
+                <DropdownMenuRadioItem value="all-page" onClick={() => setSelectedIds(new Set(paginatedVehicles.map((v) => v.id)))}>
+                  Select page ({paginatedVehicles.length})
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="all-vehicles" onClick={() => setSelectedIds(new Set(vehicles.map((v) => v.id)))}>
+                  Select all vehicles ({vehicles.length})
+                </DropdownMenuRadioItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioItem value="none" onClick={() => setSelectedIds(new Set())}>
+                  Clear selection
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <span>Unit</span>
           <span>Driver</span>
           <span>Mileage</span>
@@ -351,8 +434,13 @@ export function VehicleManagement() {
           paginatedVehicles.map((vehicle) => (
             <div
               key={vehicle.id}
-              className="grid grid-cols-[100px_1fr_100px_100px_100px_100px] gap-4 border-b border-border px-4 py-3 text-sm last:border-0"
+              className="grid grid-cols-[32px_100px_1fr_100px_100px_100px_100px] gap-4 border-b border-border px-4 py-3 text-sm last:border-0 items-center"
             >
+              <Checkbox
+                checked={selectedIds.has(vehicle.id)}
+                onCheckedChange={() => toggleSelectVehicle(vehicle.id)}
+                aria-label={`Select ${vehicle.unit}`}
+              />
               {editingId === vehicle.id ? (
                 <>
                   <Input
