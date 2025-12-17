@@ -677,7 +677,12 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
           )}
         />
         <div className="flex flex-col gap-0.5 flex-1">
-          <span className="font-mono font-semibold text-foreground text-base">{driver.name}</span>
+          <span className="flex items-center gap-2">
+            <span className="font-mono font-semibold text-foreground text-base">{driver.name}</span>
+            {driver.has_cdl && (
+              <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
+            )}
+          </span>
           {/* Show phone for unassigned/scheduled drivers */}
           {(driver.status === "unassigned" || driver.status === "scheduled") && driver.phone && (
             <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
@@ -1021,7 +1026,12 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
         </div>
 
         <div className="min-w-[120px] flex-1">
-          <p className="text-sm font-medium text-foreground">{driver.name}</p>
+          <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+            {driver.name}
+            {driver.has_cdl && (
+              <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
+            )}
+          </p>
           {driver.vehicle && (
             <p className="flex items-center gap-1 font-mono text-[10px] text-primary">
               <Truck className="h-2.5 w-2.5" />
