@@ -1,7 +1,36 @@
-import { Monitor } from "lucide-react";
+import { Monitor, Users, Truck, Award } from "lucide-react";
 import { Header } from "@/components/Header";
+import { useDispatchData } from "@/hooks/useDispatchData";
+import { cn } from "@/lib/utils";
 
 const Display = () => {
+  const { drivers, vehicles, loading } = useDispatchData();
+
+  // Filter to only active drivers
+  const activeDrivers = drivers.filter((d) => (d as any).is_active !== false);
+
+  // Group drivers by status
+  const assignedDrivers = activeDrivers.filter((d) => d.status === "assigned");
+  const workingDrivers = activeDrivers.filter((d) => ["working", "on-route"].includes(d.status));
+  const unassignedDrivers = activeDrivers.filter((d) => d.status === "unassigned" || d.status === "scheduled");
+  const punchedOutDrivers = activeDrivers.filter((d) => ["punched-out", "offline"].includes(d.status));
+  const offDrivers = activeDrivers.filter((d) => d.status === "off");
+
+  // Group vehicles by status
+  const activeVehicles = vehicles.filter((v) => v.status === "active");
+  const outOfServiceVehicles = vehicles.filter((v) => v.status === "out-of-service");
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
+          <p className="text-sm text-muted-foreground">Loading display data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -10,21 +39,167 @@ const Display = () => {
         <div className="mb-4">
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             <Monitor className="h-5 w-5 text-primary" />
-            Display
+            Command Center Display
           </h1>
-          <p className="text-sm text-muted-foreground">Command center display (to be configured)</p>
+          <p className="text-sm text-muted-foreground">Real-time driver and vehicle status</p>
         </div>
 
-        <section className="rounded-lg border border-border bg-card/50 p-8 text-center">
-          <Monitor className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-foreground mb-2">Display Configuration Coming Soon</h2>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            This page will be configured as a command center display showing real-time driver and vehicle status.
-          </p>
-        </section>
+        <div className="grid grid-cols-2 gap-6">
+          {/* Left Column - Drivers */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 text-lg font-semibold text-foreground border-b border-border pb-2">
+              <Users className="h-5 w-5 text-primary" />
+              <span>Drivers</span>
+              <span className="ml-auto text-sm font-mono text-muted-foreground">{activeDrivers.length} total</span>
+            </div>
+
+            {/* Working */}
+            <DriverSection 
+              title="Working" 
+              count={workingDrivers.length} 
+              drivers={workingDrivers} 
+              statusColor="bg-status-available"
+              bgColor="bg-status-available/5 border-status-available/30"
+            />
+
+            {/* Assigned */}
+            <DriverSection 
+              title="Assigned" 
+              count={assignedDrivers.length} 
+              drivers={assignedDrivers} 
+              statusColor="bg-emerald-500"
+              bgColor="bg-emerald-500/5 border-emerald-500/30"
+            />
+
+            {/* Unassigned */}
+            <DriverSection 
+              title="Unassigned" 
+              count={unassignedDrivers.length} 
+              drivers={unassignedDrivers} 
+              statusColor="bg-slate-500"
+              bgColor=""
+            />
+
+            {/* Punched Out */}
+            <DriverSection 
+              title="Punched Out" 
+              count={punchedOutDrivers.length} 
+              drivers={punchedOutDrivers} 
+              statusColor="bg-status-offline"
+              bgColor="opacity-60"
+            />
+
+            {/* OFF */}
+            {offDrivers.length > 0 && (
+              <DriverSection 
+                title="OFF" 
+                count={offDrivers.length} 
+                drivers={offDrivers} 
+                statusColor="bg-muted-foreground"
+                bgColor="opacity-50"
+              />
+            )}
+          </section>
+
+          {/* Right Column - Vehicles */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 text-lg font-semibold text-foreground border-b border-border pb-2">
+              <Truck className="h-5 w-5 text-primary" />
+              <span>Vehicles</span>
+              <span className="ml-auto text-sm font-mono text-muted-foreground">{vehicles.length} total</span>
+            </div>
+
+            {/* Active Vehicles */}
+            <div className="space-y-1">
+              <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                <span>Active</span>
+                <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">{activeVehicles.length}</span>
+              </h3>
+              <div className="rounded-lg border border-border bg-card/50 divide-y divide-border">
+                {activeVehicles.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic p-3">No active vehicles</p>
+                ) : (
+                  activeVehicles.map((vehicle) => (
+                    <div key={vehicle.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                      <span className="h-2 w-2 rounded-full bg-status-available shrink-0" />
+                      <span className="font-mono font-semibold text-primary">{vehicle.unit}</span>
+                      {vehicle.driver && (
+                        <span className="text-muted-foreground text-xs">→ {vehicle.driver}</span>
+                      )}
+                      <span className={cn(
+                        "ml-auto text-xs px-1.5 py-0.5 rounded",
+                        vehicle.clean_status === "clean" ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+                      )}>
+                        {vehicle.clean_status}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Out of Service Vehicles */}
+            {outOfServiceVehicles.length > 0 && (
+              <div className="space-y-1">
+                <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  <span>Out of Service</span>
+                  <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">{outOfServiceVehicles.length}</span>
+                </h3>
+                <div className="rounded-lg border border-border bg-card/50 divide-y divide-border opacity-60">
+                  {outOfServiceVehicles.map((vehicle) => (
+                    <div key={vehicle.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                      <span className="h-2 w-2 rounded-full bg-destructive shrink-0" />
+                      <span className="font-mono font-semibold text-muted-foreground">{vehicle.unit}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
       </main>
     </div>
   );
 };
+
+interface DriverSectionProps {
+  title: string;
+  count: number;
+  drivers: any[];
+  statusColor: string;
+  bgColor?: string;
+}
+
+function DriverSection({ title, count, drivers, statusColor, bgColor = "" }: DriverSectionProps) {
+  return (
+    <div className="space-y-1">
+      <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide">
+        <span>{title}</span>
+        <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">{count}</span>
+      </h3>
+      <div className={cn("rounded-lg border border-border bg-card/50 divide-y divide-border", bgColor)}>
+        {drivers.length === 0 ? (
+          <p className="text-xs text-muted-foreground italic p-3">No {title.toLowerCase()} drivers</p>
+        ) : (
+          drivers.map((driver) => (
+            <div key={driver.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+              <span className={cn("h-2 w-2 rounded-full shrink-0", statusColor)} />
+              <span className="font-medium text-foreground">{driver.name}</span>
+              {driver.has_cdl && (
+                <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
+              )}
+              {driver.vehicle && (
+                <span className="ml-auto font-mono text-xs text-primary">{driver.vehicle}</span>
+              )}
+              {driver.report_time && !driver.vehicle && (
+                <span className="ml-auto font-mono text-xs text-muted-foreground">{driver.report_time.slice(0, 5)}</span>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default Display;
