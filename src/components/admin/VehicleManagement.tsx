@@ -90,7 +90,7 @@ const validCleanStatuses: CleanStatus[] = ["clean", "dirty"];
 const validVehicleTypes: VehicleType[] = VEHICLE_TYPES.map(t => t.value);
 
 export function VehicleManagement() {
-  const { vehicles } = useDispatchData();
+  const { vehicles, allDrivers } = useDispatchData();
   const { toast } = useToast();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -292,6 +292,22 @@ export function VehicleManagement() {
     return found?.label || type;
   };
 
+  // Check if selected vehicle type requires CDL
+  const vehicleRequiresCdl = (vehicleType: VehicleType | "") => {
+    if (!vehicleType) return false;
+    const found = VEHICLE_TYPES.find(t => t.value === vehicleType);
+    return found?.requiresCdl || false;
+  };
+
+  // Filter drivers based on vehicle type CDL requirement
+  const getAvailableDrivers = () => {
+    const activeDrivers = allDrivers.filter(d => d.is_active);
+    if (vehicleRequiresCdl(formData.vehicle_type)) {
+      return activeDrivers.filter(d => d.has_cdl);
+    }
+    return activeDrivers;
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -344,13 +360,31 @@ export function VehicleManagement() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="driver">Assigned Driver</Label>
-                  <Input
-                    id="driver"
+                  <Label htmlFor="driver">
+                    Assigned Driver
+                    {vehicleRequiresCdl(formData.vehicle_type) && (
+                      <span className="ml-2 text-xs text-amber-600">(CDL required)</span>
+                    )}
+                  </Label>
+                  <Select
                     value={formData.driver}
-                    onChange={(e) => setFormData({ ...formData, driver: e.target.value })}
-                    placeholder="Driver name"
-                  />
+                    onValueChange={(value) => setFormData({ ...formData, driver: value === "_none" ? "" : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select driver" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">No driver</SelectItem>
+                      {getAvailableDrivers().map(driver => (
+                        <SelectItem key={driver.id} value={driver.name}>
+                          {driver.name} {driver.has_cdl && <span className="text-muted-foreground">(CDL)</span>}
+                        </SelectItem>
+                      ))}
+                      {vehicleRequiresCdl(formData.vehicle_type) && getAvailableDrivers().length === 0 && (
+                        <SelectItem value="_none" disabled>No CDL drivers available</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="mileage">Mileage</Label>
@@ -530,11 +564,22 @@ export function VehicleManagement() {
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                  <Input
-                    value={formData.driver}
-                    onChange={(e) => setFormData({ ...formData, driver: e.target.value })}
-                    className="h-8"
-                  />
+                  <Select
+                    value={formData.driver || "_none"}
+                    onValueChange={(value) => setFormData({ ...formData, driver: value === "_none" ? "" : value })}
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue placeholder="Driver" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">None</SelectItem>
+                      {getAvailableDrivers().map(driver => (
+                        <SelectItem key={driver.id} value={driver.name}>
+                          {driver.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Input
                     type="number"
                     value={formData.mileage}
