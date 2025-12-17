@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,14 +61,18 @@ export function DriverManagement() {
   const [importing, setImporting] = useState(false);
   const [cdlFilter, setCdlFilter] = useState<"all" | "cdl" | "non-cdl">("all");
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredDrivers = drivers.filter((driver) => {
+    const matchesSearch = searchQuery === "" || 
+      driver.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (driver.code?.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCdl = cdlFilter === "all" || 
       (cdlFilter === "cdl" ? (driver as any).has_cdl === true : (driver as any).has_cdl !== true);
     const matchesActive = activeFilter === "all" || 
       (activeFilter === "active" ? (driver as any).is_active !== false : (driver as any).is_active === false);
-    return matchesCdl && matchesActive;
+    return matchesSearch && matchesCdl && matchesActive;
   });
 
   const handleExport = () => {
@@ -264,6 +268,15 @@ export function DriverManagement() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <h2 className="text-lg font-semibold">Manage Drivers</h2>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search name or code..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8 w-48 pl-8"
+            />
+          </div>
           <Select value={cdlFilter} onValueChange={(v) => setCdlFilter(v as typeof cdlFilter)}>
             <SelectTrigger className="w-32 h-8">
               <SelectValue placeholder="Filter CDL" />
@@ -415,7 +428,7 @@ export function DriverManagement() {
         
         {filteredDrivers.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-            {cdlFilter === "all" && activeFilter === "all" 
+            {searchQuery === "" && cdlFilter === "all" && activeFilter === "all" 
               ? "No drivers found. Add your first driver above." 
               : "No drivers match the selected filters."}
           </div>
