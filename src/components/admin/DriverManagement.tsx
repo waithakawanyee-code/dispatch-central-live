@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,18 +62,34 @@ export function DriverManagement() {
   const [cdlFilter, setCdlFilter] = useState<"all" | "cdl" | "non-cdl">("all");
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "cdl" | "status">("name");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredDrivers = drivers.filter((driver) => {
-    const matchesSearch = searchQuery === "" || 
-      driver.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (driver.code?.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCdl = cdlFilter === "all" || 
-      (cdlFilter === "cdl" ? (driver as any).has_cdl === true : (driver as any).has_cdl !== true);
-    const matchesActive = activeFilter === "all" || 
-      (activeFilter === "active" ? (driver as any).is_active !== false : (driver as any).is_active === false);
-    return matchesSearch && matchesCdl && matchesActive;
-  });
+  const filteredDrivers = drivers
+    .filter((driver) => {
+      const matchesSearch = searchQuery === "" || 
+        driver.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (driver.code?.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesCdl = cdlFilter === "all" || 
+        (cdlFilter === "cdl" ? (driver as any).has_cdl === true : (driver as any).has_cdl !== true);
+      const matchesActive = activeFilter === "all" || 
+        (activeFilter === "active" ? (driver as any).is_active !== false : (driver as any).is_active === false);
+      return matchesSearch && matchesCdl && matchesActive;
+    })
+    .sort((a, b) => {
+      if (sortBy === "name") return a.name.localeCompare(b.name);
+      if (sortBy === "cdl") {
+        const aCdl = (a as any).has_cdl ? 1 : 0;
+        const bCdl = (b as any).has_cdl ? 1 : 0;
+        return bCdl - aCdl; // CDL first
+      }
+      if (sortBy === "status") {
+        const aActive = (a as any).is_active !== false ? 1 : 0;
+        const bActive = (b as any).is_active !== false ? 1 : 0;
+        return bActive - aActive; // Active first
+      }
+      return 0;
+    });
 
   const handleExport = () => {
     const exportData = drivers.map(d => ({
@@ -295,6 +311,17 @@ export function DriverManagement() {
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="active">Active Only</SelectItem>
               <SelectItem value="inactive">Inactive Only</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+            <SelectTrigger className="w-32 h-8">
+              <ArrowUpDown className="h-3 w-3 mr-1" />
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">By Name</SelectItem>
+              <SelectItem value="cdl">By CDL</SelectItem>
+              <SelectItem value="status">By Status</SelectItem>
             </SelectContent>
           </Select>
         </div>
