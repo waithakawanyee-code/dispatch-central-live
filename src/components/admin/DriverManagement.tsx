@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search, ArrowUpDown } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useDispatchData } from "@/hooks/useDispatchData";
@@ -288,37 +297,41 @@ export function DriverManagement() {
               className="h-8 w-48 pl-8"
             />
           </div>
-          <Select value={cdlFilter} onValueChange={(v) => setCdlFilter(v as typeof cdlFilter)}>
-            <SelectTrigger className="w-32 h-8">
-              <SelectValue placeholder="Filter CDL" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All CDL</SelectItem>
-              <SelectItem value="cdl">CDL Only</SelectItem>
-              <SelectItem value="non-cdl">Non-CDL Only</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={activeFilter} onValueChange={(v) => setActiveFilter(v as typeof activeFilter)}>
-            <SelectTrigger className="w-32 h-8">
-              <SelectValue placeholder="Filter Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active Only</SelectItem>
-              <SelectItem value="inactive">Inactive Only</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-            <SelectTrigger className="w-32 h-8">
-              <ArrowUpDown className="h-3 w-3 mr-1" />
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="name">By Name</SelectItem>
-              <SelectItem value="cdl">By CDL</SelectItem>
-              <SelectItem value="status">By Status</SelectItem>
-            </SelectContent>
-          </Select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 gap-2">
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+                {(cdlFilter !== "all" || activeFilter !== "all" || sortBy !== "name") && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                    {[cdlFilter !== "all", activeFilter !== "all", sortBy !== "name"].filter(Boolean).length}
+                  </Badge>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48 bg-popover">
+              <DropdownMenuLabel>Filter by CDL</DropdownMenuLabel>
+              <DropdownMenuRadioGroup value={cdlFilter} onValueChange={(v) => setCdlFilter(v as typeof cdlFilter)}>
+                <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="cdl">CDL Only</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="non-cdl">Non-CDL Only</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
+              <DropdownMenuRadioGroup value={activeFilter} onValueChange={(v) => setActiveFilter(v as typeof activeFilter)}>
+                <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="active">Active Only</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="inactive">Inactive Only</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+              <DropdownMenuRadioGroup value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="cdl">CDL Status</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="status">Active Status</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-2" onClick={handleDownloadTemplate}>
