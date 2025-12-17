@@ -152,6 +152,7 @@ export function useDispatchData() {
     if (!driver) return;
 
     const oldStatus = driver.status;
+    const oldVehicle = driver.vehicle;
     const updateData: { status: DriverStatus; updated_at: string; report_time?: string | null; vehicle?: string | null } = {
       status: newStatus,
       updated_at: new Date().toISOString(),
@@ -176,6 +177,18 @@ export function useDispatchData() {
     } else {
       await logStatusChange("driver", driverId, driver.name, "status", oldStatus, newStatus);
       
+      // Record vehicle assignment history
+      if (newStatus === "assigned" && vehicle) {
+        // Find the vehicle to get its ID and unit
+        const assignedVehicle = vehicles.find(v => v.unit === vehicle);
+        if (assignedVehicle) {
+          await recordVehicleAssignment(assignedVehicle.id, assignedVehicle.unit, driverId, driver.name);
+        }
+      } else if ((newStatus === "unassigned" || newStatus === "punched-out") && oldVehicle) {
+        // Close any open assignments for this driver
+        await closeVehicleAssignment(driverId);
+      }
+      
       // Record punch in when status changes to working
       if (newStatus === "working" && oldStatus !== "working") {
         await recordTimePunch(driverId, driver.name, "in");
@@ -183,6 +196,45 @@ export function useDispatchData() {
         // Record punch out when status changes to punched-out (not from unassigned)
         await recordTimePunch(driverId, driver.name, "out");
       }
+    }
+  };
+
+  const recordVehicleAssignment = async (vehicleId: string, vehicleUnit: string, driverId: string, driverName: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // First, close any existing open assignments for this vehicle
+    await supabase
+      .from("vehicle_assignment_history")
+      .update({ unassigned_at: new Date().toISOString() })
+      .eq("vehicle_id", vehicleId)
+      .is("unassigned_at", null);
+    
+    // Create new assignment record
+    const { error } = await supabase
+      .from("vehicle_assignment_history")
+      .insert({
+        vehicle_id: vehicleId,
+        vehicle_unit: vehicleUnit,
+        driver_id: driverId,
+        driver_name: driverName,
+        assigned_by: user?.id,
+      });
+
+    if (error) {
+      console.error("Failed to record vehicle assignment:", error);
+    }
+  };
+
+  const closeVehicleAssignment = async (driverId: string) => {
+    // Close any open assignments for this driver
+    const { error } = await supabase
+      .from("vehicle_assignment_history")
+      .update({ unassigned_at: new Date().toISOString() })
+      .eq("driver_id", driverId)
+      .is("unassigned_at", null);
+
+    if (error) {
+      console.error("Failed to close vehicle assignment:", error);
     }
   };
 
