@@ -247,9 +247,13 @@ const Drivers = () => {
   };
 
   const openAssignDialog = (driverId: string, driverName: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    const defaultVehicle = (driver as any)?.default_vehicle;
+    
     setAssigningDriver({ id: driverId, name: driverName });
     setAssignReportTime("");
-    setAssignVehicle("__none__");
+    // Pre-fill with driver's default/take-home vehicle if set
+    setAssignVehicle(defaultVehicle || "__none__");
     setShowAssignDialog(true);
   };
 

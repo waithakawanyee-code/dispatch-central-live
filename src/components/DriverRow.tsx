@@ -257,7 +257,9 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
   const handleStatusSelect = (status: DriverStatus) => {
     if (status === "assigned") {
       setReportTime(driver.report_time?.slice(0, 5) || "");
-      setSelectedVehicle(driver.vehicle || "__none__");
+      // Pre-fill with default/take-home vehicle if set, otherwise current vehicle
+      const defaultVehicle = (driver as any).default_vehicle;
+      setSelectedVehicle(defaultVehicle || driver.vehicle || "__none__");
       setShowAssignDialog(true);
     } else if (status === "off") {
       setIsCallOut(false);

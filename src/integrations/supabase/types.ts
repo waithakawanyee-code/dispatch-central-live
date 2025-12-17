@@ -89,6 +89,7 @@ export type Database = {
         Row: {
           code: string | null
           created_at: string
+          default_vehicle: string | null
           has_cdl: boolean
           id: string
           is_active: boolean
@@ -103,6 +104,7 @@ export type Database = {
         Insert: {
           code?: string | null
           created_at?: string
+          default_vehicle?: string | null
           has_cdl?: boolean
           id?: string
           is_active?: boolean
@@ -117,6 +119,7 @@ export type Database = {
         Update: {
           code?: string | null
           created_at?: string
+          default_vehicle?: string | null
           has_cdl?: boolean
           id?: string
           is_active?: boolean

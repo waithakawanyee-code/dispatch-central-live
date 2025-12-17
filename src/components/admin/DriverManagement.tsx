@@ -52,6 +52,7 @@ interface DriverFormData {
   is_active: boolean;
   has_cdl: boolean;
   notes: string;
+  default_vehicle: string;
 }
 
 const initialFormData: DriverFormData = {
@@ -61,10 +62,11 @@ const initialFormData: DriverFormData = {
   is_active: true,
   has_cdl: false,
   notes: "",
+  default_vehicle: "",
 };
 
 export function DriverManagement() {
-  const { allDrivers: drivers } = useDispatchData();
+  const { allDrivers: drivers, vehicles } = useDispatchData();
   const { toast } = useToast();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -315,6 +317,7 @@ export function DriverManagement() {
       is_active: formData.is_active,
       has_cdl: formData.has_cdl,
       notes: formData.notes.trim() || null,
+      default_vehicle: formData.default_vehicle.trim() || null,
     });
 
     if (error) {
@@ -341,6 +344,7 @@ export function DriverManagement() {
         is_active: formData.is_active,
         has_cdl: formData.has_cdl,
         notes: formData.notes.trim() || null,
+        default_vehicle: formData.default_vehicle.trim() || null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id);
@@ -373,6 +377,7 @@ export function DriverManagement() {
       is_active: (driver as any).is_active !== false,
       has_cdl: (driver as any).has_cdl === true,
       notes: (driver as any).notes || "",
+      default_vehicle: (driver as any).default_vehicle || "",
     });
   };
 
@@ -547,6 +552,23 @@ export function DriverManagement() {
                     placeholder="Additional notes..."
                     rows={2}
                   />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="default_vehicle">Default Vehicle (Take-Home)</Label>
+                  <Select
+                    value={formData.default_vehicle || "__none__"}
+                    onValueChange={(value) => setFormData({ ...formData, default_vehicle: value === "__none__" ? "" : value })}
+                  >
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="None" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">None</SelectItem>
+                      {vehicles.map((v) => (
+                        <SelectItem key={v.id} value={v.unit}>{v.unit}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <Button onClick={handleAdd} className="w-full">Add Driver</Button>
               </div>
