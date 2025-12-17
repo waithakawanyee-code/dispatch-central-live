@@ -362,10 +362,12 @@ export function DriverManagement() {
             No drivers found. Add your first driver above.
           </div>
         ) : (
-          drivers.map((driver) => (
+          drivers.map((driver) => {
+            const isInactive = (driver as any).is_active === false;
+            return (
             <div
               key={driver.id}
-              className="grid grid-cols-[1fr_60px_100px_80px_100px_100px] gap-4 border-b border-border px-4 py-3 text-sm last:border-0"
+              className={`grid grid-cols-[1fr_60px_100px_80px_100px_100px] gap-4 border-b border-border px-4 py-3 text-sm last:border-0 ${isInactive ? "bg-muted/30 opacity-60" : ""}`}
             >
               {editingId === driver.id ? (
                 <>
@@ -413,12 +415,12 @@ export function DriverManagement() {
                 </>
               ) : (
                 <>
-                  <span className="font-medium">{driver.name}</span>
-                  <span className="font-mono text-xs text-primary">{driver.code || "-"}</span>
+                  <span className={`font-medium ${isInactive ? "line-through text-muted-foreground" : ""}`}>{driver.name}</span>
+                  <span className={`font-mono text-xs ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.code || "-"}</span>
                   <span className="font-mono text-muted-foreground">{driver.phone || "-"}</span>
-                  <span className="font-mono text-primary">{driver.vehicle || "-"}</span>
-                  <Badge variant={(driver as any).is_active !== false ? "default" : "secondary"} className="text-xs">
-                    {(driver as any).is_active !== false ? "Active" : "Inactive"}
+                  <span className={`font-mono ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.vehicle || "-"}</span>
+                  <Badge variant={isInactive ? "secondary" : "default"} className="text-xs">
+                    {isInactive ? "Inactive" : "Active"}
                   </Badge>
                   <div className="flex justify-end gap-1">
                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEdit(driver)}>
@@ -447,7 +449,7 @@ export function DriverManagement() {
                 </>
               )}
             </div>
-          ))
+          )})
         )}
       </div>
     </div>
