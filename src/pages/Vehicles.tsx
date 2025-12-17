@@ -48,12 +48,12 @@ const Vehicles = () => {
           <p className="text-sm text-muted-foreground">Manage vehicle status and maintenance</p>
         </div>
 
-        {/* Vehicle Status */}
+        {/* Assigned Vehicles */}
         <section className="rounded-lg border border-border bg-card/50 p-3 mb-6">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <Truck className="h-4 w-4 text-primary" />
-              Vehicle Status
+              Assigned Vehicles
             </h2>
             <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
               {vehicles.length} TOTAL
@@ -80,59 +80,57 @@ const Vehicles = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Active Vehicles */}
+          {/* Active Vehicles */}
+          <div className="space-y-2 mb-4">
+            <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+              <span>Active</span>
+              <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                {activeVehicles}
+              </span>
+            </h3>
             <div className="space-y-2">
-              <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-                <span>Active</span>
-                <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
-                  {activeVehicles}
-                </span>
-              </h3>
-              <div className="space-y-2">
-                {vehicles
-                  .filter((v) => v.status === "active")
-                  .map((vehicle) => (
-                    <VehicleRow
-                      key={vehicle.id}
-                      vehicle={vehicle}
-                      canEdit={isAdmin}
-                      isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
-                      onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
-                      onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
-                    />
-                  ))}
-                {activeVehicles === 0 && (
-                  <p className="text-xs text-muted-foreground italic py-2">No active vehicles</p>
-                )}
-              </div>
+              {vehicles
+                .filter((v) => v.status === "active")
+                .map((vehicle) => (
+                  <VehicleRow
+                    key={vehicle.id}
+                    vehicle={vehicle}
+                    canEdit={isAdmin}
+                    isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
+                    onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
+                    onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
+                  />
+                ))}
+              {activeVehicles === 0 && (
+                <p className="text-xs text-muted-foreground italic py-2">No active vehicles</p>
+              )}
             </div>
+          </div>
 
-            {/* Out of Service Vehicles */}
+          {/* Out of Service Vehicles */}
+          <div className="space-y-2">
+            <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
+              <span>Out of Service</span>
+              <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                {outOfServiceVehicles}
+              </span>
+            </h3>
             <div className="space-y-2">
-              <h3 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-                <span>Out of Service</span>
-                <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
-                  {outOfServiceVehicles}
-                </span>
-              </h3>
-              <div className="space-y-2">
-                {vehicles
-                  .filter((v) => v.status === "out-of-service")
-                  .map((vehicle) => (
-                    <VehicleRow
-                      key={vehicle.id}
-                      vehicle={vehicle}
-                      canEdit={isAdmin}
-                      isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
-                      onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
-                      onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
-                    />
-                  ))}
-                {outOfServiceVehicles === 0 && (
-                  <p className="text-xs text-muted-foreground italic py-2">No out of service vehicles</p>
-                )}
-              </div>
+              {vehicles
+                .filter((v) => v.status === "out-of-service")
+                .map((vehicle) => (
+                  <VehicleRow
+                    key={vehicle.id}
+                    vehicle={vehicle}
+                    canEdit={isAdmin}
+                    isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
+                    onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
+                    onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
+                  />
+                ))}
+              {outOfServiceVehicles === 0 && (
+                <p className="text-xs text-muted-foreground italic py-2">No out of service vehicles</p>
+              )}
             </div>
           </div>
         </section>
