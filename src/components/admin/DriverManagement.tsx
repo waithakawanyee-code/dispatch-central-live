@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search, SlidersHorizontal, StickyNote } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -73,6 +73,19 @@ export function DriverManagement() {
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "cdl" | "status">("name");
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredDrivers = drivers
@@ -491,11 +504,13 @@ export function DriverManagement() {
         ) : (
           filteredDrivers.map((driver) => {
             const isInactive = (driver as any).is_active === false;
+            const hasNotes = !!(driver as any).notes;
+            const isExpanded = expandedIds.has(driver.id);
             return (
-            <div
-              key={driver.id}
-              className={`grid grid-cols-[1fr_60px_100px_70px_100px_100px] gap-4 border-b border-border px-4 py-3 text-sm last:border-0 ${isInactive ? "bg-muted/30 opacity-60" : ""}`}
-            >
+            <div key={driver.id} className="border-b border-border last:border-0">
+              <div
+                className={`grid grid-cols-[1fr_60px_100px_70px_100px_100px] gap-4 px-4 py-3 text-sm ${isInactive ? "bg-muted/30 opacity-60" : ""}`}
+              >
               {editingId === driver.id ? (
                 <>
                   <Input
@@ -550,11 +565,21 @@ export function DriverManagement() {
               ) : (
                 <>
                   <span className={`font-medium flex items-center gap-1.5 ${isInactive ? "line-through text-muted-foreground" : ""}`}>
+                    {hasNotes && (
+                      <button
+                        onClick={() => toggleExpand(driver.id)}
+                        className="p-0.5 -ml-1 hover:bg-secondary rounded transition-colors"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    )}
                     {driver.name}
-                    {(driver as any).notes && (
-                      <span title={(driver as any).notes}>
-                        <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />
-                      </span>
+                    {hasNotes && (
+                      <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />
                     )}
                   </span>
                   <span className={`font-mono text-xs ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.code || "-"}</span>
@@ -591,6 +616,13 @@ export function DriverManagement() {
                     </AlertDialog>
                   </div>
                 </>
+              )}
+              </div>
+              {/* Expanded notes section */}
+              {hasNotes && isExpanded && (
+                <div className="px-4 py-3 bg-muted/20 border-t border-border/50">
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{(driver as any).notes}</p>
+                </div>
               )}
             </div>
           )})
