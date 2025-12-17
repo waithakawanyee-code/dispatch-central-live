@@ -74,6 +74,8 @@ export function DriverManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "cdl" | "status">("name");
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
+  const [editingNotesValue, setEditingNotesValue] = useState("");
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -85,6 +87,31 @@ export function DriverManagement() {
       }
       return next;
     });
+  };
+
+  const startEditNotes = (driverId: string, currentNotes: string) => {
+    setEditingNotesId(driverId);
+    setEditingNotesValue(currentNotes || "");
+  };
+
+  const cancelEditNotes = () => {
+    setEditingNotesId(null);
+    setEditingNotesValue("");
+  };
+
+  const saveNotes = async (driverId: string) => {
+    const { error } = await supabase
+      .from("drivers")
+      .update({ notes: editingNotesValue.trim() || null, updated_at: new Date().toISOString() })
+      .eq("id", driverId);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to update notes", variant: "destructive" });
+    } else {
+      toast({ title: "Success", description: "Notes updated" });
+      setEditingNotesId(null);
+      setEditingNotesValue("");
+    }
   };
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -565,18 +592,16 @@ export function DriverManagement() {
               ) : (
                 <>
                   <span className={`font-medium flex items-center gap-1.5 ${isInactive ? "line-through text-muted-foreground" : ""}`}>
-                    {hasNotes && (
-                      <button
-                        onClick={() => toggleExpand(driver.id)}
-                        className="p-0.5 -ml-1 hover:bg-secondary rounded transition-colors"
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </button>
-                    )}
+                    <button
+                      onClick={() => toggleExpand(driver.id)}
+                      className="p-0.5 -ml-1 hover:bg-secondary rounded transition-colors"
+                    >
+                      {isExpanded ? (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
                     {driver.name}
                     {hasNotes && (
                       <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />
@@ -619,9 +644,43 @@ export function DriverManagement() {
               )}
               </div>
               {/* Expanded notes section */}
-              {hasNotes && isExpanded && (
+              {isExpanded && (
                 <div className="px-4 py-3 bg-muted/20 border-t border-border/50">
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{(driver as any).notes}</p>
+                  {editingNotesId === driver.id ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={editingNotesValue}
+                        onChange={(e) => setEditingNotesValue(e.target.value)}
+                        placeholder="Add notes..."
+                        rows={3}
+                        className="text-sm"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => saveNotes(driver.id)}>
+                          Save
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={cancelEditNotes}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start justify-between gap-4">
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap flex-1">
+                        {hasNotes ? (driver as any).notes : <span className="italic">No notes</span>}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="shrink-0"
+                        onClick={() => startEditNotes(driver.id, (driver as any).notes || "")}
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1" />
+                        Edit
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
