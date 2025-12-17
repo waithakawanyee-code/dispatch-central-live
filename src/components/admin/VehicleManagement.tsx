@@ -510,7 +510,7 @@ export function VehicleManagement() {
       </div>
 
       <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[32px_80px_110px_1fr_80px_90px_80px_90px] gap-3 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+        <div className="grid grid-cols-[32px_80px_110px_1fr_90px_90px] gap-3 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center justify-center">
@@ -542,7 +542,6 @@ export function VehicleManagement() {
           <span>Type</span>
           <span>Driver</span>
           <span>Status</span>
-          <span>Clean</span>
           <span className="text-right">Actions</span>
         </div>
         
@@ -554,7 +553,7 @@ export function VehicleManagement() {
           paginatedVehicles.map((vehicle) => (
             <div
               key={vehicle.id}
-              className="grid grid-cols-[32px_80px_110px_1fr_90px_80px_90px] gap-3 border-b border-border px-4 py-3 text-sm last:border-0 items-center"
+              className="grid grid-cols-[32px_80px_110px_1fr_90px_90px] gap-3 border-b border-border px-4 py-3 text-sm last:border-0 items-center"
             >
               <Checkbox
                 checked={selectedIds.has(vehicle.id)}
@@ -618,18 +617,6 @@ export function VehicleManagement() {
                       <SelectItem value="out-of-service">Out of Service</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select
-                    value={formData.clean_status}
-                    onValueChange={(value: CleanStatus) => setFormData({ ...formData, clean_status: value })}
-                  >
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="clean">Clean</SelectItem>
-                      <SelectItem value="dirty">Dirty</SelectItem>
-                    </SelectContent>
-                  </Select>
                   <div className="flex justify-end gap-1">
                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleEdit(vehicle.id)}>
                       <Check className="h-4 w-4 text-status-available" />
@@ -657,7 +644,6 @@ export function VehicleManagement() {
                     )}
                   </span>
                   <StatusBadge status={vehicle.status} size="sm" />
-                  <StatusBadge status={vehicle.clean_status} size="sm" />
                   <div className="flex justify-end gap-1">
                     {((vehicle as any).notes || editingId === vehicle.id) && (
                       <Button
