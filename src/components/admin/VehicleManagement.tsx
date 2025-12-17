@@ -510,7 +510,7 @@ export function VehicleManagement() {
       </div>
 
       <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[32px_80px_110px_1fr_90px_90px] gap-3 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+        <div className="grid grid-cols-[32px_100px_140px_90px_90px] gap-3 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center justify-center">
@@ -540,7 +540,6 @@ export function VehicleManagement() {
           </DropdownMenu>
           <span>Unit</span>
           <span>Type</span>
-          <span>Driver</span>
           <span>Status</span>
           <span className="text-right">Actions</span>
         </div>
@@ -553,7 +552,7 @@ export function VehicleManagement() {
           paginatedVehicles.map((vehicle) => (
             <div
               key={vehicle.id}
-              className="grid grid-cols-[32px_80px_110px_1fr_90px_90px] gap-3 border-b border-border px-4 py-3 text-sm last:border-0 items-center"
+              className="grid grid-cols-[32px_100px_140px_90px_90px] gap-3 border-b border-border px-4 py-3 text-sm last:border-0 items-center"
             >
               <Checkbox
                 checked={selectedIds.has(vehicle.id)}
@@ -590,22 +589,6 @@ export function VehicleManagement() {
                     </SelectContent>
                   </Select>
                   <Select
-                    value={formData.driver || "_none"}
-                    onValueChange={(value) => setFormData({ ...formData, driver: value === "_none" ? "" : value })}
-                  >
-                    <SelectTrigger className="h-8">
-                      <SelectValue placeholder="Driver" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_none">None</SelectItem>
-                      {getAvailableDrivers().map(driver => (
-                        <SelectItem key={driver.id} value={driver.name}>
-                          {driver.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
                     value={formData.status}
                     onValueChange={(value: VehicleStatus) => setFormData({ ...formData, status: value })}
                   >
@@ -635,14 +618,6 @@ export function VehicleManagement() {
                     )}
                   </span>
                   <span className="text-xs text-muted-foreground truncate">{getVehicleTypeLabel(vehicle.vehicle_type)}</span>
-                  <span className="flex items-center gap-1 text-muted-foreground">
-                    {vehicle.driver || "-"}
-                    {vehicleHasCdlMismatch(vehicle) && (
-                      <span title="Driver does not have CDL for this vehicle type">
-                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                      </span>
-                    )}
-                  </span>
                   <StatusBadge status={vehicle.status} size="sm" />
                   <div className="flex justify-end gap-1">
                     {((vehicle as any).notes || editingId === vehicle.id) && (
