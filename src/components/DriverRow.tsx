@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, Phone, Clock, Truck, Pencil, Trash2, Check, X, Plus } from "lucide-react";
+import { User, Phone, Clock, Truck, Pencil, Trash2, Check, X, Plus, Award } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import {
@@ -341,6 +341,9 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
           )}
         />
         <span className="font-mono font-medium text-foreground truncate max-w-[100px]">{driver.name}</span>
+        {driver.has_cdl && (
+          <span className="text-[9px] font-semibold text-primary bg-primary/10 px-1 rounded">CDL</span>
+        )}
       </div>
     );
 

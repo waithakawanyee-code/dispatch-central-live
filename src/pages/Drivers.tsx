@@ -464,6 +464,9 @@ const Drivers = () => {
                       >
                         <span className="h-2 w-2 rounded-full bg-slate-500 shrink-0" />
                         <span className="font-medium text-foreground flex-1">{driver.name}</span>
+                        {(driver as any).has_cdl && (
+                          <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
+                        )}
                         {driver.schedule && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
                             <Clock className="h-3 w-3" />
@@ -500,6 +503,9 @@ const Drivers = () => {
                       >
                         <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
                         <span className="font-medium text-foreground flex-1">{driver.name}</span>
+                        {(driver as any).has_cdl && (
+                          <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
+                        )}
                         {driver.report_time && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
                             <Clock className="h-3 w-3" />
@@ -622,6 +628,9 @@ const Drivers = () => {
                           >
                             <span className="h-2.5 w-2.5 rounded-full bg-status-offline shrink-0" />
                             <span className="font-mono font-medium text-foreground flex-1">{driver.name}</span>
+                            {(driver as any).has_cdl && (
+                              <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
+                            )}
                             {calledOut && (
                               <span className="flex items-center gap-1.5 text-destructive" title={note || "Called out"}>
                                 <PhoneOff className="h-4 w-4" />
