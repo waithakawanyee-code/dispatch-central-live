@@ -651,6 +651,11 @@ export function DriverManagement() {
                       <Textarea
                         value={editingNotesValue}
                         onChange={(e) => setEditingNotesValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") {
+                            cancelEditNotes();
+                          }
+                        }}
                         placeholder="Add notes..."
                         rows={3}
                         className="text-sm"
