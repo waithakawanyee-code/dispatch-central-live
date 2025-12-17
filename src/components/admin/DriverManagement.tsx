@@ -330,6 +330,21 @@ export function DriverManagement() {
                 <DropdownMenuRadioItem value="cdl">CDL Status</DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="status">Active Status</DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
+              {(cdlFilter !== "all" || activeFilter !== "all" || sortBy !== "name") && (
+                <>
+                  <DropdownMenuSeparator />
+                  <button
+                    onClick={() => {
+                      setCdlFilter("all");
+                      setActiveFilter("all");
+                      setSortBy("name");
+                    }}
+                    className="w-full px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 rounded-sm transition-colors text-left"
+                  >
+                    Reset all filters
+                  </button>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
