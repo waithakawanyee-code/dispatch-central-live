@@ -266,6 +266,57 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_assignment_history: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          created_at: string
+          driver_id: string | null
+          driver_name: string
+          id: string
+          unassigned_at: string | null
+          vehicle_id: string
+          vehicle_unit: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          driver_id?: string | null
+          driver_name: string
+          id?: string
+          unassigned_at?: string | null
+          vehicle_id: string
+          vehicle_unit: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          driver_id?: string | null
+          driver_name?: string
+          id?: string
+          unassigned_at?: string | null
+          vehicle_id?: string
+          vehicle_unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_assignment_history_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_assignment_history_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
           clean_status: Database["public"]["Enums"]["clean_status"]
