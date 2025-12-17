@@ -273,6 +273,7 @@ export type Database = {
           driver: string | null
           id: string
           mileage: number | null
+          notes: string | null
           status: Database["public"]["Enums"]["vehicle_status"]
           unit: string
           updated_at: string
@@ -284,6 +285,7 @@ export type Database = {
           driver?: string | null
           id?: string
           mileage?: number | null
+          notes?: string | null
           status?: Database["public"]["Enums"]["vehicle_status"]
           unit: string
           updated_at?: string
@@ -295,6 +297,7 @@ export type Database = {
           driver?: string | null
           id?: string
           mileage?: number | null
+          notes?: string | null
           status?: Database["public"]["Enums"]["vehicle_status"]
           unit?: string
           updated_at?: string

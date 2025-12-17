@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Download, Upload, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertTriangle, StickyNote, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,6 +45,7 @@ import { useDispatchData } from "@/hooks/useDispatchData";
 import { StatusBadge } from "@/components/StatusBadge";
 import { parseCSV, generateCSV, downloadCSV } from "@/lib/csv";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import type { Database } from "@/integrations/supabase/types";
 
 type VehicleStatus = Database["public"]["Enums"]["vehicle_status"];
@@ -73,6 +74,7 @@ interface VehicleFormData {
   status: VehicleStatus;
   clean_status: CleanStatus;
   vehicle_type: VehicleType | "";
+  notes: string;
 }
 
 const initialFormData: VehicleFormData = {
@@ -81,6 +83,7 @@ const initialFormData: VehicleFormData = {
   status: "active",
   clean_status: "clean",
   vehicle_type: "",
+  notes: "",
 };
 
 const validStatuses: VehicleStatus[] = ["active", "out-of-service"];
@@ -97,6 +100,7 @@ export function VehicleManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Pagination
@@ -138,13 +142,14 @@ export function VehicleManagement() {
       { key: "driver", header: "Driver" },
       { key: "status", header: "Status" },
       { key: "clean_status", header: "Clean Status" },
+      { key: "notes", header: "Notes" },
     ]);
     downloadCSV(csv, `vehicles-${new Date().toISOString().split("T")[0]}.csv`);
     toast({ title: "Exported", description: `${vehicles.length} vehicles exported to CSV` });
   };
 
   const handleDownloadTemplate = () => {
-    const template = "Unit,Vehicle Type,Driver,Status,Clean Status\nV-109,sedan_volvo,Jane Smith,active,clean";
+    const template = "Unit,Vehicle Type,Driver,Status,Clean Status,Notes\nV-109,sedan_volvo,Jane Smith,active,clean,Maintenance note";
     downloadCSV(template, "vehicles-template.csv");
     toast({ title: "Template Downloaded", description: "CSV template with example row" });
   };
@@ -155,13 +160,14 @@ export function VehicleManagement() {
 
     setImporting(true);
     try {
-      const text = await file.text();
+        const text = await file.text();
       const rows = parseCSV<{
         unit: string;
         vehicle_type?: string;
         driver?: string;
         status?: string;
         clean_status?: string;
+        notes?: string;
       }>(text);
 
       if (rows.length === 0) {
@@ -177,6 +183,7 @@ export function VehicleManagement() {
           driver: row.driver?.trim() || null,
           status: (validStatuses.includes(row.status as VehicleStatus) ? row.status : "active") as VehicleStatus,
           clean_status: (validCleanStatuses.includes(row.clean_status as CleanStatus) ? row.clean_status : "clean") as CleanStatus,
+          notes: row.notes?.trim() || null,
         }));
 
       if (validRows.length === 0) {
@@ -215,6 +222,7 @@ export function VehicleManagement() {
       driver: formData.driver.trim() || null,
       status: formData.status,
       clean_status: formData.clean_status,
+      notes: formData.notes.trim() || null,
     });
 
     if (error) {
@@ -244,6 +252,7 @@ export function VehicleManagement() {
         driver: formData.driver.trim() || null,
         status: formData.status,
         clean_status: formData.clean_status,
+        notes: formData.notes.trim() || null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id);
@@ -269,12 +278,14 @@ export function VehicleManagement() {
 
   const startEdit = (vehicle: typeof vehicles[0]) => {
     setEditingId(vehicle.id);
+    setExpandedId(vehicle.id);
     setFormData({
       unit: vehicle.unit,
       vehicle_type: vehicle.vehicle_type || "",
       driver: vehicle.driver || "",
       status: vehicle.status,
       clean_status: vehicle.clean_status,
+      notes: (vehicle as any).notes || "",
     });
   };
 
@@ -453,6 +464,16 @@ export function VehicleManagement() {
                     </Select>
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Maintenance notes, etc."
+                    rows={3}
+                  />
+                </div>
                 {hasCdlMismatch() && (
                   <div className="flex items-center gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-600">
                     <AlertTriangle className="h-4 w-4 flex-shrink-0" />
@@ -468,7 +489,7 @@ export function VehicleManagement() {
 
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-          CSV format: Unit, Vehicle Type (e.g. sedan_volvo), Driver, Mileage, Status, Clean Status
+          CSV format: Unit, Vehicle Type (e.g. sedan_volvo), Driver, Status, Clean Status, Notes
         </p>
         {selectedIds.size > 0 && (
           <div className="flex items-center gap-2">
@@ -620,7 +641,12 @@ export function VehicleManagement() {
                 </>
               ) : (
                 <>
-                  <span className="font-mono font-medium">{vehicle.unit}</span>
+                  <span className="font-mono font-medium flex items-center gap-1">
+                    {vehicle.unit}
+                    {(vehicle as any).notes && (
+                      <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
+                  </span>
                   <span className="text-xs text-muted-foreground truncate">{getVehicleTypeLabel(vehicle.vehicle_type)}</span>
                   <span className="flex items-center gap-1 text-muted-foreground">
                     {vehicle.driver || "-"}
@@ -633,6 +659,20 @@ export function VehicleManagement() {
                   <StatusBadge status={vehicle.status} size="sm" />
                   <StatusBadge status={vehicle.clean_status} size="sm" />
                   <div className="flex justify-end gap-1">
+                    {((vehicle as any).notes || editingId === vehicle.id) && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => setExpandedId(expandedId === vehicle.id ? null : vehicle.id)}
+                      >
+                        {expandedId === vehicle.id ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEdit(vehicle)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -657,6 +697,24 @@ export function VehicleManagement() {
                     </AlertDialog>
                   </div>
                 </>
+              )}
+              {/* Expandable Notes Row */}
+              {expandedId === vehicle.id && (
+                <div className="col-span-7 px-2 pb-3 pt-1">
+                  {editingId === vehicle.id ? (
+                    <Textarea
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      placeholder="Add notes..."
+                      rows={2}
+                      className="text-sm"
+                    />
+                  ) : (
+                    <div className="text-sm text-muted-foreground bg-secondary/30 rounded-md px-3 py-2">
+                      {(vehicle as any).notes || "No notes"}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           ))
