@@ -90,6 +90,7 @@ export type Database = {
           code: string | null
           created_at: string
           id: string
+          is_active: boolean
           name: string
           phone: string | null
           report_time: string | null
@@ -101,6 +102,7 @@ export type Database = {
           code?: string | null
           created_at?: string
           id?: string
+          is_active?: boolean
           name: string
           phone?: string | null
           report_time?: string | null
@@ -112,6 +114,7 @@ export type Database = {
           code?: string | null
           created_at?: string
           id?: string
+          is_active?: boolean
           name?: string
           phone?: string | null
           report_time?: string | null

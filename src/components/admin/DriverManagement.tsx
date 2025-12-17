@@ -31,18 +31,15 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useDispatchData } from "@/hooks/useDispatchData";
-import { StatusBadge } from "@/components/StatusBadge";
 import { parseCSV, generateCSV, downloadCSV } from "@/lib/csv";
-import type { Database } from "@/integrations/supabase/types";
-
-type DriverStatus = Database["public"]["Enums"]["driver_status"];
+import { Badge } from "@/components/ui/badge";
 
 interface DriverFormData {
   name: string;
   code: string;
   phone: string;
   vehicle: string;
-  status: DriverStatus;
+  is_active: boolean;
 }
 
 const initialFormData: DriverFormData = {
@@ -50,10 +47,8 @@ const initialFormData: DriverFormData = {
   code: "",
   phone: "",
   vehicle: "",
-  status: "offline",
+  is_active: true,
 };
-
-const validStatuses: DriverStatus[] = ["unassigned", "assigned", "working", "punched-out", "available", "on-route", "break", "offline", "off"];
 
 export function DriverManagement() {
   const { drivers } = useDispatchData();
@@ -65,21 +60,25 @@ export function DriverManagement() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
-    const csv = generateCSV(drivers, [
+    const exportData = drivers.map(d => ({
+      ...d,
+      is_active: (d as any).is_active !== false ? "Active" : "Inactive"
+    }));
+    const csv = generateCSV(exportData, [
       { key: "name", header: "Name" },
       { key: "code", header: "Code" },
       { key: "phone", header: "Phone" },
       { key: "vehicle", header: "Vehicle" },
-      { key: "status", header: "Status" },
+      { key: "is_active", header: "Status" },
     ]);
     downloadCSV(csv, `drivers-${new Date().toISOString().split("T")[0]}.csv`);
     toast({ title: "Exported", description: `${drivers.length} drivers exported to CSV` });
   };
 
   const handleDownloadTemplate = () => {
-    const template = "Name,Code,Phone,Vehicle,Status,Mon_In,Mon_Out,Tue_In,Tue_Out,Wed_In,Wed_Out,Thu_In,Thu_Out,Fri_In,Fri_Out,Sat_In,Sat_Out,Sun_In,Sun_Out\nJohn Doe,JDOE,555-0123,V-101,unassigned,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,OFF,,OFF,";
+    const template = "Name,Code,Phone,Vehicle,Active,Mon_In,Mon_Out,Tue_In,Tue_Out,Wed_In,Wed_Out,Thu_In,Thu_Out,Fri_In,Fri_Out,Sat_In,Sat_Out,Sun_In,Sun_Out\nJohn Doe,JDOE,555-0123,V-101,yes,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,OFF,,OFF,";
     downloadCSV(template, "drivers-template.csv");
-    toast({ title: "Template Downloaded", description: "CSV template with schedule columns (Code is 4-letter identifier, Out times are optional, use OFF for days off)" });
+    toast({ title: "Template Downloaded", description: "CSV template with schedule columns (Code is 4-letter identifier, Active: yes/no)" });
   };
 
   const dayMapping: Record<string, number> = {
@@ -114,7 +113,7 @@ export function DriverManagement() {
             code: row.Code?.trim().toUpperCase().slice(0, 4) || null,
             phone: row.Phone?.trim() || null,
             vehicle: row.Vehicle?.trim() || null,
-            status: (validStatuses.includes(row.Status as DriverStatus) ? row.Status : "unassigned") as DriverStatus,
+            is_active: row.Active?.toLowerCase() !== "no" && row.Active?.toLowerCase() !== "inactive",
           })
           .select("id")
           .single();
@@ -182,7 +181,7 @@ export function DriverManagement() {
       code: formData.code.trim().toUpperCase().slice(0, 4) || null,
       phone: formData.phone.trim() || null,
       vehicle: formData.vehicle.trim() || null,
-      status: formData.status,
+      is_active: formData.is_active,
     });
 
     if (error) {
@@ -207,7 +206,7 @@ export function DriverManagement() {
         code: formData.code.trim().toUpperCase().slice(0, 4) || null,
         phone: formData.phone.trim() || null,
         vehicle: formData.vehicle.trim() || null,
-        status: formData.status,
+        is_active: formData.is_active,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id);
@@ -238,7 +237,7 @@ export function DriverManagement() {
       code: driver.code || "",
       phone: driver.phone || "",
       vehicle: driver.vehicle || "",
-      status: driver.status,
+      is_active: (driver as any).is_active !== false,
     });
   };
 
@@ -322,20 +321,18 @@ export function DriverManagement() {
                     placeholder="V-101"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="is_active">Status</Label>
                   <Select
-                    value={formData.status}
-                    onValueChange={(value: DriverStatus) => setFormData({ ...formData, status: value })}
+                    value={formData.is_active ? "active" : "inactive"}
+                    onValueChange={(value) => setFormData({ ...formData, is_active: value === "active" })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-32">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="available">Available</SelectItem>
-                      <SelectItem value="on-route">On Route</SelectItem>
-                      <SelectItem value="break">Break</SelectItem>
-                      <SelectItem value="offline">Offline</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -347,7 +344,7 @@ export function DriverManagement() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        CSV format: Name, Code, Phone, Vehicle, Status (available/on-route/break/offline)
+        CSV format: Name, Code, Phone, Vehicle, Active (yes/no)
       </p>
 
       <div className="rounded-lg border border-border bg-card">
@@ -394,17 +391,15 @@ export function DriverManagement() {
                     className="h-8"
                   />
                   <Select
-                    value={formData.status}
-                    onValueChange={(value: DriverStatus) => setFormData({ ...formData, status: value })}
+                    value={formData.is_active ? "active" : "inactive"}
+                    onValueChange={(value) => setFormData({ ...formData, is_active: value === "active" })}
                   >
                     <SelectTrigger className="h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="available">Available</SelectItem>
-                      <SelectItem value="on-route">On Route</SelectItem>
-                      <SelectItem value="break">Break</SelectItem>
-                      <SelectItem value="offline">Offline</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
                   <div className="flex justify-end gap-1">
@@ -422,7 +417,9 @@ export function DriverManagement() {
                   <span className="font-mono text-xs text-primary">{driver.code || "-"}</span>
                   <span className="font-mono text-muted-foreground">{driver.phone || "-"}</span>
                   <span className="font-mono text-primary">{driver.vehicle || "-"}</span>
-                  <StatusBadge status={driver.status} size="sm" />
+                  <Badge variant={(driver as any).is_active !== false ? "default" : "secondary"} className="text-xs">
+                    {(driver as any).is_active !== false ? "Active" : "Inactive"}
+                  </Badge>
                   <div className="flex justify-end gap-1">
                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEdit(driver)}>
                       <Pencil className="h-4 w-4" />
