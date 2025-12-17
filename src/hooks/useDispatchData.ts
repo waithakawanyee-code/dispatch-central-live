@@ -38,25 +38,37 @@ export function useDispatchData() {
   // Filter to only active drivers for dispatch views
   const drivers = allDrivers.filter((d) => (d as any).is_active !== false);
 
+  // Fetch data function (reusable for refetch)
+  const fetchData = async () => {
+    const [driversRes, vehiclesRes] = await Promise.all([
+      supabase.from("drivers").select("*").order("name"),
+      supabase.from("vehicles").select("*").order("unit"),
+    ]);
+
+    if (driversRes.data) setAllDrivers(driversRes.data);
+    if (vehiclesRes.data) setVehicles(vehiclesRes.data);
+    setLoading(false);
+    // Mark initial load complete after a brief delay
+    setTimeout(() => {
+      isInitialLoad.current = false;
+    }, 1000);
+  };
+
   // Fetch initial data
   useEffect(() => {
-    const fetchData = async () => {
-      const [driversRes, vehiclesRes] = await Promise.all([
-        supabase.from("drivers").select("*").order("name"),
-        supabase.from("vehicles").select("*").order("unit"),
-      ]);
-
-      if (driversRes.data) setAllDrivers(driversRes.data);
-      if (vehiclesRes.data) setVehicles(vehiclesRes.data);
-      setLoading(false);
-      // Mark initial load complete after a brief delay
-      setTimeout(() => {
-        isInitialLoad.current = false;
-      }, 1000);
-    };
-
     fetchData();
   }, []);
+
+  // Refetch function for manual refresh
+  const refetch = async () => {
+    const [driversRes, vehiclesRes] = await Promise.all([
+      supabase.from("drivers").select("*").order("name"),
+      supabase.from("vehicles").select("*").order("unit"),
+    ]);
+
+    if (driversRes.data) setAllDrivers(driversRes.data);
+    if (vehiclesRes.data) setVehicles(vehiclesRes.data);
+  };
 
   // Subscribe to real-time updates
   useEffect(() => {
@@ -235,5 +247,6 @@ export function useDispatchData() {
     updateDriverStatus,
     updateVehicleStatus,
     updateVehicleCleanStatus,
+    refetch,
   };
 }

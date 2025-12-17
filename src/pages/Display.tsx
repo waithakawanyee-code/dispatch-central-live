@@ -1,10 +1,36 @@
-import { Monitor, Users, Truck, Award } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Monitor, Users, Truck, RefreshCw } from "lucide-react";
 import { Header } from "@/components/Header";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+
+const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
 
 const Display = () => {
-  const { drivers, vehicles, loading } = useDispatchData();
+  const { drivers, vehicles, loading, refetch } = useDispatchData();
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      setIsRefreshing(true);
+      await refetch();
+      setLastUpdated(new Date());
+      setIsRefreshing(false);
+    }, AUTO_REFRESH_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [refetch]);
+
+  // Manual refresh handler
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setLastUpdated(new Date());
+    setIsRefreshing(false);
+  };
 
   // Filter to only active drivers
   const activeDrivers = drivers.filter((d) => (d as any).is_active !== false);
@@ -36,12 +62,27 @@ const Display = () => {
       <Header />
 
       <main className="p-4">
-        <div className="mb-4">
-          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Monitor className="h-5 w-5 text-primary" />
-            Command Center Display
-          </h1>
-          <p className="text-sm text-muted-foreground">Real-time driver and vehicle status</p>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <Monitor className="h-5 w-5 text-primary" />
+              Command Center Display
+            </h1>
+            <p className="text-sm text-muted-foreground">Real-time driver and vehicle status</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              Last updated: {format(lastUpdated, "HH:mm:ss")}
+            </span>
+            <button
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              className="p-2 rounded-md hover:bg-secondary transition-colors disabled:opacity-50"
+              title="Refresh now"
+            >
+              <RefreshCw className={cn("h-4 w-4 text-muted-foreground", isRefreshing && "animate-spin")} />
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-6">
