@@ -654,6 +654,9 @@ export function DriverManagement() {
                         onKeyDown={(e) => {
                           if (e.key === "Escape") {
                             cancelEditNotes();
+                          } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                            e.preventDefault();
+                            saveNotes(driver.id);
                           }
                         }}
                         placeholder="Add notes..."
