@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload, ChevronLeft, ChevronRight, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Download, Upload, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -308,6 +308,24 @@ export function VehicleManagement() {
     return activeDrivers;
   };
 
+  // Check for CDL mismatch warning
+  const hasCdlMismatch = () => {
+    if (!formData.driver || !formData.vehicle_type) return false;
+    const requiresCdl = vehicleRequiresCdl(formData.vehicle_type);
+    if (!requiresCdl) return false;
+    const driver = allDrivers.find(d => d.name === formData.driver);
+    return driver && !driver.has_cdl;
+  };
+
+  // Check if a specific vehicle has CDL mismatch
+  const vehicleHasCdlMismatch = (vehicle: typeof vehicles[0]) => {
+    if (!vehicle.driver || !vehicle.vehicle_type) return false;
+    const typeInfo = VEHICLE_TYPES.find(t => t.value === vehicle.vehicle_type);
+    if (!typeInfo?.requiresCdl) return false;
+    const driver = allDrivers.find(d => d.name === vehicle.driver);
+    return driver && !driver.has_cdl;
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -453,6 +471,12 @@ export function VehicleManagement() {
                     </Select>
                   </div>
                 </div>
+                {hasCdlMismatch() && (
+                  <div className="flex items-center gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-600">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                    <span>Warning: {formData.driver} does not have a CDL but this vehicle type requires one.</span>
+                  </div>
+                )}
                 <Button onClick={handleAdd} className="w-full">Add Vehicle</Button>
               </div>
             </DialogContent>
@@ -623,7 +647,14 @@ export function VehicleManagement() {
                 <>
                   <span className="font-mono font-medium">{vehicle.unit}</span>
                   <span className="text-xs text-muted-foreground truncate">{getVehicleTypeLabel(vehicle.vehicle_type)}</span>
-                  <span className="text-muted-foreground">{vehicle.driver || "-"}</span>
+                  <span className="flex items-center gap-1 text-muted-foreground">
+                    {vehicle.driver || "-"}
+                    {vehicleHasCdlMismatch(vehicle) && (
+                      <span title="Driver does not have CDL for this vehicle type">
+                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                      </span>
+                    )}
+                  </span>
                   <span className="font-mono text-muted-foreground">
                     {vehicle.mileage ? vehicle.mileage.toLocaleString() : "-"}
                   </span>
