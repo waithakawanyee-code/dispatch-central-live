@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, UserCheck, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,6 +43,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { parseCSV, generateCSV, downloadCSV } from "@/lib/csv";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface DriverFormData {
   name: string;
@@ -76,6 +77,7 @@ export function DriverManagement() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [editingNotesValue, setEditingNotesValue] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -113,6 +115,42 @@ export function DriverManagement() {
       setEditingNotesValue("");
     }
   };
+
+  const toggleSelectDriver = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredDrivers.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredDrivers.map((d) => d.id)));
+    }
+  };
+
+  const bulkSetActive = async (isActive: boolean) => {
+    if (selectedIds.size === 0) return;
+    const { error } = await supabase
+      .from("drivers")
+      .update({ is_active: isActive, updated_at: new Date().toISOString() })
+      .in("id", Array.from(selectedIds));
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to update drivers", variant: "destructive" });
+    } else {
+      toast({ title: "Success", description: `${selectedIds.size} driver(s) marked as ${isActive ? "active" : "inactive"}` });
+      setSelectedIds(new Set());
+    }
+  };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredDrivers = drivers
@@ -508,12 +546,35 @@ export function DriverManagement() {
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        CSV format: Name, Code, Phone, Active (yes/no), CDL (yes/no)
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          CSV format: Name, Code, Phone, Active (yes/no), CDL (yes/no)
+        </p>
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
+            <Button size="sm" variant="outline" onClick={() => bulkSetActive(true)}>
+              <UserCheck className="h-4 w-4 mr-1" />
+              Set Active
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => bulkSetActive(false)}>
+              <UserX className="h-4 w-4 mr-1" />
+              Set Inactive
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+              Clear
+            </Button>
+          </div>
+        )}
+      </div>
 
       <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[1fr_60px_100px_70px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground">
+        <div className="grid grid-cols-[32px_1fr_60px_100px_70px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground">
+          <Checkbox
+            checked={filteredDrivers.length > 0 && selectedIds.size === filteredDrivers.length}
+            onCheckedChange={toggleSelectAll}
+            aria-label="Select all"
+          />
           <span>Name</span>
           <span>Code</span>
           <span>Phone</span>
@@ -536,8 +597,13 @@ export function DriverManagement() {
             return (
             <div key={driver.id} className="border-b border-border last:border-0">
               <div
-                className={`grid grid-cols-[1fr_60px_100px_70px_100px_100px] gap-4 px-4 py-3 text-sm ${isInactive ? "bg-muted/30 opacity-60" : ""}`}
+                className={`grid grid-cols-[32px_1fr_60px_100px_70px_100px_100px] gap-4 px-4 py-3 text-sm items-center ${isInactive ? "bg-muted/30 opacity-60" : ""}`}
               >
+              <Checkbox
+                checked={selectedIds.has(driver.id)}
+                onCheckedChange={() => toggleSelectDriver(driver.id)}
+                aria-label={`Select ${driver.name}`}
+              />
               {editingId === driver.id ? (
                 <>
                   <Input
