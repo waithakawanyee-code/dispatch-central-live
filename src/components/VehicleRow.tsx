@@ -11,10 +11,26 @@ import type { Database } from "@/integrations/supabase/types";
 
 type VehicleStatus = Database["public"]["Enums"]["vehicle_status"];
 type CleanStatus = Database["public"]["Enums"]["clean_status"];
-type VehicleRow = Database["public"]["Tables"]["vehicles"]["Row"];
+type VehicleType = Database["public"]["Enums"]["vehicle_type"];
+type VehicleRowType = Database["public"]["Tables"]["vehicles"]["Row"];
+
+const VEHICLE_TYPE_LABELS: Record<VehicleType, string> = {
+  sedan_volvo: "Sedan-Volvo",
+  sedan_aviator: "Sedan Aviator",
+  suv: "SUV",
+  exec_transit: "Exec Transit",
+  sprinter_limo: "Sprinter Limo",
+  stretch_limo: "Stretch Limo",
+  "28_shuttle": "28 Shuttle",
+  "37_shuttle": "37 Shuttle",
+  "39_shuttle": "39 Shuttle",
+  "56_mc": "56 MC",
+  "32_limo_bus": "32-Limo Bus",
+  trolley: "Trolley",
+};
 
 interface VehicleRowProps {
-  vehicle: VehicleRow;
+  vehicle: VehicleRowType;
   onStatusChange?: (newStatus: VehicleStatus) => void;
   onCleanStatusChange?: (newCleanStatus: CleanStatus) => void;
   canEdit?: boolean;
@@ -57,6 +73,9 @@ export function VehicleRow({ vehicle, onStatusChange, onCleanStatusChange, canEd
 
       <div className="min-w-[90px] flex-1">
         <p className="font-mono text-sm font-medium text-foreground">{vehicle.unit}</p>
+        {vehicle.vehicle_type && (
+          <p className="text-[10px] text-muted-foreground">{VEHICLE_TYPE_LABELS[vehicle.vehicle_type]}</p>
+        )}
         {vehicle.driver && (
           <p className="text-[10px] text-muted-foreground">{vehicle.driver}</p>
         )}
