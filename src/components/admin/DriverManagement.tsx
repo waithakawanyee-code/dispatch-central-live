@@ -38,7 +38,6 @@ interface DriverFormData {
   name: string;
   code: string;
   phone: string;
-  vehicle: string;
   is_active: boolean;
   has_cdl: boolean;
 }
@@ -47,7 +46,6 @@ const initialFormData: DriverFormData = {
   name: "",
   code: "",
   phone: "",
-  vehicle: "",
   is_active: true,
   has_cdl: false,
 };
@@ -215,7 +213,6 @@ export function DriverManagement() {
       name: formData.name.trim(),
       code: formData.code.trim().toUpperCase().slice(0, 4) || null,
       phone: formData.phone.trim() || null,
-      vehicle: formData.vehicle.trim() || null,
       is_active: formData.is_active,
       has_cdl: formData.has_cdl,
     });
@@ -241,7 +238,6 @@ export function DriverManagement() {
         name: formData.name.trim(),
         code: formData.code.trim().toUpperCase().slice(0, 4) || null,
         phone: formData.phone.trim() || null,
-        vehicle: formData.vehicle.trim() || null,
         is_active: formData.is_active,
         has_cdl: formData.has_cdl,
         updated_at: new Date().toISOString(),
@@ -273,7 +269,6 @@ export function DriverManagement() {
       name: driver.name,
       code: driver.code || "",
       phone: driver.phone || "",
-      vehicle: driver.vehicle || "",
       is_active: (driver as any).is_active !== false,
       has_cdl: (driver as any).has_cdl === true,
     });
@@ -392,15 +387,6 @@ export function DriverManagement() {
                     placeholder="555-0100"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="vehicle">Assigned Vehicle</Label>
-                  <Input
-                    id="vehicle"
-                    value={formData.vehicle}
-                    onChange={(e) => setFormData({ ...formData, vehicle: e.target.value })}
-                    placeholder="V-101"
-                  />
-                </div>
                 <div className="flex items-center justify-between">
                   <Label htmlFor="is_active">Status</Label>
                   <Select
@@ -439,15 +425,14 @@ export function DriverManagement() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        CSV format: Name, Code, Phone, Vehicle, Active (yes/no)
+        CSV format: Name, Code, Phone, Active (yes/no), CDL (yes/no)
       </p>
 
       <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[1fr_60px_100px_80px_70px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground">
+        <div className="grid grid-cols-[1fr_60px_100px_70px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground">
           <span>Name</span>
           <span>Code</span>
           <span>Phone</span>
-          <span>Vehicle</span>
           <span>CDL</span>
           <span>Status</span>
           <span className="text-right">Actions</span>
@@ -465,7 +450,7 @@ export function DriverManagement() {
             return (
             <div
               key={driver.id}
-              className={`grid grid-cols-[1fr_60px_100px_80px_70px_100px_100px] gap-4 border-b border-border px-4 py-3 text-sm last:border-0 ${isInactive ? "bg-muted/30 opacity-60" : ""}`}
+              className={`grid grid-cols-[1fr_60px_100px_70px_100px_100px] gap-4 border-b border-border px-4 py-3 text-sm last:border-0 ${isInactive ? "bg-muted/30 opacity-60" : ""}`}
             >
               {editingId === driver.id ? (
                 <>
@@ -483,11 +468,6 @@ export function DriverManagement() {
                   <Input
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="h-8"
-                  />
-                  <Input
-                    value={formData.vehicle}
-                    onChange={(e) => setFormData({ ...formData, vehicle: e.target.value })}
                     className="h-8"
                   />
                   <Select
@@ -528,7 +508,7 @@ export function DriverManagement() {
                   <span className={`font-medium ${isInactive ? "line-through text-muted-foreground" : ""}`}>{driver.name}</span>
                   <span className={`font-mono text-xs ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.code || "-"}</span>
                   <span className="font-mono text-muted-foreground">{driver.phone || "-"}</span>
-                  <span className={`font-mono ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.vehicle || "-"}</span>
+                  
                   <Badge variant={(driver as any).has_cdl ? "default" : "outline"} className="text-xs">
                     {(driver as any).has_cdl ? "CDL" : "Non-CDL"}
                   </Badge>
