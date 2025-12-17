@@ -59,7 +59,14 @@ export function DriverManagement() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<DriverFormData>(initialFormData);
   const [importing, setImporting] = useState(false);
+  const [cdlFilter, setCdlFilter] = useState<"all" | "cdl" | "non-cdl">("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const filteredDrivers = drivers.filter((driver) => {
+    if (cdlFilter === "all") return true;
+    if (cdlFilter === "cdl") return (driver as any).has_cdl === true;
+    return (driver as any).has_cdl !== true;
+  });
 
   const handleExport = () => {
     const exportData = drivers.map(d => ({
@@ -252,7 +259,19 @@ export function DriverManagement() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Manage Drivers</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-lg font-semibold">Manage Drivers</h2>
+          <Select value={cdlFilter} onValueChange={(v) => setCdlFilter(v as typeof cdlFilter)}>
+            <SelectTrigger className="w-32 h-8">
+              <SelectValue placeholder="Filter CDL" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="cdl">CDL Only</SelectItem>
+              <SelectItem value="non-cdl">Non-CDL Only</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-2" onClick={handleDownloadTemplate}>
             <Download className="h-4 w-4" />
@@ -381,12 +400,12 @@ export function DriverManagement() {
           <span className="text-right">Actions</span>
         </div>
         
-        {drivers.length === 0 ? (
+        {filteredDrivers.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-            No drivers found. Add your first driver above.
+            {cdlFilter === "all" ? "No drivers found. Add your first driver above." : `No ${cdlFilter === "cdl" ? "CDL" : "Non-CDL"} drivers found.`}
           </div>
         ) : (
-          drivers.map((driver) => {
+          filteredDrivers.map((driver) => {
             const isInactive = (driver as any).is_active === false;
             return (
             <div
