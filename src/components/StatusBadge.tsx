@@ -121,5 +121,20 @@ export function StatusBadge({
 }: StatusBadgeProps) {
   const config = statusConfig[status];
   const displayLabel = label || statusLabels[status] || status.replace("-", " ").toUpperCase();
-  return;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border font-medium uppercase tracking-wider",
+        config?.bg,
+        config?.text,
+        config?.border,
+        sizeConfig[size]
+      )}
+    >
+      {showPulse && (
+        <span className={cn("h-1.5 w-1.5 rounded-full animate-pulse", config?.bg?.replace("/20", ""))} />
+      )}
+      {displayLabel}
+    </span>
+  );
 }
