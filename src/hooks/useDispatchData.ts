@@ -28,12 +28,15 @@ async function logStatusChange(
 }
 
 export function useDispatchData() {
-  const [drivers, setDrivers] = useState<DriverRow[]>([]);
+  const [allDrivers, setAllDrivers] = useState<DriverRow[]>([]);
   const [vehicles, setVehicles] = useState<VehicleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [recentlyUpdatedDrivers, setRecentlyUpdatedDrivers] = useState<Set<string>>(new Set());
   const [recentlyUpdatedVehicles, setRecentlyUpdatedVehicles] = useState<Set<string>>(new Set());
   const isInitialLoad = useRef(true);
+
+  // Filter to only active drivers for dispatch views
+  const drivers = allDrivers.filter((d) => (d as any).is_active !== false);
 
   // Fetch initial data
   useEffect(() => {
@@ -43,7 +46,7 @@ export function useDispatchData() {
         supabase.from("vehicles").select("*").order("unit"),
       ]);
 
-      if (driversRes.data) setDrivers(driversRes.data);
+      if (driversRes.data) setAllDrivers(driversRes.data);
       if (vehiclesRes.data) setVehicles(vehiclesRes.data);
       setLoading(false);
       // Mark initial load complete after a brief delay
@@ -81,13 +84,13 @@ export function useDispatchData() {
                 });
               }, 1500);
             }
-            setDrivers((prev) =>
+            setAllDrivers((prev) =>
               prev.map((d) => (d.id === newDriver.id ? newDriver : d))
             );
           } else if (payload.eventType === "INSERT") {
-            setDrivers((prev) => [...prev, payload.new as DriverRow]);
+            setAllDrivers((prev) => [...prev, payload.new as DriverRow]);
           } else if (payload.eventType === "DELETE") {
-            setDrivers((prev) => prev.filter((d) => d.id !== payload.old.id));
+            setAllDrivers((prev) => prev.filter((d) => d.id !== payload.old.id));
           }
         }
       )
@@ -133,7 +136,7 @@ export function useDispatchData() {
   }, []);
 
   const updateDriverStatus = async (driverId: string, newStatus: DriverStatus, reportTime?: string, vehicle?: string) => {
-    const driver = drivers.find((d) => d.id === driverId);
+    const driver = allDrivers.find((d) => d.id === driverId);
     if (!driver) return;
 
     const oldStatus = driver.status;
@@ -223,7 +226,8 @@ export function useDispatchData() {
   };
 
   return {
-    drivers,
+    drivers, // Active drivers only (for dispatch views)
+    allDrivers, // All drivers including inactive (for admin)
     vehicles,
     loading,
     recentlyUpdatedDrivers,
