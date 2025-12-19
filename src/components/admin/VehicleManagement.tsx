@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertTriangle, StickyNote, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Download, Upload, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertTriangle, StickyNote, ChevronDown, ChevronUp, Home, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -666,6 +666,16 @@ export function VehicleManagement() {
                 <>
                   <span className="font-mono font-medium flex items-center gap-1">
                     {vehicle.unit}
+                    {(vehicle as any).classification === 'take_home' ? (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400" title="Take-Home Vehicle">
+                        <User className="h-3 w-3" />
+                        TH
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground" title="House Vehicle">
+                        <Home className="h-3 w-3" />
+                      </span>
+                    )}
                     {(vehicle as any).notes && (
                       <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />
                     )}
