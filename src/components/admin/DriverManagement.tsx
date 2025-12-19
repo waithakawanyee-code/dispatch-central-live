@@ -49,6 +49,8 @@ interface DriverFormData {
   name: string;
   code: string;
   phone: string;
+  email: string;
+  address: string;
   is_active: boolean;
   has_cdl: boolean;
   notes: string;
@@ -59,6 +61,8 @@ const initialFormData: DriverFormData = {
   name: "",
   code: "",
   phone: "",
+  email: "",
+  address: "",
   is_active: true,
   has_cdl: false,
   notes: "",
@@ -314,6 +318,8 @@ export function DriverManagement() {
       name: formData.name.trim(),
       code: formData.code.trim().toUpperCase().slice(0, 4) || null,
       phone: formData.phone.trim() || null,
+      email: formData.email.trim() || null,
+      address: formData.address.trim() || null,
       is_active: formData.is_active,
       has_cdl: formData.has_cdl,
       notes: formData.notes.trim() || null,
@@ -341,6 +347,8 @@ export function DriverManagement() {
         name: formData.name.trim(),
         code: formData.code.trim().toUpperCase().slice(0, 4) || null,
         phone: formData.phone.trim() || null,
+        email: formData.email.trim() || null,
+        address: formData.address.trim() || null,
         is_active: formData.is_active,
         has_cdl: formData.has_cdl,
         notes: formData.notes.trim() || null,
@@ -374,6 +382,8 @@ export function DriverManagement() {
       name: driver.name,
       code: driver.code || "",
       phone: driver.phone || "",
+      email: (driver as any).email || "",
+      address: (driver as any).address || "",
       is_active: (driver as any).is_active !== false,
       has_cdl: (driver as any).has_cdl === true,
       notes: (driver as any).notes || "",
@@ -600,7 +610,7 @@ export function DriverManagement() {
       </div>
 
       <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[32px_1fr_60px_100px_70px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+        <div className="grid grid-cols-[32px_1fr_60px_70px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center justify-center">
@@ -633,7 +643,6 @@ export function DriverManagement() {
           </DropdownMenu>
           <span>Name</span>
           <span>Code</span>
-          <span>Phone</span>
           <span>CDL</span>
           <span>Status</span>
           <span className="text-right">Actions</span>
@@ -653,7 +662,7 @@ export function DriverManagement() {
             return (
             <div key={driver.id} className="border-b border-border last:border-0">
               <div
-                className={`grid grid-cols-[32px_1fr_60px_100px_70px_100px_100px] gap-4 px-4 py-3 text-sm items-center ${isInactive ? "bg-muted/30 opacity-60" : ""}`}
+                className={`grid grid-cols-[32px_1fr_60px_70px_100px_100px] gap-4 px-4 py-3 text-sm items-center ${isInactive ? "bg-muted/30 opacity-60" : ""}`}
               >
               <Checkbox
                 checked={selectedIds.has(driver.id)}
