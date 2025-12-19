@@ -87,9 +87,11 @@ export type Database = {
       }
       drivers: {
         Row: {
+          address: string | null
           code: string | null
           created_at: string
           default_vehicle: string | null
+          email: string | null
           has_cdl: boolean
           id: string
           is_active: boolean
@@ -102,9 +104,11 @@ export type Database = {
           vehicle: string | null
         }
         Insert: {
+          address?: string | null
           code?: string | null
           created_at?: string
           default_vehicle?: string | null
+          email?: string | null
           has_cdl?: boolean
           id?: string
           is_active?: boolean
@@ -117,9 +121,11 @@ export type Database = {
           vehicle?: string | null
         }
         Update: {
+          address?: string | null
           code?: string | null
           created_at?: string
           default_vehicle?: string | null
+          email?: string | null
           has_cdl?: boolean
           id?: string
           is_active?: boolean
