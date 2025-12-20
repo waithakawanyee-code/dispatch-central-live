@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, UserCheck, UserX, Home, Phone, User } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, UserCheck, UserX, Home, Phone, User } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -50,6 +50,10 @@ import { useDispatchData } from "@/hooks/useDispatchData";
 import { parseCSV, generateCSV, downloadCSV } from "@/lib/csv";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DriverProfileDialog } from "./DriverProfileDialog";
+import type { Database } from "@/integrations/supabase/types";
+
+type DriverRow = Database["public"]["Tables"]["drivers"]["Row"];
 
 interface DriverFormData {
   name: string;
@@ -79,7 +83,7 @@ export function DriverManagement() {
   const { allDrivers: drivers, vehicles } = useDispatchData();
   const { toast } = useToast();
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingDriver, setEditingDriver] = useState<DriverRow | null>(null);
   const [formData, setFormData] = useState<DriverFormData>(initialFormData);
   const [importing, setImporting] = useState(false);
   const [cdlFilter, setCdlFilter] = useState<"all" | "cdl" | "non-cdl">("all");
@@ -341,37 +345,6 @@ export function DriverManagement() {
     }
   };
 
-  const handleEdit = async (id: string) => {
-    if (!formData.name.trim()) {
-      toast({ title: "Error", description: "Name is required", variant: "destructive" });
-      return;
-    }
-
-    const { error } = await supabase
-      .from("drivers")
-      .update({
-        name: formData.name.trim(),
-        code: formData.code.trim().toUpperCase().slice(0, 4) || null,
-        phone: formData.phone.trim() || null,
-        email: formData.email.trim() || null,
-        address: formData.address.trim() || null,
-        is_active: formData.is_active,
-        has_cdl: formData.has_cdl,
-        notes: formData.notes.trim() || null,
-        default_vehicle: formData.default_vehicle.trim() || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id);
-
-    if (error) {
-      toast({ title: "Error", description: "Failed to update driver", variant: "destructive" });
-    } else {
-      toast({ title: "Success", description: "Driver updated successfully" });
-      setEditingId(null);
-      setFormData(initialFormData);
-    }
-  };
-
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("drivers").delete().eq("id", id);
 
@@ -382,19 +355,8 @@ export function DriverManagement() {
     }
   };
 
-  const startEdit = (driver: typeof drivers[0]) => {
-    setEditingId(driver.id);
-    setFormData({
-      name: driver.name,
-      code: driver.code || "",
-      phone: driver.phone || "",
-      email: (driver as any).email || "",
-      address: (driver as any).address || "",
-      is_active: (driver as any).is_active !== false,
-      has_cdl: (driver as any).has_cdl === true,
-      notes: (driver as any).notes || "",
-      default_vehicle: (driver as any).default_vehicle || "",
-    });
+  const openEditProfile = (driver: DriverRow) => {
+    setEditingDriver(driver);
   };
 
   return (
@@ -675,141 +637,86 @@ export function DriverManagement() {
                 onCheckedChange={() => toggleSelectDriver(driver.id)}
                 aria-label={`Select ${driver.name}`}
               />
-              {editingId === driver.id ? (
-                <>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="h-8"
-                  />
-                  <Input
-                    value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase().slice(0, 4) })}
-                    className="h-8 font-mono uppercase"
-                    maxLength={4}
-                  />
-                  <Input
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="h-8"
-                  />
-                  <Select
-                    value={formData.has_cdl ? "cdl" : "non-cdl"}
-                    onValueChange={(value) => setFormData({ ...formData, has_cdl: value === "cdl" })}
-                  >
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cdl">CDL</SelectItem>
-                      <SelectItem value="non-cdl">Non-CDL</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={formData.is_active ? "active" : "inactive"}
-                    onValueChange={(value) => setFormData({ ...formData, is_active: value === "active" })}
-                  >
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <div className="flex justify-end gap-1">
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleEdit(driver.id)}>
-                      <Check className="h-4 w-4 text-status-available" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingId(null)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <TooltipProvider delayDuration={1000}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className={`font-medium flex items-center gap-1.5 cursor-default ${isInactive ? "line-through text-muted-foreground" : ""}`}>
-                          <button
-                            onClick={() => toggleExpand(driver.id)}
-                            className="p-0.5 -ml-1 hover:bg-secondary rounded transition-colors"
-                          >
-                            {isExpanded ? (
-                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </button>
-                          {driver.name}
-                          {(driver as any).default_vehicle && (
-                            <span title={`Take-home: ${(driver as any).default_vehicle}`}>
-                              <Home className="h-3.5 w-3.5 text-primary" />
-                            </span>
-                          )}
-                          {hasNotes && (
-                            <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />
-                          )}
+              <TooltipProvider delayDuration={1000}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={`font-medium flex items-center gap-1.5 cursor-default ${isInactive ? "line-through text-muted-foreground" : ""}`}>
+                      <button
+                        onClick={() => toggleExpand(driver.id)}
+                        className="p-0.5 -ml-1 hover:bg-secondary rounded transition-colors"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                      {driver.name}
+                      {(driver as any).default_vehicle && (
+                        <span title={`Take-home: ${(driver as any).default_vehicle}`}>
+                          <Home className="h-3.5 w-3.5 text-primary" />
                         </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="p-3">
-                        <div className="flex flex-col gap-1.5 text-xs">
-                          <div className="font-semibold text-foreground">{driver.name}</div>
-                          {driver.code && (
-                            <div className="flex items-center gap-1.5 text-muted-foreground">
-                              <User className="h-3 w-3" />
-                              <span className="font-mono">{driver.code}</span>
-                            </div>
-                          )}
-                          {driver.phone && (
-                            <div className="flex items-center gap-1.5 text-muted-foreground">
-                              <Phone className="h-3 w-3" />
-                              <span className="font-mono">{driver.phone}</span>
-                            </div>
-                          )}
-                          {!driver.code && !driver.phone && (
-                            <span className="text-muted-foreground italic">No contact info</span>
-                          )}
+                      )}
+                      {hasNotes && (
+                        <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />
+                      )}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="p-3">
+                    <div className="flex flex-col gap-1.5 text-xs">
+                      <div className="font-semibold text-foreground">{driver.name}</div>
+                      {driver.code && (
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <User className="h-3 w-3" />
+                          <span className="font-mono">{driver.code}</span>
                         </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <span className={`font-mono text-xs ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.code || "-"}</span>
-                  <span className="font-mono text-muted-foreground">{driver.phone || "-"}</span>
-                  
-                  <Badge variant={(driver as any).has_cdl ? "default" : "outline"} className="text-xs">
-                    {(driver as any).has_cdl ? "CDL" : "Non-CDL"}
-                  </Badge>
-                  <Badge variant={isInactive ? "secondary" : "default"} className="text-xs">
-                    {isInactive ? "Inactive" : "Active"}
-                  </Badge>
-                  <div className="flex justify-end gap-1">
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEdit(driver)}>
-                      <Pencil className="h-4 w-4" />
+                      )}
+                      {driver.phone && (
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Phone className="h-3 w-3" />
+                          <span className="font-mono">{driver.phone}</span>
+                        </div>
+                      )}
+                      {!driver.code && !driver.phone && (
+                        <span className="text-muted-foreground italic">No contact info</span>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <span className={`font-mono text-xs ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.code || "-"}</span>
+              <span className="font-mono text-muted-foreground">{driver.phone || "-"}</span>
+              
+              <Badge variant={(driver as any).has_cdl ? "default" : "outline"} className="text-xs">
+                {(driver as any).has_cdl ? "CDL" : "Non-CDL"}
+              </Badge>
+              <Badge variant={isInactive ? "secondary" : "default"} className="text-xs">
+                {isInactive ? "Inactive" : "Active"}
+              </Badge>
+              <div className="flex justify-end gap-1">
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditProfile(driver as DriverRow)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive">
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Driver</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete {driver.name}? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDelete(driver.id)}>Delete</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </>
-              )}
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Driver</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete {driver.name}? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDelete(driver.id)}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
               </div>
               {/* Expanded notes section */}
               {isExpanded && (
@@ -911,6 +818,14 @@ export function DriverManagement() {
           </div>
         )}
       </div>
+
+      {/* Driver Profile Dialog */}
+      <DriverProfileDialog
+        driver={editingDriver}
+        vehicles={vehicles}
+        open={editingDriver !== null}
+        onOpenChange={(open) => !open && setEditingDriver(null)}
+      />
     </div>
   );
 }
