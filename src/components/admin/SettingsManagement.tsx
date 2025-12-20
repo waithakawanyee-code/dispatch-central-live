@@ -1,9 +1,17 @@
-import { useState } from "react";
-import { Settings, Palette, Clock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Settings, Palette, Clock, LayoutList, Filter, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
 interface ScheduleColorConfig {
@@ -14,6 +22,15 @@ interface ScheduleColorConfig {
   evening: { label: string; range: string; color: string };
 }
 
+interface DisplayPreferences {
+  defaultPageSize: number;
+  defaultDriverTab: "cdl" | "non-cdl";
+  defaultActiveFilter: "all" | "active" | "inactive";
+  showScheduleInTable: boolean;
+  showColorLegend: boolean;
+  compactMode: boolean;
+}
+
 const defaultColors: ScheduleColorConfig = {
   veryEarly: { label: "Very Early", range: "Before 6am", color: "#c084fc" },
   earlyMorning: { label: "Early Morning", range: "6am - 9am", color: "#60a5fa" },
@@ -22,9 +39,39 @@ const defaultColors: ScheduleColorConfig = {
   evening: { label: "Evening", range: "After 5pm", color: "#fb923c" },
 };
 
+const defaultDisplayPrefs: DisplayPreferences = {
+  defaultPageSize: 10,
+  defaultDriverTab: "non-cdl",
+  defaultActiveFilter: "active",
+  showScheduleInTable: true,
+  showColorLegend: true,
+  compactMode: false,
+};
+
 export function SettingsManagement() {
   const { toast } = useToast();
   const [colors, setColors] = useState<ScheduleColorConfig>(defaultColors);
+  const [displayPrefs, setDisplayPrefs] = useState<DisplayPreferences>(defaultDisplayPrefs);
+
+  // Load saved settings on mount
+  useEffect(() => {
+    const savedColors = localStorage.getItem("scheduleColors");
+    const savedPrefs = localStorage.getItem("displayPreferences");
+    if (savedColors) {
+      try {
+        setColors(JSON.parse(savedColors));
+      } catch (e) {
+        console.error("Failed to parse saved colors");
+      }
+    }
+    if (savedPrefs) {
+      try {
+        setDisplayPrefs({ ...defaultDisplayPrefs, ...JSON.parse(savedPrefs) });
+      } catch (e) {
+        console.error("Failed to parse saved preferences");
+      }
+    }
+  }, []);
 
   const handleColorChange = (key: keyof ScheduleColorConfig, color: string) => {
     setColors((prev) => ({
@@ -33,16 +80,25 @@ export function SettingsManagement() {
     }));
   };
 
-  const handleSave = () => {
-    // In a real implementation, this would save to localStorage or database
-    localStorage.setItem("scheduleColors", JSON.stringify(colors));
-    toast({ title: "Settings Saved", description: "Schedule color preferences updated." });
+  const handlePrefChange = <K extends keyof DisplayPreferences>(key: K, value: DisplayPreferences[K]) => {
+    setDisplayPrefs((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
   };
 
-  const handleReset = () => {
+  const handleSaveAll = () => {
+    localStorage.setItem("scheduleColors", JSON.stringify(colors));
+    localStorage.setItem("displayPreferences", JSON.stringify(displayPrefs));
+    toast({ title: "Settings Saved", description: "All preferences have been updated." });
+  };
+
+  const handleResetAll = () => {
     setColors(defaultColors);
+    setDisplayPrefs(defaultDisplayPrefs);
     localStorage.removeItem("scheduleColors");
-    toast({ title: "Settings Reset", description: "Colors restored to defaults." });
+    localStorage.removeItem("displayPreferences");
+    toast({ title: "Settings Reset", description: "All settings restored to defaults." });
   };
 
   return (
@@ -52,8 +108,137 @@ export function SettingsManagement() {
           <Settings className="h-5 w-5" />
           Settings
         </h2>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleSaveAll}>Save All Settings</Button>
+          <Button variant="outline" onClick={handleResetAll}>
+            Reset All
+          </Button>
+        </div>
       </div>
 
+      {/* Display Preferences */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <LayoutList className="h-5 w-5" />
+            Display Preferences
+          </CardTitle>
+          <CardDescription>
+            Configure how driver lists are displayed by default.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="pageSize">Default Page Size</Label>
+              <Select
+                value={displayPrefs.defaultPageSize.toString()}
+                onValueChange={(v) => handlePrefChange("defaultPageSize", parseInt(v))}
+              >
+                <SelectTrigger id="pageSize">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5 drivers</SelectItem>
+                  <SelectItem value="10">10 drivers</SelectItem>
+                  <SelectItem value="25">25 drivers</SelectItem>
+                  <SelectItem value="50">50 drivers</SelectItem>
+                  <SelectItem value="100">100 drivers</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Number of drivers shown per page</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="defaultTab">Default Driver Tab</Label>
+              <Select
+                value={displayPrefs.defaultDriverTab}
+                onValueChange={(v) => handlePrefChange("defaultDriverTab", v as "cdl" | "non-cdl")}
+              >
+                <SelectTrigger id="defaultTab">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="non-cdl">Non-CDL Drivers</SelectItem>
+                  <SelectItem value="cdl">CDL Drivers</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Which tab opens first</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Filter Preferences */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filter Preferences
+          </CardTitle>
+          <CardDescription>
+            Set default filter behavior for the driver list.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="activeFilter">Default Status Filter</Label>
+              <Select
+                value={displayPrefs.defaultActiveFilter}
+                onValueChange={(v) => handlePrefChange("defaultActiveFilter", v as "all" | "active" | "inactive")}
+              >
+                <SelectTrigger id="activeFilter">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active Drivers Only</SelectItem>
+                  <SelectItem value="inactive">Inactive Drivers Only</SelectItem>
+                  <SelectItem value="all">All Drivers</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Which drivers are shown by default</p>
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-4 border-t border-border">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Show Schedule in Table</Label>
+                <p className="text-xs text-muted-foreground">Display weekly schedule columns in driver list</p>
+              </div>
+              <Switch
+                checked={displayPrefs.showScheduleInTable}
+                onCheckedChange={(v) => handlePrefChange("showScheduleInTable", v)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Show Color Legend</Label>
+                <p className="text-xs text-muted-foreground">Display schedule color legend above table</p>
+              </div>
+              <Switch
+                checked={displayPrefs.showColorLegend}
+                onCheckedChange={(v) => handlePrefChange("showColorLegend", v)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Compact Mode</Label>
+                <p className="text-xs text-muted-foreground">Reduce row height for more drivers on screen</p>
+              </div>
+              <Switch
+                checked={displayPrefs.compactMode}
+                onCheckedChange={(v) => handlePrefChange("compactMode", v)}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Schedule Colors */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -99,13 +284,6 @@ export function SettingsManagement() {
                 </div>
               </div>
             ))}
-          </div>
-
-          <div className="flex items-center gap-3 pt-4 border-t border-border">
-            <Button onClick={handleSave}>Save Colors</Button>
-            <Button variant="outline" onClick={handleReset}>
-              Reset to Defaults
-            </Button>
           </div>
 
           <div className="bg-muted/50 rounded-lg p-4 mt-4">
