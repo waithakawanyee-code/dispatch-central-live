@@ -529,6 +529,9 @@ export function DriverProfileDialog({
                           >
                             <X className="h-3 w-3" />
                           </Button>
+                          <span className="text-xs font-medium text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                            Strict Out
+                          </span>
                         </div>
                       ) : (
                         <Button
