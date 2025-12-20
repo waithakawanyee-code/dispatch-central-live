@@ -456,6 +456,34 @@ export function DriverManagement() {
           )}
         </div>
 
+        {/* Schedule Color Legend */}
+        <div className="flex items-center gap-4 mt-3 text-[10px] text-muted-foreground">
+          <span className="font-medium">Schedule:</span>
+          <div className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+            <span>&lt;6am</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+            <span>6-9am</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>9am-12pm</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span>12-5pm</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-orange-400"></span>
+            <span>5pm+</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-muted-foreground/50">OFF</span>
+          </div>
+        </div>
+
         <TabsContent value="cdl" className="mt-4">
           {renderDriverTable()}
         </TabsContent>
