@@ -1,5 +1,11 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, UserCheck, UserX, Home } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, UserCheck, UserX, Home, Phone, User } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -722,27 +728,53 @@ export function DriverManagement() {
                 </>
               ) : (
                 <>
-                  <span className={`font-medium flex items-center gap-1.5 ${isInactive ? "line-through text-muted-foreground" : ""}`}>
-                    <button
-                      onClick={() => toggleExpand(driver.id)}
-                      className="p-0.5 -ml-1 hover:bg-secondary rounded transition-colors"
-                    >
-                      {isExpanded ? (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </button>
-                    {driver.name}
-                    {(driver as any).default_vehicle && (
-                      <span title={`Take-home: ${(driver as any).default_vehicle}`}>
-                        <Home className="h-3.5 w-3.5 text-primary" />
-                      </span>
-                    )}
-                    {hasNotes && (
-                      <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />
-                    )}
-                  </span>
+                  <TooltipProvider delayDuration={1000}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={`font-medium flex items-center gap-1.5 cursor-default ${isInactive ? "line-through text-muted-foreground" : ""}`}>
+                          <button
+                            onClick={() => toggleExpand(driver.id)}
+                            className="p-0.5 -ml-1 hover:bg-secondary rounded transition-colors"
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </button>
+                          {driver.name}
+                          {(driver as any).default_vehicle && (
+                            <span title={`Take-home: ${(driver as any).default_vehicle}`}>
+                              <Home className="h-3.5 w-3.5 text-primary" />
+                            </span>
+                          )}
+                          {hasNotes && (
+                            <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />
+                          )}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="p-3">
+                        <div className="flex flex-col gap-1.5 text-xs">
+                          <div className="font-semibold text-foreground">{driver.name}</div>
+                          {driver.code && (
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <User className="h-3 w-3" />
+                              <span className="font-mono">{driver.code}</span>
+                            </div>
+                          )}
+                          {driver.phone && (
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <Phone className="h-3 w-3" />
+                              <span className="font-mono">{driver.phone}</span>
+                            </div>
+                          )}
+                          {!driver.code && !driver.phone && (
+                            <span className="text-muted-foreground italic">No contact info</span>
+                          )}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <span className={`font-mono text-xs ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.code || "-"}</span>
                   <span className="font-mono text-muted-foreground">{driver.phone || "-"}</span>
                   
