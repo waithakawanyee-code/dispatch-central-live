@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Settings, Palette, Clock, LayoutList, Filter, Users } from "lucide-react";
+import { Settings, Palette, Clock, LayoutList, Filter, Sun, Moon, Monitor } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,7 @@ const defaultDisplayPrefs: DisplayPreferences = {
 
 export function SettingsManagement() {
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
   const [colors, setColors] = useState<ScheduleColorConfig>(defaultColors);
   const [displayPrefs, setDisplayPrefs] = useState<DisplayPreferences>(defaultDisplayPrefs);
 
@@ -115,6 +117,50 @@ export function SettingsManagement() {
           </Button>
         </div>
       </div>
+
+      {/* Appearance */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sun className="h-5 w-5" />
+            Appearance
+          </CardTitle>
+          <CardDescription>
+            Choose your preferred color theme for the application.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3">
+            <Button
+              variant={theme === "light" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTheme("light")}
+              className="gap-2"
+            >
+              <Sun className="h-4 w-4" />
+              Light
+            </Button>
+            <Button
+              variant={theme === "dark" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTheme("dark")}
+              className="gap-2"
+            >
+              <Moon className="h-4 w-4" />
+              Dark
+            </Button>
+            <Button
+              variant={theme === "system" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTheme("system")}
+              className="gap-2"
+            >
+              <Monitor className="h-4 w-4" />
+              System
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Display Preferences */}
       <Card>
