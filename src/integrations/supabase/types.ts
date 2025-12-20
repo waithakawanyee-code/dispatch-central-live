@@ -92,6 +92,9 @@ export type Database = {
           created_at: string
           default_vehicle: string | null
           email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          emergency_contact_relationship: string | null
           has_cdl: boolean
           id: string
           is_active: boolean
@@ -109,6 +112,9 @@ export type Database = {
           created_at?: string
           default_vehicle?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
           has_cdl?: boolean
           id?: string
           is_active?: boolean
@@ -126,6 +132,9 @@ export type Database = {
           created_at?: string
           default_vehicle?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
           has_cdl?: boolean
           id?: string
           is_active?: boolean
