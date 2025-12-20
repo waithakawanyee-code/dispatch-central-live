@@ -1,5 +1,11 @@
 import { useState } from "react";
 import { User, Phone, Clock, Truck, Pencil, Trash2, Check, X, Plus, Award, Home } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import {
@@ -355,6 +361,41 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
       </div>
     );
 
+    // Tooltip content with driver details
+    const tooltipContent = (
+      <div className="flex flex-col gap-1.5 text-xs">
+        <div className="font-semibold text-foreground">{driver.name}</div>
+        {driver.code && (
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <User className="h-3 w-3" />
+            <span className="font-mono">{driver.code}</span>
+          </div>
+        )}
+        {driver.phone && (
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Phone className="h-3 w-3" />
+            <span className="font-mono">{driver.phone}</span>
+          </div>
+        )}
+        {!driver.code && !driver.phone && (
+          <span className="text-muted-foreground italic">No contact info</span>
+        )}
+      </div>
+    );
+
+    const wrappedMiniContent = (
+      <TooltipProvider delayDuration={1000}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {miniContent}
+          </TooltipTrigger>
+          <TooltipContent side="top" className="p-3">
+            {tooltipContent}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+
     // Determine which options to show based on status
     const getMiniOptions = () => {
       if (["punched-out", "offline", "off"].includes(driver.status)) return compactPunchedOutOptions;
@@ -366,34 +407,45 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
     if (canEdit) {
       return (
         <>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              {miniContent}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-[140px]">
-              {["punched-out", "offline"].includes(driver.status) && (
-                <DropdownMenuItem
-                  onClick={handlePunchedOutClick}
-                  className="cursor-pointer text-sm"
-                >
-                  <Clock className="h-4 w-4 mr-2" />
-                  <span>View Times</span>
-                </DropdownMenuItem>
-              )}
-              {getMiniOptions().map((option) => (
-                <DropdownMenuItem
-                  key={option.value}
-                  onClick={() => handleStatusSelect(option.value)}
-                  className={cn(
-                    "cursor-pointer text-sm",
-                    driver.status === option.value && "bg-secondary"
-                  )}
-                >
-                  <span>{option.label}</span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <TooltipProvider delayDuration={1000}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      {miniContent}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="min-w-[140px]">
+                      {["punched-out", "offline"].includes(driver.status) && (
+                        <DropdownMenuItem
+                          onClick={handlePunchedOutClick}
+                          className="cursor-pointer text-sm"
+                        >
+                          <Clock className="h-4 w-4 mr-2" />
+                          <span>View Times</span>
+                        </DropdownMenuItem>
+                      )}
+                      {getMiniOptions().map((option) => (
+                        <DropdownMenuItem
+                          key={option.value}
+                          onClick={() => handleStatusSelect(option.value)}
+                          className={cn(
+                            "cursor-pointer text-sm",
+                            driver.status === option.value && "bg-secondary"
+                          )}
+                        >
+                          <span>{option.label}</span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="p-3">
+                {tooltipContent}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
             <DialogContent className="sm:max-w-[350px]">
@@ -650,7 +702,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
       );
     }
 
-    return miniContent;
+    return wrappedMiniContent;
   }
 
   if (compact) {
