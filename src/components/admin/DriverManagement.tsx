@@ -55,7 +55,7 @@ export function DriverManagement() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingDriver, setEditingDriver] = useState<DriverRow | null>(null);
   const [importing, setImporting] = useState(false);
-  const [cdlTab, setCdlTab] = useState<"cdl" | "non-cdl">("cdl");
+  const [cdlTab, setCdlTab] = useState<"cdl" | "non-cdl">("non-cdl");
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("active");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "status">("name");
@@ -391,13 +391,13 @@ export function DriverManagement() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <TabsList>
-              <TabsTrigger value="cdl" className="gap-2">
-                CDL Drivers
-                <Badge variant="secondary" className="text-xs">{cdlCount}</Badge>
-              </TabsTrigger>
               <TabsTrigger value="non-cdl" className="gap-2">
                 Non-CDL Drivers
                 <Badge variant="secondary" className="text-xs">{nonCdlCount}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="cdl" className="gap-2">
+                CDL Drivers
+                <Badge variant="secondary" className="text-xs">{cdlCount}</Badge>
               </TabsTrigger>
             </TabsList>
             <Button
