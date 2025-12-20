@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Phone, Mail, MapPin, Car, FileText, AlertCircle, Shield, Calendar, Clock, Copy, Plus, X } from "lucide-react";
+import { User, Phone, Mail, MapPin, Car, FileText, AlertCircle, Shield, Calendar, Clock, Copy, Plus, X, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,6 +45,7 @@ interface DaySchedule {
   is_off: boolean;
   start_time: string;
   end_time: string;
+  note: string;
 }
 
 type WeeklySchedule = Record<number, DaySchedule>;
@@ -60,13 +61,13 @@ const DAYS_OF_WEEK = [
 ];
 
 const initialSchedule: WeeklySchedule = {
-  0: { is_off: true, start_time: "", end_time: "" },
-  1: { is_off: false, start_time: "08:00", end_time: "" },
-  2: { is_off: false, start_time: "08:00", end_time: "" },
-  3: { is_off: false, start_time: "08:00", end_time: "" },
-  4: { is_off: false, start_time: "08:00", end_time: "" },
-  5: { is_off: false, start_time: "08:00", end_time: "" },
-  6: { is_off: true, start_time: "", end_time: "" },
+  0: { is_off: true, start_time: "", end_time: "", note: "" },
+  1: { is_off: false, start_time: "08:00", end_time: "", note: "" },
+  2: { is_off: false, start_time: "08:00", end_time: "", note: "" },
+  3: { is_off: false, start_time: "08:00", end_time: "", note: "" },
+  4: { is_off: false, start_time: "08:00", end_time: "", note: "" },
+  5: { is_off: false, start_time: "08:00", end_time: "", note: "" },
+  6: { is_off: true, start_time: "", end_time: "", note: "" },
 };
 
 const initialFormData: DriverProfileFormData = {
@@ -124,6 +125,7 @@ export function DriverProfileDialog({
               is_off: s.is_off,
               start_time: s.start_time || "",
               end_time: s.end_time || "",
+              note: (s as any).note || "",
             };
           });
           setSchedule(scheduleMap);
@@ -167,8 +169,8 @@ export function DriverProfileDialog({
       [day]: {
         ...prev[day],
         [field]: value,
-        // Clear times when marking as off
-        ...(field === "is_off" && value === true ? { start_time: "", end_time: "" } : {}),
+        // Clear times and note when marking as off
+        ...(field === "is_off" && value === true ? { start_time: "", end_time: "", note: "" } : {}),
       },
     }));
   };
@@ -197,6 +199,7 @@ export function DriverProfileDialog({
       is_off: data.is_off,
       start_time: data.is_off ? null : (data.start_time || null),
       end_time: data.is_off ? null : (data.end_time || null),
+      note: data.is_off ? null : (data.note || null),
     }));
 
     const { error } = await supabase.from("driver_schedules").insert(scheduleInserts);
@@ -485,70 +488,84 @@ export function DriverProfileDialog({
               {DAYS_OF_WEEK.map((day) => (
                 <div
                   key={day.value}
-                  className={`grid grid-cols-[80px_60px_1fr] gap-3 items-center p-2 rounded-lg transition-colors ${
+                  className={`flex flex-col gap-2 p-2 rounded-lg transition-colors ${
                     schedule[day.value]?.is_off ? "bg-muted/50" : ""
                   }`}
                 >
-                  <span className="text-sm font-medium">{day.short}</span>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id={`day-off-${day.value}`}
-                      checked={!schedule[day.value]?.is_off}
-                      onCheckedChange={(checked) => updateDaySchedule(day.value, "is_off", !checked)}
-                    />
-                    <Label htmlFor={`day-off-${day.value}`} className="text-xs text-muted-foreground">
-                      {schedule[day.value]?.is_off ? "Off" : "On"}
-                    </Label>
-                  </div>
-                  {!schedule[day.value]?.is_off && (
+                  <div className="grid grid-cols-[80px_60px_1fr] gap-3 items-center">
+                    <span className="text-sm font-medium">{day.short}</span>
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3 text-muted-foreground" />
-                        <Input
-                          type="time"
-                          value={schedule[day.value]?.start_time || ""}
-                          onChange={(e) => updateDaySchedule(day.value, "start_time", e.target.value)}
-                          className="h-8 w-[100px] text-xs"
-                        />
-                      </div>
-                      <span className="text-muted-foreground text-xs">to</span>
-                      {schedule[day.value]?.end_time ? (
+                      <Switch
+                        id={`day-off-${day.value}`}
+                        checked={!schedule[day.value]?.is_off}
+                        onCheckedChange={(checked) => updateDaySchedule(day.value, "is_off", !checked)}
+                      />
+                      <Label htmlFor={`day-off-${day.value}`} className="text-xs text-muted-foreground">
+                        {schedule[day.value]?.is_off ? "Off" : "On"}
+                      </Label>
+                    </div>
+                    {!schedule[day.value]?.is_off && (
+                      <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
                           <Input
                             type="time"
-                            value={schedule[day.value]?.end_time || ""}
-                            onChange={(e) => updateDaySchedule(day.value, "end_time", e.target.value)}
+                            value={schedule[day.value]?.start_time || ""}
+                            onChange={(e) => updateDaySchedule(day.value, "start_time", e.target.value)}
                             className="h-8 w-[100px] text-xs"
                           />
+                        </div>
+                        <span className="text-muted-foreground text-xs">to</span>
+                        {schedule[day.value]?.end_time ? (
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="time"
+                              value={schedule[day.value]?.end_time || ""}
+                              onChange={(e) => updateDaySchedule(day.value, "end_time", e.target.value)}
+                              className="h-8 w-[100px] text-xs"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                              onClick={() => updateDaySchedule(day.value, "end_time", "")}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                            <span className="text-xs font-medium text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                              Strict Out
+                            </span>
+                          </div>
+                        ) : (
                           <Button
                             type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                            onClick={() => updateDaySchedule(day.value, "end_time", "")}
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs text-muted-foreground"
+                            onClick={() => updateDaySchedule(day.value, "end_time", "17:00")}
                           >
-                            <X className="h-3 w-3" />
+                            <Plus className="h-3 w-3 mr-1" />
+                            End Time
                           </Button>
-                          <span className="text-xs font-medium text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded">
-                            Strict Out
-                          </span>
-                        </div>
-                      ) : (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-xs text-muted-foreground"
-                          onClick={() => updateDaySchedule(day.value, "end_time", "17:00")}
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          End Time
-                        </Button>
-                      )}
+                        )}
+                      </div>
+                    )}
+                    {schedule[day.value]?.is_off && (
+                      <span className="text-xs text-muted-foreground italic">Day off</span>
+                    )}
+                  </div>
+                  {!schedule[day.value]?.is_off && (
+                    <div className="ml-[140px] flex items-center gap-2">
+                      <MessageSquare className="h-3 w-3 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        placeholder="Add note (e.g., school pickup, doctor appt)"
+                        value={schedule[day.value]?.note || ""}
+                        onChange={(e) => updateDaySchedule(day.value, "note", e.target.value)}
+                        className="h-7 text-xs flex-1"
+                      />
                     </div>
-                  )}
-                  {schedule[day.value]?.is_off && (
-                    <span className="text-xs text-muted-foreground italic">Day off</span>
                   )}
                 </div>
               ))}

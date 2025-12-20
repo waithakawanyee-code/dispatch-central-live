@@ -52,6 +52,7 @@ export type Database = {
           end_time: string | null
           id: string
           is_off: boolean
+          note: string | null
           start_time: string | null
           updated_at: string
         }
@@ -62,6 +63,7 @@ export type Database = {
           end_time?: string | null
           id?: string
           is_off?: boolean
+          note?: string | null
           start_time?: string | null
           updated_at?: string
         }
@@ -72,6 +74,7 @@ export type Database = {
           end_time?: string | null
           id?: string
           is_off?: boolean
+          note?: string | null
           start_time?: string | null
           updated_at?: string
         }
