@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 
 const Vehicles = () => {
   const {
+    drivers,
     vehicles,
     loading,
     recentlyUpdatedVehicles,
@@ -92,6 +93,7 @@ const Vehicles = () => {
                     isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
                     onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
                     onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
+                    drivers={drivers}
                   />
                 ))}
                 {unassignedVehicles.length === 0 && (
@@ -117,6 +119,7 @@ const Vehicles = () => {
                     isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
                     onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
                     onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
+                    drivers={drivers}
                   />
                 ))}
                 {assignedVehicles.length === 0 && (
@@ -147,6 +150,7 @@ const Vehicles = () => {
                 isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
                 onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
                 onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
+                drivers={drivers}
               />
             ))}
             {outOfServiceVehicles.length === 0 && (
