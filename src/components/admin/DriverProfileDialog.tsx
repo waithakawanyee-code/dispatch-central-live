@@ -173,14 +173,16 @@ export function DriverProfileDialog({
     }));
   };
 
-  const copyMondayToWeekdays = () => {
+  const copyMondayToAll = () => {
     const mondaySchedule = schedule[1];
     setSchedule((prev) => ({
       ...prev,
+      0: { ...mondaySchedule },
       2: { ...mondaySchedule },
       3: { ...mondaySchedule },
       4: { ...mondaySchedule },
       5: { ...mondaySchedule },
+      6: { ...mondaySchedule },
     }));
   };
 
@@ -472,11 +474,11 @@ export function DriverProfileDialog({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={copyMondayToWeekdays}
+                onClick={copyMondayToAll}
                 className="text-xs"
               >
                 <Copy className="h-3 w-3 mr-1" />
-                Copy Mon → Tue-Fri
+                Copy All
               </Button>
             </div>
             <div className="space-y-3">
