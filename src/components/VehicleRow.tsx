@@ -1,4 +1,4 @@
-import { Truck, Wrench, Droplets } from "lucide-react";
+import { Truck, Wrench, Droplets, User, Phone } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import {
@@ -7,6 +7,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { Database } from "@/integrations/supabase/types";
 
 type VehicleStatus = Database["public"]["Enums"]["vehicle_status"];
@@ -29,12 +35,15 @@ const VEHICLE_TYPE_LABELS: Record<VehicleType, string> = {
   trolley: "Trolley",
 };
 
+type DriverRowType = Database["public"]["Tables"]["drivers"]["Row"];
+
 interface VehicleRowProps {
   vehicle: VehicleRowType;
   onStatusChange?: (newStatus: VehicleStatus) => void;
   onCleanStatusChange?: (newCleanStatus: CleanStatus) => void;
   canEdit?: boolean;
   isUpdated?: boolean;
+  drivers?: DriverRowType[];
 }
 
 const vehicleStatusOptions: { value: VehicleStatus; label: string }[] = [
@@ -47,7 +56,10 @@ const cleanStatusOptions: { value: CleanStatus; label: string }[] = [
   { value: "dirty", label: "Dirty" },
 ];
 
-export function VehicleRow({ vehicle, onStatusChange, onCleanStatusChange, canEdit = true, isUpdated = false }: VehicleRowProps) {
+export function VehicleRow({ vehicle, onStatusChange, onCleanStatusChange, canEdit = true, isUpdated = false, drivers = [] }: VehicleRowProps) {
+  // Find the driver details if the vehicle has a driver assigned
+  const assignedDriver = vehicle.driver ? drivers.find(d => d.name === vehicle.driver) : null;
+
   return (
     <div
       className={cn(
@@ -77,7 +89,35 @@ export function VehicleRow({ vehicle, onStatusChange, onCleanStatusChange, canEd
           <p className="text-[10px] text-muted-foreground">{VEHICLE_TYPE_LABELS[vehicle.vehicle_type]}</p>
         )}
         {vehicle.driver && (
-          <p className="text-[10px] text-muted-foreground">{vehicle.driver}</p>
+          <TooltipProvider delayDuration={1000}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-[10px] text-muted-foreground cursor-default hover:text-foreground transition-colors">
+                  {vehicle.driver}
+                </p>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="p-3">
+                <div className="flex flex-col gap-1.5 text-xs">
+                  <div className="font-semibold text-foreground">{vehicle.driver}</div>
+                  {assignedDriver?.code && (
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <User className="h-3 w-3" />
+                      <span className="font-mono">{assignedDriver.code}</span>
+                    </div>
+                  )}
+                  {assignedDriver?.phone && (
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Phone className="h-3 w-3" />
+                      <span className="font-mono">{assignedDriver.phone}</span>
+                    </div>
+                  )}
+                  {(!assignedDriver?.code && !assignedDriver?.phone) && (
+                    <span className="text-muted-foreground italic">No contact info</span>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
 
