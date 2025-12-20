@@ -56,7 +56,7 @@ export function DriverManagement() {
   const [editingDriver, setEditingDriver] = useState<DriverRow | null>(null);
   const [importing, setImporting] = useState(false);
   const [cdlTab, setCdlTab] = useState<"cdl" | "non-cdl">("cdl");
-  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
+  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("active");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "status">("name");
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -402,15 +402,15 @@ export function DriverManagement() {
             </TabsList>
             <Button
               size="sm"
-              variant={activeFilter === "inactive" ? "default" : "outline"}
+              variant={activeFilter === "all" ? "default" : "outline"}
               onClick={() => {
-                setActiveFilter(activeFilter === "inactive" ? "all" : "inactive");
+                setActiveFilter(activeFilter === "all" ? "active" : "all");
                 setCurrentPage(1);
               }}
               className="gap-1.5"
             >
-              <UserX className="h-4 w-4" />
-              Inactive Only
+              <User className="h-4 w-4" />
+              All Drivers
             </Button>
           </div>
           {selectedIds.size > 0 && (
