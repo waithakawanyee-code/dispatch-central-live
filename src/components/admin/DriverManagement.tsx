@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Plus, Pencil, Trash2, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, UserCheck, UserX, Home, Phone, User, Circle } from "lucide-react";
 import {
   Tooltip,
@@ -49,6 +49,11 @@ import type { Database } from "@/integrations/supabase/types";
 
 type DriverRow = Database["public"]["Tables"]["drivers"]["Row"];
 
+type ScheduleMap = Record<string, Record<number, { is_off: boolean; start_time: string | null }>>;
+
+const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mon-Sun
+
 export function DriverManagement() {
   const { allDrivers: drivers, vehicles } = useDispatchData();
   const { toast } = useToast();
@@ -65,6 +70,26 @@ export function DriverManagement() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [schedules, setSchedules] = useState<ScheduleMap>({});
+
+  // Fetch all driver schedules
+  useEffect(() => {
+    const fetchSchedules = async () => {
+      const { data } = await supabase.from("driver_schedules").select("*");
+      if (data) {
+        const map: ScheduleMap = {};
+        data.forEach((s) => {
+          if (!map[s.driver_id]) map[s.driver_id] = {};
+          map[s.driver_id][s.day_of_week] = {
+            is_off: s.is_off,
+            start_time: s.start_time,
+          };
+        });
+        setSchedules(map);
+      }
+    };
+    fetchSchedules();
+  }, [drivers]);
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -460,9 +485,16 @@ export function DriverManagement() {
   );
 
   function renderDriverTable() {
+    const formatTime = (time: string | null) => {
+      if (!time) return "-";
+      const [h, m] = time.split(":");
+      const hour = parseInt(h, 10);
+      return `${hour > 12 ? hour - 12 : hour}${m !== "00" ? `:${m}` : ""}${hour >= 12 ? "p" : "a"}`;
+    };
+
     return (
       <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[32px_24px_1fr_80px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+        <div className="grid grid-cols-[32px_24px_minmax(140px,1fr)_repeat(7,32px)_60px_80px] gap-2 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center justify-center">
@@ -495,6 +527,9 @@ export function DriverManagement() {
           </DropdownMenu>
           <span></span>
           <span>Name</span>
+          {DAY_LABELS.map((d, i) => (
+            <span key={i} className="text-center text-[10px]">{d}</span>
+          ))}
           <span>Code</span>
           <span className="text-right">Actions</span>
         </div>
@@ -510,10 +545,11 @@ export function DriverManagement() {
             const isInactive = (driver as any).is_active === false;
             const hasNotes = !!(driver as any).notes;
             const isExpanded = expandedIds.has(driver.id);
+            const driverSchedule = schedules[driver.id] || {};
             return (
               <div key={driver.id} className="border-b border-border last:border-0">
                 <div
-                  className={`grid grid-cols-[32px_24px_1fr_80px_100px] gap-4 px-4 py-3 text-sm items-center ${isInactive ? "bg-muted/30" : ""}`}
+                  className={`grid grid-cols-[32px_24px_minmax(140px,1fr)_repeat(7,32px)_60px_80px] gap-2 px-4 py-2 text-sm items-center ${isInactive ? "bg-muted/30" : ""}`}
                 >
                   <Checkbox
                     checked={selectedIds.has(driver.id)}
@@ -579,6 +615,20 @@ export function DriverManagement() {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                  {/* Weekly Schedule */}
+                  {DAY_ORDER.map((dayNum, idx) => {
+                    const dayData = driverSchedule[dayNum];
+                    const isOff = dayData?.is_off || !dayData;
+                    const time = isOff ? null : dayData?.start_time;
+                    return (
+                      <span 
+                        key={idx} 
+                        className={`text-center text-[10px] font-mono ${isOff ? "text-muted-foreground/50" : "text-foreground"}`}
+                      >
+                        {isOff ? "OFF" : formatTime(time)}
+                      </span>
+                    );
+                  })}
                   <span className={`font-mono text-xs ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.code || "-"}</span>
                   <div className="flex justify-end gap-1">
                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditProfile(driver as DriverRow)}>
