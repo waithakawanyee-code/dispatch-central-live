@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, Pencil, Trash2, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, Home, Phone, User, Circle } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, Home, Phone, User, Circle, UserCheck, UserX } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -370,6 +370,19 @@ export function DriverManagement() {
     setEditingDriver(driver);
   };
 
+  const toggleDriverActive = async (id: string, currentlyActive: boolean) => {
+    const { error } = await supabase
+      .from("drivers")
+      .update({ is_active: !currentlyActive, updated_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to update driver status", variant: "destructive" });
+    } else {
+      toast({ title: "Success", description: `Driver marked as ${!currentlyActive ? "active" : "inactive"}` });
+    }
+  };
+
   const cdlCount = drivers.filter(d => (d as any).has_cdl === true).length;
   const nonCdlCount = drivers.filter(d => (d as any).has_cdl !== true).length;
 
@@ -679,6 +692,23 @@ export function DriverManagement() {
                   })}
                   <span className={`font-mono text-xs ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.code || "-"}</span>
                   <div className="flex justify-end gap-1">
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className={`h-8 w-8 ${isInactive ? "text-green-600 hover:text-green-600" : "text-muted-foreground hover:text-muted-foreground"}`}
+                            onClick={() => toggleDriverActive(driver.id, !isInactive)}
+                          >
+                            {isInactive ? <UserCheck className="h-4 w-4" /> : <UserX className="h-4 w-4" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          <span>{isInactive ? "Set Active" : "Set Inactive"}</span>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditProfile(driver as DriverRow)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
