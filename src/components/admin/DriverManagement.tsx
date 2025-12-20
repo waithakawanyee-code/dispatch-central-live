@@ -37,6 +37,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useDispatchData } from "@/hooks/useDispatchData";
@@ -54,10 +55,10 @@ export function DriverManagement() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingDriver, setEditingDriver] = useState<DriverRow | null>(null);
   const [importing, setImporting] = useState(false);
-  const [cdlFilter, setCdlFilter] = useState<"all" | "cdl" | "non-cdl">("all");
+  const [cdlTab, setCdlTab] = useState<"cdl" | "non-cdl">("cdl");
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"name" | "cdl" | "status">("name");
+  const [sortBy, setSortBy] = useState<"name" | "status">("name");
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [editingNotesValue, setEditingNotesValue] = useState("");
@@ -144,19 +145,13 @@ export function DriverManagement() {
       const matchesSearch = searchQuery === "" || 
         driver.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (driver.code?.toLowerCase().includes(searchQuery.toLowerCase()));
-      const matchesCdl = cdlFilter === "all" || 
-        (cdlFilter === "cdl" ? (driver as any).has_cdl === true : (driver as any).has_cdl !== true);
+      const matchesCdl = cdlTab === "cdl" ? (driver as any).has_cdl === true : (driver as any).has_cdl !== true;
       const matchesActive = activeFilter === "all" || 
         (activeFilter === "active" ? (driver as any).is_active !== false : (driver as any).is_active === false);
       return matchesSearch && matchesCdl && matchesActive;
     })
     .sort((a, b) => {
       if (sortBy === "name") return a.name.localeCompare(b.name);
-      if (sortBy === "cdl") {
-        const aCdl = (a as any).has_cdl ? 1 : 0;
-        const bCdl = (b as any).has_cdl ? 1 : 0;
-        return bCdl - aCdl; // CDL first
-      }
       if (sortBy === "status") {
         const aActive = (a as any).is_active !== false ? 1 : 0;
         const bActive = (b as any).is_active !== false ? 1 : 0;
@@ -300,6 +295,9 @@ export function DriverManagement() {
     setEditingDriver(driver);
   };
 
+  const cdlCount = drivers.filter(d => (d as any).has_cdl === true).length;
+  const nonCdlCount = drivers.filter(d => (d as any).has_cdl !== true).length;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -319,21 +317,14 @@ export function DriverManagement() {
               <Button variant="outline" size="sm" className="h-8 gap-2">
                 <SlidersHorizontal className="h-4 w-4" />
                 Filters
-                {(cdlFilter !== "all" || activeFilter !== "all" || sortBy !== "name") && (
+                {(activeFilter !== "all" || sortBy !== "name") && (
                   <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                    {[cdlFilter !== "all", activeFilter !== "all", sortBy !== "name"].filter(Boolean).length}
+                    {[activeFilter !== "all", sortBy !== "name"].filter(Boolean).length}
                   </Badge>
                 )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48 bg-popover">
-              <DropdownMenuLabel>Filter by CDL</DropdownMenuLabel>
-              <DropdownMenuRadioGroup value={cdlFilter} onValueChange={(v) => setCdlFilter(v as typeof cdlFilter)}>
-                <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="cdl">CDL Only</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="non-cdl">Non-CDL Only</DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-              <DropdownMenuSeparator />
               <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
               <DropdownMenuRadioGroup value={activeFilter} onValueChange={(v) => setActiveFilter(v as typeof activeFilter)}>
                 <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
@@ -344,15 +335,13 @@ export function DriverManagement() {
               <DropdownMenuLabel>Sort by</DropdownMenuLabel>
               <DropdownMenuRadioGroup value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
                 <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="cdl">CDL Status</DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="status">Active Status</DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
-              {(cdlFilter !== "all" || activeFilter !== "all" || sortBy !== "name") && (
+              {(activeFilter !== "all" || sortBy !== "name") && (
                 <>
                   <DropdownMenuSeparator />
                   <button
                     onClick={() => {
-                      setCdlFilter("all");
                       setActiveFilter("all");
                       setSortBy("name");
                     }}
@@ -398,30 +387,68 @@ export function DriverManagement() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">
-          CSV format: Name, Code, Phone, Active (yes/no), CDL (yes/no)
-        </p>
-        {selectedIds.size > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
-            <Button size="sm" variant="outline" onClick={() => bulkSetActive(true)}>
-              <UserCheck className="h-4 w-4 mr-1" />
-              Set Active
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => bulkSetActive(false)}>
-              <UserX className="h-4 w-4 mr-1" />
-              Set Inactive
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-              Clear
-            </Button>
-          </div>
-        )}
-      </div>
+      <Tabs value={cdlTab} onValueChange={(v) => { setCdlTab(v as "cdl" | "non-cdl"); setCurrentPage(1); }}>
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="cdl" className="gap-2">
+              CDL Drivers
+              <Badge variant="secondary" className="text-xs">{cdlCount}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="non-cdl" className="gap-2">
+              Non-CDL Drivers
+              <Badge variant="secondary" className="text-xs">{nonCdlCount}</Badge>
+            </TabsTrigger>
+          </TabsList>
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
+              <Button size="sm" variant="outline" onClick={() => bulkSetActive(true)}>
+                <UserCheck className="h-4 w-4 mr-1" />
+                Set Active
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => bulkSetActive(false)}>
+                <UserX className="h-4 w-4 mr-1" />
+                Set Inactive
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+                Clear
+              </Button>
+            </div>
+          )}
+        </div>
 
+        <TabsContent value="cdl" className="mt-4">
+          {renderDriverTable()}
+        </TabsContent>
+        <TabsContent value="non-cdl" className="mt-4">
+          {renderDriverTable()}
+        </TabsContent>
+      </Tabs>
+
+      {/* Driver Profile Dialog - Add Mode */}
+      <DriverProfileDialog
+        driver={null}
+        vehicles={vehicles}
+        open={isAddOpen}
+        onOpenChange={setIsAddOpen}
+        mode="add"
+      />
+
+      {/* Driver Profile Dialog - Edit Mode */}
+      <DriverProfileDialog
+        driver={editingDriver}
+        vehicles={vehicles}
+        open={editingDriver !== null}
+        onOpenChange={(open) => !open && setEditingDriver(null)}
+        mode="edit"
+      />
+    </div>
+  );
+
+  function renderDriverTable() {
+    return (
       <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[32px_1fr_60px_70px_100px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+        <div className="grid grid-cols-[32px_1fr_80px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center justify-center">
@@ -454,15 +481,13 @@ export function DriverManagement() {
           </DropdownMenu>
           <span>Name</span>
           <span>Code</span>
-          <span>CDL</span>
-          <span>Status</span>
           <span className="text-right">Actions</span>
         </div>
         
         {filteredDrivers.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-            {searchQuery === "" && cdlFilter === "all" && activeFilter === "all" 
-              ? "No drivers found. Add your first driver above." 
+            {searchQuery === "" && activeFilter === "all" 
+              ? `No ${cdlTab === "cdl" ? "CDL" : "Non-CDL"} drivers found. Add your first driver above.` 
               : "No drivers match the selected filters."}
           </div>
         ) : (
@@ -471,149 +496,142 @@ export function DriverManagement() {
             const hasNotes = !!(driver as any).notes;
             const isExpanded = expandedIds.has(driver.id);
             return (
-            <div key={driver.id} className="border-b border-border last:border-0">
-              <div
-                className={`grid grid-cols-[32px_1fr_60px_70px_100px_100px] gap-4 px-4 py-3 text-sm items-center ${isInactive ? "bg-muted/30 opacity-60" : ""}`}
-              >
-              <Checkbox
-                checked={selectedIds.has(driver.id)}
-                onCheckedChange={() => toggleSelectDriver(driver.id)}
-                aria-label={`Select ${driver.name}`}
-              />
-              <TooltipProvider delayDuration={1000}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className={`font-medium flex items-center gap-1.5 cursor-default ${isInactive ? "line-through text-muted-foreground" : ""}`}>
-                      <button
-                        onClick={() => toggleExpand(driver.id)}
-                        className="p-0.5 -ml-1 hover:bg-secondary rounded transition-colors"
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </button>
-                      {driver.name}
-                      {(driver as any).default_vehicle && (
-                        <span title={`Take-home: ${(driver as any).default_vehicle}`}>
-                          <Home className="h-3.5 w-3.5 text-primary" />
+              <div key={driver.id} className="border-b border-border last:border-0">
+                <div
+                  className={`grid grid-cols-[32px_1fr_80px_100px] gap-4 px-4 py-3 text-sm items-center ${isInactive ? "bg-muted/30 opacity-60" : ""}`}
+                >
+                  <Checkbox
+                    checked={selectedIds.has(driver.id)}
+                    onCheckedChange={() => toggleSelectDriver(driver.id)}
+                    aria-label={`Select ${driver.name}`}
+                  />
+                  <TooltipProvider delayDuration={1000}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={`font-medium flex items-center gap-1.5 cursor-default ${isInactive ? "line-through text-muted-foreground" : ""}`}>
+                          <button
+                            onClick={() => toggleExpand(driver.id)}
+                            className="p-0.5 -ml-1 hover:bg-secondary rounded transition-colors"
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </button>
+                          {driver.name}
+                          {(driver as any).default_vehicle && (
+                            <span title={`Take-home: ${(driver as any).default_vehicle}`}>
+                              <Home className="h-3.5 w-3.5 text-primary" />
+                            </span>
+                          )}
+                          {hasNotes && (
+                            <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />
+                          )}
                         </span>
-                      )}
-                      {hasNotes && (
-                        <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />
-                      )}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="p-3">
-                    <div className="flex flex-col gap-1.5 text-xs">
-                      <div className="font-semibold text-foreground">{driver.name}</div>
-                      {driver.code && (
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <User className="h-3 w-3" />
-                          <span className="font-mono">{driver.code}</span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="p-3">
+                        <div className="flex flex-col gap-1.5 text-xs">
+                          <div className="font-semibold text-foreground">{driver.name}</div>
+                          {driver.code && (
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <User className="h-3 w-3" />
+                              <span className="font-mono">{driver.code}</span>
+                            </div>
+                          )}
+                          {driver.phone && (
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <Phone className="h-3 w-3" />
+                              <span className="font-mono">{driver.phone}</span>
+                            </div>
+                          )}
+                          {!driver.code && !driver.phone && (
+                            <span className="text-muted-foreground italic">No contact info</span>
+                          )}
                         </div>
-                      )}
-                      {driver.phone && (
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Phone className="h-3 w-3" />
-                          <span className="font-mono">{driver.phone}</span>
-                        </div>
-                      )}
-                      {!driver.code && !driver.phone && (
-                        <span className="text-muted-foreground italic">No contact info</span>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <span className={`font-mono text-xs ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.code || "-"}</span>
-              <span className="font-mono text-muted-foreground">{driver.phone || "-"}</span>
-              
-              <Badge variant={(driver as any).has_cdl ? "default" : "outline"} className="text-xs">
-                {(driver as any).has_cdl ? "CDL" : "Non-CDL"}
-              </Badge>
-              <Badge variant={isInactive ? "secondary" : "default"} className="text-xs">
-                {isInactive ? "Inactive" : "Active"}
-              </Badge>
-              <div className="flex justify-end gap-1">
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditProfile(driver as DriverRow)}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <span className={`font-mono text-xs ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.code || "-"}</span>
+                  <div className="flex justify-end gap-1">
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditProfile(driver as DriverRow)}>
+                      <Pencil className="h-4 w-4" />
                     </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Driver</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete {driver.name}? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDelete(driver.id)}>Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-              </div>
-              {/* Expanded notes section */}
-              {isExpanded && (
-                <div className="px-4 py-3 bg-muted/20 border-t border-border/50">
-                  {editingNotesId === driver.id ? (
-                    <div className="space-y-2">
-                      <Textarea
-                        value={editingNotesValue}
-                        onChange={(e) => setEditingNotesValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Escape") {
-                            cancelEditNotes();
-                          } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                            e.preventDefault();
-                            saveNotes(driver.id);
-                          }
-                        }}
-                        placeholder="Add notes..."
-                        rows={3}
-                        className="text-sm"
-                        autoFocus
-                      />
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-muted-foreground">Esc to cancel • Ctrl+Enter to save</p>
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => saveNotes(driver.id)}>
-                            Save
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={cancelEditNotes}>
-                            Cancel
-                          </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Driver</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete {driver.name}? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDelete(driver.id)}>Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+                {/* Expanded notes section */}
+                {isExpanded && (
+                  <div className="px-4 py-3 bg-muted/20 border-t border-border/50">
+                    {editingNotesId === driver.id ? (
+                      <div className="space-y-2">
+                        <Textarea
+                          value={editingNotesValue}
+                          onChange={(e) => setEditingNotesValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") {
+                              cancelEditNotes();
+                            } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                              e.preventDefault();
+                              saveNotes(driver.id);
+                            }
+                          }}
+                          placeholder="Add notes..."
+                          rows={3}
+                          className="text-sm"
+                          autoFocus
+                        />
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">Esc to cancel • Ctrl+Enter to save</p>
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={() => saveNotes(driver.id)}>
+                              Save
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={cancelEditNotes}>
+                              Cancel
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-start justify-between gap-4">
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap flex-1">
-                        {hasNotes ? (driver as any).notes : <span className="italic">No notes</span>}
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="shrink-0"
-                        onClick={() => startEditNotes(driver.id, (driver as any).notes || "")}
-                      >
-                        <Pencil className="h-3.5 w-3.5 mr-1" />
-                        Edit
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )})
+                    ) : (
+                      <div className="flex items-start justify-between gap-4">
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap flex-1">
+                          {hasNotes ? (driver as any).notes : <span className="italic">No notes</span>}
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="shrink-0"
+                          onClick={() => startEditNotes(driver.id, (driver as any).notes || "")}
+                        >
+                          <Pencil className="h-3.5 w-3.5 mr-1" />
+                          Edit
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
         
         {/* Pagination Controls */}
@@ -661,24 +679,6 @@ export function DriverManagement() {
           </div>
         )}
       </div>
-
-      {/* Driver Profile Dialog - Add Mode */}
-      <DriverProfileDialog
-        driver={null}
-        vehicles={vehicles}
-        open={isAddOpen}
-        onOpenChange={setIsAddOpen}
-        mode="add"
-      />
-
-      {/* Driver Profile Dialog - Edit Mode */}
-      <DriverProfileDialog
-        driver={editingDriver}
-        vehicles={vehicles}
-        open={editingDriver !== null}
-        onOpenChange={(open) => !open && setEditingDriver(null)}
-        mode="edit"
-      />
-    </div>
-  );
+    );
+  }
 }
