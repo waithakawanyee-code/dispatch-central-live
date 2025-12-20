@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, User, Phone, Mail, MapPin, Car, FileText, AlertCircle, Shield } from "lucide-react";
+import { User, Phone, Mail, MapPin, Car, FileText, AlertCircle, Shield, Calendar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,6 +18,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -39,6 +40,34 @@ interface DriverProfileFormData {
   emergency_contact_phone: string;
   emergency_contact_relationship: string;
 }
+
+interface DaySchedule {
+  is_off: boolean;
+  start_time: string;
+  end_time: string;
+}
+
+type WeeklySchedule = Record<number, DaySchedule>;
+
+const DAYS_OF_WEEK = [
+  { value: 0, label: "Sunday", short: "Sun" },
+  { value: 1, label: "Monday", short: "Mon" },
+  { value: 2, label: "Tuesday", short: "Tue" },
+  { value: 3, label: "Wednesday", short: "Wed" },
+  { value: 4, label: "Thursday", short: "Thu" },
+  { value: 5, label: "Friday", short: "Fri" },
+  { value: 6, label: "Saturday", short: "Sat" },
+];
+
+const initialSchedule: WeeklySchedule = {
+  0: { is_off: true, start_time: "", end_time: "" },
+  1: { is_off: false, start_time: "08:00", end_time: "17:00" },
+  2: { is_off: false, start_time: "08:00", end_time: "17:00" },
+  3: { is_off: false, start_time: "08:00", end_time: "17:00" },
+  4: { is_off: false, start_time: "08:00", end_time: "17:00" },
+  5: { is_off: false, start_time: "08:00", end_time: "17:00" },
+  6: { is_off: true, start_time: "", end_time: "" },
+};
 
 const initialFormData: DriverProfileFormData = {
   name: "",
@@ -74,9 +103,40 @@ export function DriverProfileDialog({
 }: DriverProfileDialogProps) {
   const { toast } = useToast();
   const [formData, setFormData] = useState<DriverProfileFormData>(initialFormData);
+  const [schedule, setSchedule] = useState<WeeklySchedule>(initialSchedule);
   const [saving, setSaving] = useState(false);
 
   const isAddMode = mode === "add";
+
+  // Fetch driver schedule when editing
+  useEffect(() => {
+    const fetchSchedule = async () => {
+      if (driver && !isAddMode && open) {
+        const { data } = await supabase
+          .from("driver_schedules")
+          .select("*")
+          .eq("driver_id", driver.id);
+
+        if (data && data.length > 0) {
+          const scheduleMap: WeeklySchedule = { ...initialSchedule };
+          data.forEach((s) => {
+            scheduleMap[s.day_of_week] = {
+              is_off: s.is_off,
+              start_time: s.start_time || "",
+              end_time: s.end_time || "",
+            };
+          });
+          setSchedule(scheduleMap);
+        } else {
+          setSchedule(initialSchedule);
+        }
+      } else {
+        setSchedule(initialSchedule);
+      }
+    };
+
+    fetchSchedule();
+  }, [driver, open, isAddMode]);
 
   useEffect(() => {
     if (open) {
@@ -101,6 +161,35 @@ export function DriverProfileDialog({
     }
   }, [driver, open, isAddMode]);
 
+  const updateDaySchedule = (day: number, field: keyof DaySchedule, value: string | boolean) => {
+    setSchedule((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [field]: value,
+        // Clear times when marking as off
+        ...(field === "is_off" && value === true ? { start_time: "", end_time: "" } : {}),
+      },
+    }));
+  };
+
+  const saveSchedule = async (driverId: string) => {
+    // Delete existing schedules
+    await supabase.from("driver_schedules").delete().eq("driver_id", driverId);
+
+    // Insert new schedules
+    const scheduleInserts = Object.entries(schedule).map(([day, data]) => ({
+      driver_id: driverId,
+      day_of_week: parseInt(day),
+      is_off: data.is_off,
+      start_time: data.is_off ? null : (data.start_time || null),
+      end_time: data.is_off ? null : (data.end_time || null),
+    }));
+
+    const { error } = await supabase.from("driver_schedules").insert(scheduleInserts);
+    return error;
+  };
+
   const handleSave = async () => {
     if (!formData.name.trim()) {
       toast({ title: "Error", description: "Name is required", variant: "destructive" });
@@ -111,7 +200,7 @@ export function DriverProfileDialog({
 
     if (isAddMode) {
       // Insert new driver
-      const { error } = await supabase.from("drivers").insert({
+      const { data: newDriver, error } = await supabase.from("drivers").insert({
         name: formData.name.trim(),
         code: formData.code.trim().toUpperCase().slice(0, 4) || null,
         phone: formData.phone.trim() || null,
@@ -124,13 +213,15 @@ export function DriverProfileDialog({
         emergency_contact_name: formData.emergency_contact_name.trim() || null,
         emergency_contact_phone: formData.emergency_contact_phone.trim() || null,
         emergency_contact_relationship: formData.emergency_contact_relationship.trim() || null,
-      });
+      }).select("id").single();
 
-      setSaving(false);
-
-      if (error) {
+      if (error || !newDriver) {
+        setSaving(false);
         toast({ title: "Error", description: "Failed to add driver", variant: "destructive" });
       } else {
+        // Save schedule for the new driver
+        await saveSchedule(newDriver.id);
+        setSaving(false);
         toast({ title: "Success", description: "Driver added successfully" });
         onOpenChange(false);
         onSaved?.();
@@ -161,11 +252,13 @@ export function DriverProfileDialog({
         })
         .eq("id", driver.id);
 
-      setSaving(false);
-
       if (error) {
+        setSaving(false);
         toast({ title: "Error", description: "Failed to update driver", variant: "destructive" });
       } else {
+        // Save schedule
+        await saveSchedule(driver.id);
+        setSaving(false);
         toast({ title: "Success", description: "Driver profile updated" });
         onOpenChange(false);
         onSaved?.();
@@ -352,6 +445,62 @@ export function DriverProfileDialog({
                   />
                 </div>
               </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Weekly Schedule */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Weekly Schedule
+            </h3>
+            
+            <div className="space-y-3">
+              {DAYS_OF_WEEK.map((day) => (
+                <div
+                  key={day.value}
+                  className={`grid grid-cols-[80px_60px_1fr] gap-3 items-center p-2 rounded-lg transition-colors ${
+                    schedule[day.value]?.is_off ? "bg-muted/50" : ""
+                  }`}
+                >
+                  <span className="text-sm font-medium">{day.short}</span>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id={`day-off-${day.value}`}
+                      checked={!schedule[day.value]?.is_off}
+                      onCheckedChange={(checked) => updateDaySchedule(day.value, "is_off", !checked)}
+                    />
+                    <Label htmlFor={`day-off-${day.value}`} className="text-xs text-muted-foreground">
+                      {schedule[day.value]?.is_off ? "Off" : "On"}
+                    </Label>
+                  </div>
+                  {!schedule[day.value]?.is_off && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-muted-foreground" />
+                        <Input
+                          type="time"
+                          value={schedule[day.value]?.start_time || ""}
+                          onChange={(e) => updateDaySchedule(day.value, "start_time", e.target.value)}
+                          className="h-8 w-[100px] text-xs"
+                        />
+                      </div>
+                      <span className="text-muted-foreground text-xs">to</span>
+                      <Input
+                        type="time"
+                        value={schedule[day.value]?.end_time || ""}
+                        onChange={(e) => updateDaySchedule(day.value, "end_time", e.target.value)}
+                        className="h-8 w-[100px] text-xs"
+                      />
+                    </div>
+                  )}
+                  {schedule[day.value]?.is_off && (
+                    <span className="text-xs text-muted-foreground italic">Day off</span>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
