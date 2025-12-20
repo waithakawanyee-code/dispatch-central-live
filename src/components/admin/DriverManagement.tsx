@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, UserCheck, UserX, Home, Phone, User } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, UserCheck, UserX, Home, Phone, User, Circle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -448,7 +448,7 @@ export function DriverManagement() {
   function renderDriverTable() {
     return (
       <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[32px_1fr_80px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+        <div className="grid grid-cols-[32px_24px_1fr_80px_100px] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center justify-center">
@@ -479,6 +479,7 @@ export function DriverManagement() {
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
+          <span></span>
           <span>Name</span>
           <span>Code</span>
           <span className="text-right">Actions</span>
@@ -498,13 +499,25 @@ export function DriverManagement() {
             return (
               <div key={driver.id} className="border-b border-border last:border-0">
                 <div
-                  className={`grid grid-cols-[32px_1fr_80px_100px] gap-4 px-4 py-3 text-sm items-center ${isInactive ? "bg-muted/30 opacity-60" : ""}`}
+                  className={`grid grid-cols-[32px_24px_1fr_80px_100px] gap-4 px-4 py-3 text-sm items-center ${isInactive ? "bg-muted/30" : ""}`}
                 >
                   <Checkbox
                     checked={selectedIds.has(driver.id)}
                     onCheckedChange={() => toggleSelectDriver(driver.id)}
                     aria-label={`Select ${driver.name}`}
                   />
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Circle 
+                          className={`h-3 w-3 ${isInactive ? "text-muted-foreground/40" : "text-green-500 fill-green-500"}`}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <span>{isInactive ? "Inactive" : "Active"}</span>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <TooltipProvider delayDuration={1000}>
                     <Tooltip>
                       <TooltipTrigger asChild>
