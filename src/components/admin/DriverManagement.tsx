@@ -389,16 +389,30 @@ export function DriverManagement() {
 
       <Tabs value={cdlTab} onValueChange={(v) => { setCdlTab(v as "cdl" | "non-cdl"); setCurrentPage(1); }}>
         <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="cdl" className="gap-2">
-              CDL Drivers
-              <Badge variant="secondary" className="text-xs">{cdlCount}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="non-cdl" className="gap-2">
-              Non-CDL Drivers
-              <Badge variant="secondary" className="text-xs">{nonCdlCount}</Badge>
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center gap-3">
+            <TabsList>
+              <TabsTrigger value="cdl" className="gap-2">
+                CDL Drivers
+                <Badge variant="secondary" className="text-xs">{cdlCount}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="non-cdl" className="gap-2">
+                Non-CDL Drivers
+                <Badge variant="secondary" className="text-xs">{nonCdlCount}</Badge>
+              </TabsTrigger>
+            </TabsList>
+            <Button
+              size="sm"
+              variant={activeFilter === "inactive" ? "default" : "outline"}
+              onClick={() => {
+                setActiveFilter(activeFilter === "inactive" ? "all" : "inactive");
+                setCurrentPage(1);
+              }}
+              className="gap-1.5"
+            >
+              <UserX className="h-4 w-4" />
+              Inactive Only
+            </Button>
+          </div>
           {selectedIds.size > 0 && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
