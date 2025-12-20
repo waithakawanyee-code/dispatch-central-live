@@ -620,10 +620,28 @@ export function DriverManagement() {
                     const dayData = driverSchedule[dayNum];
                     const isOff = dayData?.is_off || !dayData;
                     const time = isOff ? null : dayData?.start_time;
+                    
+                    // Color coding based on shift time
+                    let timeColor = "text-muted-foreground/50";
+                    if (!isOff && time) {
+                      const hour = parseInt(time.split(":")[0], 10);
+                      if (hour < 6) {
+                        timeColor = "text-purple-400"; // Very early (before 6am)
+                      } else if (hour < 9) {
+                        timeColor = "text-blue-400"; // Early morning (6-9am)
+                      } else if (hour < 12) {
+                        timeColor = "text-emerald-400"; // Late morning (9am-12pm)
+                      } else if (hour < 17) {
+                        timeColor = "text-amber-400"; // Afternoon (12-5pm)
+                      } else {
+                        timeColor = "text-orange-400"; // Evening (5pm+)
+                      }
+                    }
+                    
                     return (
                       <span 
                         key={idx} 
-                        className={`text-center text-[10px] font-mono ${isOff ? "text-muted-foreground/50" : "text-foreground"}`}
+                        className={`text-center text-[10px] font-mono ${timeColor}`}
                       >
                         {isOff ? "OFF" : formatTime(time)}
                       </span>
