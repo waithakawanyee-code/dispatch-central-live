@@ -54,6 +54,40 @@ type ScheduleMap = Record<string, Record<number, { is_off: boolean; start_time: 
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mon-Sun
 
+interface ScheduleColorConfig {
+  veryEarly: { label: string; range: string; color: string };
+  earlyMorning: { label: string; range: string; color: string };
+  lateMorning: { label: string; range: string; color: string };
+  afternoon: { label: string; range: string; color: string };
+  evening: { label: string; range: string; color: string };
+}
+
+interface DisplayPreferences {
+  defaultPageSize: number;
+  defaultDriverTab: "cdl" | "non-cdl";
+  defaultActiveFilter: "all" | "active" | "inactive";
+  showScheduleInTable: boolean;
+  showColorLegend: boolean;
+  compactMode: boolean;
+}
+
+const defaultColors: ScheduleColorConfig = {
+  veryEarly: { label: "Very Early", range: "Before 6am", color: "#c084fc" },
+  earlyMorning: { label: "Early Morning", range: "6am - 9am", color: "#60a5fa" },
+  lateMorning: { label: "Late Morning", range: "9am - 12pm", color: "#34d399" },
+  afternoon: { label: "Afternoon", range: "12pm - 5pm", color: "#fbbf24" },
+  evening: { label: "Evening", range: "After 5pm", color: "#fb923c" },
+};
+
+const defaultDisplayPrefs: DisplayPreferences = {
+  defaultPageSize: 10,
+  defaultDriverTab: "non-cdl",
+  defaultActiveFilter: "active",
+  showScheduleInTable: true,
+  showColorLegend: true,
+  compactMode: false,
+};
+
 export function DriverManagement() {
   const { allDrivers: drivers, vehicles } = useDispatchData();
   const { toast } = useToast();
@@ -71,6 +105,59 @@ export function DriverManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [schedules, setSchedules] = useState<ScheduleMap>({});
+  const [scheduleColors, setScheduleColors] = useState<ScheduleColorConfig>(defaultColors);
+  const [displayPrefs, setDisplayPrefs] = useState<DisplayPreferences>(defaultDisplayPrefs);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+
+  // Load saved preferences from localStorage
+  useEffect(() => {
+    const savedColors = localStorage.getItem("scheduleColors");
+    const savedPrefs = localStorage.getItem("displayPreferences");
+    
+    if (savedColors) {
+      try {
+        setScheduleColors(JSON.parse(savedColors));
+      } catch (e) {
+        console.error("Failed to parse saved colors");
+      }
+    }
+    
+    if (savedPrefs) {
+      try {
+        const prefs = { ...defaultDisplayPrefs, ...JSON.parse(savedPrefs) };
+        setDisplayPrefs(prefs);
+        // Apply saved defaults
+        setCdlTab(prefs.defaultDriverTab);
+        setActiveFilter(prefs.defaultActiveFilter);
+        setPageSize(prefs.defaultPageSize);
+      } catch (e) {
+        console.error("Failed to parse saved preferences");
+      }
+    }
+    setPrefsLoaded(true);
+  }, []);
+
+  // Listen for settings changes via storage event
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "scheduleColors" && e.newValue) {
+        try {
+          setScheduleColors(JSON.parse(e.newValue));
+        } catch (err) {
+          console.error("Failed to parse updated colors");
+        }
+      }
+      if (e.key === "displayPreferences" && e.newValue) {
+        try {
+          setDisplayPrefs({ ...defaultDisplayPrefs, ...JSON.parse(e.newValue) });
+        } catch (err) {
+          console.error("Failed to parse updated preferences");
+        }
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
   // Fetch all driver schedules
   useEffect(() => {
@@ -457,32 +544,34 @@ export function DriverManagement() {
         </div>
 
         {/* Schedule Color Legend */}
-        <div className="flex items-center gap-4 mt-3 text-[10px] text-muted-foreground">
-          <span className="font-medium">Schedule:</span>
-          <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-purple-400"></span>
-            <span>&lt;6am</span>
+        {displayPrefs.showColorLegend && displayPrefs.showScheduleInTable && (
+          <div className="flex items-center gap-4 mt-3 text-[10px] text-muted-foreground">
+            <span className="font-medium">Schedule:</span>
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: scheduleColors.veryEarly.color }}></span>
+              <span>&lt;6am</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: scheduleColors.earlyMorning.color }}></span>
+              <span>6-9am</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: scheduleColors.lateMorning.color }}></span>
+              <span>9am-12pm</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: scheduleColors.afternoon.color }}></span>
+              <span>12-5pm</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: scheduleColors.evening.color }}></span>
+              <span>5pm+</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground/50">OFF</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-            <span>6-9am</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>9am-12pm</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-            <span>12-5pm</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-orange-400"></span>
-            <span>5pm+</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="text-muted-foreground/50">OFF</span>
-          </div>
-        </div>
+        )}
 
         <TabsContent value="cdl" className="mt-4">
           {renderDriverTable()}
@@ -520,9 +609,25 @@ export function DriverManagement() {
       return `${hour > 12 ? hour - 12 : hour}${m !== "00" ? `:${m}` : ""}${hour >= 12 ? "p" : "a"}`;
     };
 
+    const getTimeColor = (time: string | null, isOff: boolean): string | undefined => {
+      if (isOff || !time) return undefined;
+      const hour = parseInt(time.split(":")[0], 10);
+      if (hour < 6) return scheduleColors.veryEarly.color;
+      if (hour < 9) return scheduleColors.earlyMorning.color;
+      if (hour < 12) return scheduleColors.lateMorning.color;
+      if (hour < 17) return scheduleColors.afternoon.color;
+      return scheduleColors.evening.color;
+    };
+
+    const gridCols = displayPrefs.showScheduleInTable
+      ? "grid-cols-[32px_24px_minmax(140px,1fr)_repeat(7,32px)_60px_80px]"
+      : "grid-cols-[32px_24px_minmax(200px,1fr)_80px_80px]";
+
+    const rowPadding = displayPrefs.compactMode ? "py-1" : "py-2";
+
     return (
       <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[32px_24px_minmax(140px,1fr)_repeat(7,32px)_60px_80px] gap-2 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+        <div className={`grid ${gridCols} gap-2 border-b border-border bg-secondary/50 px-4 ${rowPadding} text-xs font-medium uppercase text-muted-foreground items-center`}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center justify-center">
@@ -555,7 +660,7 @@ export function DriverManagement() {
           </DropdownMenu>
           <span></span>
           <span>Name</span>
-          {DAY_LABELS.map((d, i) => (
+          {displayPrefs.showScheduleInTable && DAY_LABELS.map((d, i) => (
             <span key={i} className="text-center text-[10px]">{d}</span>
           ))}
           <span>Code</span>
@@ -577,7 +682,7 @@ export function DriverManagement() {
             return (
               <div key={driver.id} className="border-b border-border last:border-0">
                 <div
-                  className={`grid grid-cols-[32px_24px_minmax(140px,1fr)_repeat(7,32px)_60px_80px] gap-2 px-4 py-2 text-sm items-center ${isInactive ? "bg-muted/30" : ""}`}
+                  className={`grid ${gridCols} gap-2 px-4 ${rowPadding} text-sm items-center ${isInactive ? "bg-muted/30" : ""}`}
                 >
                   <Checkbox
                     checked={selectedIds.has(driver.id)}
@@ -644,34 +749,19 @@ export function DriverManagement() {
                     </Tooltip>
                   </TooltipProvider>
                   {/* Weekly Schedule */}
-                  {DAY_ORDER.map((dayNum, idx) => {
+                  {displayPrefs.showScheduleInTable && DAY_ORDER.map((dayNum, idx) => {
                     const dayData = driverSchedule[dayNum];
                     const isOff = dayData?.is_off || !dayData;
                     const time = isOff ? null : dayData?.start_time;
-                    
-                    // Color coding based on shift time
-                    let timeColor = "text-muted-foreground/50";
-                    if (!isOff && time) {
-                      const hour = parseInt(time.split(":")[0], 10);
-                      if (hour < 6) {
-                        timeColor = "text-purple-400"; // Very early (before 6am)
-                      } else if (hour < 9) {
-                        timeColor = "text-blue-400"; // Early morning (6-9am)
-                      } else if (hour < 12) {
-                        timeColor = "text-emerald-400"; // Late morning (9am-12pm)
-                      } else if (hour < 17) {
-                        timeColor = "text-amber-400"; // Afternoon (12-5pm)
-                      } else {
-                        timeColor = "text-orange-400"; // Evening (5pm+)
-                      }
-                    }
+                    const color = getTimeColor(time, isOff);
                     
                     return (
                       <span 
                         key={idx} 
-                        className={`text-center text-[10px] font-mono ${timeColor}`}
+                        className="text-center text-[10px] font-mono"
+                        style={color ? { color } : undefined}
                       >
-                        {isOff ? "OFF" : formatTime(time)}
+                        {isOff ? <span className="text-muted-foreground/50">OFF</span> : formatTime(time)}
                       </span>
                     );
                   })}
