@@ -18,13 +18,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -55,36 +48,11 @@ import type { Database } from "@/integrations/supabase/types";
 
 type DriverRow = Database["public"]["Tables"]["drivers"]["Row"];
 
-interface DriverFormData {
-  name: string;
-  code: string;
-  phone: string;
-  email: string;
-  address: string;
-  is_active: boolean;
-  has_cdl: boolean;
-  notes: string;
-  default_vehicle: string;
-}
-
-const initialFormData: DriverFormData = {
-  name: "",
-  code: "",
-  phone: "",
-  email: "",
-  address: "",
-  is_active: true,
-  has_cdl: false,
-  notes: "",
-  default_vehicle: "",
-};
-
 export function DriverManagement() {
   const { allDrivers: drivers, vehicles } = useDispatchData();
   const { toast } = useToast();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingDriver, setEditingDriver] = useState<DriverRow | null>(null);
-  const [formData, setFormData] = useState<DriverFormData>(initialFormData);
   const [importing, setImporting] = useState(false);
   const [cdlFilter, setCdlFilter] = useState<"all" | "cdl" | "non-cdl">("all");
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
@@ -318,33 +286,6 @@ export function DriverManagement() {
     }
   };
 
-  const handleAdd = async () => {
-    if (!formData.name.trim()) {
-      toast({ title: "Error", description: "Name is required", variant: "destructive" });
-      return;
-    }
-
-    const { error } = await supabase.from("drivers").insert({
-      name: formData.name.trim(),
-      code: formData.code.trim().toUpperCase().slice(0, 4) || null,
-      phone: formData.phone.trim() || null,
-      email: formData.email.trim() || null,
-      address: formData.address.trim() || null,
-      is_active: formData.is_active,
-      has_cdl: formData.has_cdl,
-      notes: formData.notes.trim() || null,
-      default_vehicle: formData.default_vehicle.trim() || null,
-    });
-
-    if (error) {
-      toast({ title: "Error", description: "Failed to add driver", variant: "destructive" });
-    } else {
-      toast({ title: "Success", description: "Driver added successfully" });
-      setFormData(initialFormData);
-      setIsAddOpen(false);
-    }
-  };
-
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("drivers").delete().eq("id", id);
 
@@ -450,108 +391,10 @@ export function DriverManagement() {
             <Upload className="h-4 w-4" />
             {importing ? "Importing..." : "Import"}
           </Button>
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Driver
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Driver</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Driver name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="code">Code (4 letters)</Label>
-                  <Input
-                    id="code"
-                    value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase().slice(0, 4) })}
-                    placeholder="ABCD"
-                    maxLength={4}
-                    className="font-mono uppercase"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="555-0100"
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="is_active">Status</Label>
-                  <Select
-                    value={formData.is_active ? "active" : "inactive"}
-                    onValueChange={(value) => setFormData({ ...formData, is_active: value === "active" })}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="has_cdl">License Type</Label>
-                  <Select
-                    value={formData.has_cdl ? "cdl" : "non-cdl"}
-                    onValueChange={(value) => setFormData({ ...formData, has_cdl: value === "cdl" })}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cdl">CDL</SelectItem>
-                      <SelectItem value="non-cdl">Non-CDL</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="Additional notes..."
-                    rows={2}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="default_vehicle">Default Vehicle (Take-Home)</Label>
-                  <Select
-                    value={formData.default_vehicle || "__none__"}
-                    onValueChange={(value) => setFormData({ ...formData, default_vehicle: value === "__none__" ? "" : value })}
-                  >
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="None" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">None</SelectItem>
-                      {vehicles.map((v) => (
-                        <SelectItem key={v.id} value={v.unit}>{v.unit}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button onClick={handleAdd} className="w-full">Add Driver</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button size="sm" className="gap-2" onClick={() => setIsAddOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Add Driver
+          </Button>
         </div>
       </div>
 
@@ -819,12 +662,22 @@ export function DriverManagement() {
         )}
       </div>
 
-      {/* Driver Profile Dialog */}
+      {/* Driver Profile Dialog - Add Mode */}
+      <DriverProfileDialog
+        driver={null}
+        vehicles={vehicles}
+        open={isAddOpen}
+        onOpenChange={setIsAddOpen}
+        mode="add"
+      />
+
+      {/* Driver Profile Dialog - Edit Mode */}
       <DriverProfileDialog
         driver={editingDriver}
         vehicles={vehicles}
         open={editingDriver !== null}
         onOpenChange={(open) => !open && setEditingDriver(null)}
+        mode="edit"
       />
     </div>
   );
