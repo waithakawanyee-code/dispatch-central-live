@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, Pencil, Trash2, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, UserCheck, UserX, Home, Phone, User, Circle } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, Home, Phone, User, Circle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -43,7 +43,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { parseCSV, generateCSV, downloadCSV } from "@/lib/csv";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { DriverProfileDialog } from "./DriverProfileDialog";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -101,7 +100,6 @@ export function DriverManagement() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [editingNotesValue, setEditingNotesValue] = useState("");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [schedules, setSchedules] = useState<ScheduleMap>({});
@@ -212,41 +210,6 @@ export function DriverManagement() {
       toast({ title: "Success", description: "Notes updated" });
       setEditingNotesId(null);
       setEditingNotesValue("");
-    }
-  };
-
-  const toggleSelectDriver = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === filteredDrivers.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredDrivers.map((d) => d.id)));
-    }
-  };
-
-  const bulkSetActive = async (isActive: boolean) => {
-    if (selectedIds.size === 0) return;
-    const { error } = await supabase
-      .from("drivers")
-      .update({ is_active: isActive, updated_at: new Date().toISOString() })
-      .in("id", Array.from(selectedIds));
-
-    if (error) {
-      toast({ title: "Error", description: "Failed to update drivers", variant: "destructive" });
-    } else {
-      toast({ title: "Success", description: `${selectedIds.size} driver(s) marked as ${isActive ? "active" : "inactive"}` });
-      setSelectedIds(new Set());
     }
   };
 
@@ -525,22 +488,6 @@ export function DriverManagement() {
               All Drivers
             </Button>
           </div>
-          {selectedIds.size > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
-              <Button size="sm" variant="outline" onClick={() => bulkSetActive(true)}>
-                <UserCheck className="h-4 w-4 mr-1" />
-                Set Active
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => bulkSetActive(false)}>
-                <UserX className="h-4 w-4 mr-1" />
-                Set Inactive
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-                Clear
-              </Button>
-            </div>
-          )}
         </div>
 
         {/* Schedule Color Legend */}
@@ -620,44 +567,14 @@ export function DriverManagement() {
     };
 
     const gridCols = displayPrefs.showScheduleInTable
-      ? "grid-cols-[32px_24px_minmax(140px,1fr)_repeat(7,32px)_60px_80px]"
-      : "grid-cols-[32px_24px_minmax(200px,1fr)_80px_80px]";
+      ? "grid-cols-[24px_minmax(140px,1fr)_repeat(7,32px)_60px_80px]"
+      : "grid-cols-[24px_minmax(200px,1fr)_80px_80px]";
 
     const rowPadding = displayPrefs.compactMode ? "py-1" : "py-2";
 
     return (
       <div className="rounded-lg border border-border bg-card">
         <div className={`grid ${gridCols} gap-2 border-b border-border bg-secondary/50 px-4 ${rowPadding} text-xs font-medium uppercase text-muted-foreground items-center`}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center justify-center">
-                <Checkbox
-                  checked={filteredDrivers.length > 0 && selectedIds.size === filteredDrivers.length}
-                  className="pointer-events-none"
-                  aria-label="Select all"
-                />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuLabel>Selection</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuRadioGroup value="">
-                <DropdownMenuRadioItem value="all-page" onClick={() => setSelectedIds(new Set(paginatedDrivers.map((d) => d.id)))}>
-                  Select page ({paginatedDrivers.length})
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="all-filtered" onClick={() => setSelectedIds(new Set(filteredDrivers.map((d) => d.id)))}>
-                  Select all filtered ({filteredDrivers.length})
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="all-drivers" onClick={() => setSelectedIds(new Set(drivers.map((d) => d.id)))}>
-                  Select all drivers ({drivers.length})
-                </DropdownMenuRadioItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuRadioItem value="none" onClick={() => setSelectedIds(new Set())}>
-                  Clear selection
-                </DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
           <span></span>
           <span>Name</span>
           {displayPrefs.showScheduleInTable && DAY_LABELS.map((d, i) => (
@@ -684,11 +601,6 @@ export function DriverManagement() {
                 <div
                   className={`grid ${gridCols} gap-2 px-4 ${rowPadding} text-sm items-center ${isInactive ? "bg-muted/30" : ""}`}
                 >
-                  <Checkbox
-                    checked={selectedIds.has(driver.id)}
-                    onCheckedChange={() => toggleSelectDriver(driver.id)}
-                    aria-label={`Select ${driver.name}`}
-                  />
                   <TooltipProvider delayDuration={300}>
                     <Tooltip>
                       <TooltipTrigger asChild>
