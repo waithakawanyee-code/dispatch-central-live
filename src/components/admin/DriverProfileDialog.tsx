@@ -61,6 +61,7 @@ interface DriverProfileDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved?: () => void;
+  mode?: "add" | "edit";
 }
 
 export function DriverProfileDialog({
@@ -69,31 +70,36 @@ export function DriverProfileDialog({
   open,
   onOpenChange,
   onSaved,
+  mode = "edit",
 }: DriverProfileDialogProps) {
   const { toast } = useToast();
   const [formData, setFormData] = useState<DriverProfileFormData>(initialFormData);
   const [saving, setSaving] = useState(false);
 
+  const isAddMode = mode === "add";
+
   useEffect(() => {
-    if (driver) {
-      setFormData({
-        name: driver.name || "",
-        code: driver.code || "",
-        phone: driver.phone || "",
-        email: driver.email || "",
-        address: driver.address || "",
-        is_active: driver.is_active !== false,
-        has_cdl: driver.has_cdl === true,
-        notes: driver.notes || "",
-        default_vehicle: driver.default_vehicle || "",
-        emergency_contact_name: (driver as any).emergency_contact_name || "",
-        emergency_contact_phone: (driver as any).emergency_contact_phone || "",
-        emergency_contact_relationship: (driver as any).emergency_contact_relationship || "",
-      });
-    } else {
-      setFormData(initialFormData);
+    if (open) {
+      if (driver && !isAddMode) {
+        setFormData({
+          name: driver.name || "",
+          code: driver.code || "",
+          phone: driver.phone || "",
+          email: driver.email || "",
+          address: driver.address || "",
+          is_active: driver.is_active !== false,
+          has_cdl: driver.has_cdl === true,
+          notes: driver.notes || "",
+          default_vehicle: driver.default_vehicle || "",
+          emergency_contact_name: (driver as any).emergency_contact_name || "",
+          emergency_contact_phone: (driver as any).emergency_contact_phone || "",
+          emergency_contact_relationship: (driver as any).emergency_contact_relationship || "",
+        });
+      } else {
+        setFormData(initialFormData);
+      }
     }
-  }, [driver, open]);
+  }, [driver, open, isAddMode]);
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
@@ -101,12 +107,11 @@ export function DriverProfileDialog({
       return;
     }
 
-    if (!driver) return;
-
     setSaving(true);
-    const { error } = await supabase
-      .from("drivers")
-      .update({
+
+    if (isAddMode) {
+      // Insert new driver
+      const { error } = await supabase.from("drivers").insert({
         name: formData.name.trim(),
         code: formData.code.trim().toUpperCase().slice(0, 4) || null,
         phone: formData.phone.trim() || null,
@@ -119,18 +124,52 @@ export function DriverProfileDialog({
         emergency_contact_name: formData.emergency_contact_name.trim() || null,
         emergency_contact_phone: formData.emergency_contact_phone.trim() || null,
         emergency_contact_relationship: formData.emergency_contact_relationship.trim() || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", driver.id);
+      });
 
-    setSaving(false);
+      setSaving(false);
 
-    if (error) {
-      toast({ title: "Error", description: "Failed to update driver", variant: "destructive" });
+      if (error) {
+        toast({ title: "Error", description: "Failed to add driver", variant: "destructive" });
+      } else {
+        toast({ title: "Success", description: "Driver added successfully" });
+        onOpenChange(false);
+        onSaved?.();
+      }
     } else {
-      toast({ title: "Success", description: "Driver profile updated" });
-      onOpenChange(false);
-      onSaved?.();
+      // Update existing driver
+      if (!driver) {
+        setSaving(false);
+        return;
+      }
+
+      const { error } = await supabase
+        .from("drivers")
+        .update({
+          name: formData.name.trim(),
+          code: formData.code.trim().toUpperCase().slice(0, 4) || null,
+          phone: formData.phone.trim() || null,
+          email: formData.email.trim() || null,
+          address: formData.address.trim() || null,
+          is_active: formData.is_active,
+          has_cdl: formData.has_cdl,
+          notes: formData.notes.trim() || null,
+          default_vehicle: formData.default_vehicle.trim() || null,
+          emergency_contact_name: formData.emergency_contact_name.trim() || null,
+          emergency_contact_phone: formData.emergency_contact_phone.trim() || null,
+          emergency_contact_relationship: formData.emergency_contact_relationship.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", driver.id);
+
+      setSaving(false);
+
+      if (error) {
+        toast({ title: "Error", description: "Failed to update driver", variant: "destructive" });
+      } else {
+        toast({ title: "Success", description: "Driver profile updated" });
+        onOpenChange(false);
+        onSaved?.();
+      }
     }
   };
 
@@ -140,7 +179,7 @@ export function DriverProfileDialog({
         <SheetHeader className="pb-4">
           <SheetTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            Driver Profile
+            {isAddMode ? "Add New Driver" : "Driver Profile"}
           </SheetTitle>
         </SheetHeader>
 
@@ -371,7 +410,7 @@ export function DriverProfileDialog({
               disabled={saving}
               className="flex-1"
             >
-              {saving ? "Saving..." : "Save Changes"}
+              {saving ? "Saving..." : isAddMode ? "Add Driver" : "Save Changes"}
             </Button>
             <Button
               variant="outline"
