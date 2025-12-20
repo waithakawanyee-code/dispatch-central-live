@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Phone, Mail, MapPin, Car, FileText, AlertCircle, Shield, Calendar, Clock, Copy } from "lucide-react";
+import { User, Phone, Mail, MapPin, Car, FileText, AlertCircle, Shield, Calendar, Clock, Copy, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,11 +61,11 @@ const DAYS_OF_WEEK = [
 
 const initialSchedule: WeeklySchedule = {
   0: { is_off: true, start_time: "", end_time: "" },
-  1: { is_off: false, start_time: "08:00", end_time: "17:00" },
-  2: { is_off: false, start_time: "08:00", end_time: "17:00" },
-  3: { is_off: false, start_time: "08:00", end_time: "17:00" },
-  4: { is_off: false, start_time: "08:00", end_time: "17:00" },
-  5: { is_off: false, start_time: "08:00", end_time: "17:00" },
+  1: { is_off: false, start_time: "08:00", end_time: "" },
+  2: { is_off: false, start_time: "08:00", end_time: "" },
+  3: { is_off: false, start_time: "08:00", end_time: "" },
+  4: { is_off: false, start_time: "08:00", end_time: "" },
+  5: { is_off: false, start_time: "08:00", end_time: "" },
   6: { is_off: true, start_time: "", end_time: "" },
 };
 
@@ -512,12 +512,36 @@ export function DriverProfileDialog({
                         />
                       </div>
                       <span className="text-muted-foreground text-xs">to</span>
-                      <Input
-                        type="time"
-                        value={schedule[day.value]?.end_time || ""}
-                        onChange={(e) => updateDaySchedule(day.value, "end_time", e.target.value)}
-                        className="h-8 w-[100px] text-xs"
-                      />
+                      {schedule[day.value]?.end_time ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="time"
+                            value={schedule[day.value]?.end_time || ""}
+                            onChange={(e) => updateDaySchedule(day.value, "end_time", e.target.value)}
+                            className="h-8 w-[100px] text-xs"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                            onClick={() => updateDaySchedule(day.value, "end_time", "")}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs text-muted-foreground"
+                          onClick={() => updateDaySchedule(day.value, "end_time", "17:00")}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          End Time
+                        </Button>
+                      )}
                     </div>
                   )}
                   {schedule[day.value]?.is_off && (
