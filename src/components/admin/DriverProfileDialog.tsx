@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Phone, Mail, MapPin, Car, FileText, AlertCircle, Shield, Calendar, Clock } from "lucide-react";
+import { User, Phone, Mail, MapPin, Car, FileText, AlertCircle, Shield, Calendar, Clock, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -170,6 +170,17 @@ export function DriverProfileDialog({
         // Clear times when marking as off
         ...(field === "is_off" && value === true ? { start_time: "", end_time: "" } : {}),
       },
+    }));
+  };
+
+  const copyMondayToWeekdays = () => {
+    const mondaySchedule = schedule[1];
+    setSchedule((prev) => ({
+      ...prev,
+      2: { ...mondaySchedule },
+      3: { ...mondaySchedule },
+      4: { ...mondaySchedule },
+      5: { ...mondaySchedule },
     }));
   };
 
@@ -452,11 +463,22 @@ export function DriverProfileDialog({
 
           {/* Weekly Schedule */}
           <div className="space-y-4">
-            <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Weekly Schedule
-            </h3>
-            
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Weekly Schedule
+              </h3>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={copyMondayToWeekdays}
+                className="text-xs"
+              >
+                <Copy className="h-3 w-3 mr-1" />
+                Copy Mon → Tue-Fri
+              </Button>
+            </div>
             <div className="space-y-3">
               {DAYS_OF_WEEK.map((day) => (
                 <div
