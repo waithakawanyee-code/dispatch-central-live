@@ -39,6 +39,9 @@ interface DriverProfileFormData {
   emergency_contact_name: string;
   emergency_contact_phone: string;
   emergency_contact_relationship: string;
+  emergency_contact_name_2: string;
+  emergency_contact_phone_2: string;
+  emergency_contact_relationship_2: string;
 }
 
 interface DaySchedule {
@@ -83,6 +86,9 @@ const initialFormData: DriverProfileFormData = {
   emergency_contact_name: "",
   emergency_contact_phone: "",
   emergency_contact_relationship: "",
+  emergency_contact_name_2: "",
+  emergency_contact_phone_2: "",
+  emergency_contact_relationship_2: "",
 };
 
 interface DriverProfileDialogProps {
@@ -153,9 +159,12 @@ export function DriverProfileDialog({
           has_cdl: driver.has_cdl === true,
           notes: driver.notes || "",
           default_vehicle: driver.default_vehicle || "",
-          emergency_contact_name: (driver as any).emergency_contact_name || "",
-          emergency_contact_phone: (driver as any).emergency_contact_phone || "",
-          emergency_contact_relationship: (driver as any).emergency_contact_relationship || "",
+          emergency_contact_name: driver.emergency_contact_name || "",
+          emergency_contact_phone: driver.emergency_contact_phone || "",
+          emergency_contact_relationship: driver.emergency_contact_relationship || "",
+          emergency_contact_name_2: (driver as any).emergency_contact_name_2 || "",
+          emergency_contact_phone_2: (driver as any).emergency_contact_phone_2 || "",
+          emergency_contact_relationship_2: (driver as any).emergency_contact_relationship_2 || "",
         });
       } else {
         setFormData(initialFormData);
@@ -229,7 +238,10 @@ export function DriverProfileDialog({
         emergency_contact_name: formData.emergency_contact_name.trim() || null,
         emergency_contact_phone: formData.emergency_contact_phone.trim() || null,
         emergency_contact_relationship: formData.emergency_contact_relationship.trim() || null,
-      }).select("id").single();
+        emergency_contact_name_2: formData.emergency_contact_name_2.trim() || null,
+        emergency_contact_phone_2: formData.emergency_contact_phone_2.trim() || null,
+        emergency_contact_relationship_2: formData.emergency_contact_relationship_2.trim() || null,
+      } as any).select("id").single();
 
       if (error || !newDriver) {
         setSaving(false);
@@ -264,8 +276,11 @@ export function DriverProfileDialog({
           emergency_contact_name: formData.emergency_contact_name.trim() || null,
           emergency_contact_phone: formData.emergency_contact_phone.trim() || null,
           emergency_contact_relationship: formData.emergency_contact_relationship.trim() || null,
+          emergency_contact_name_2: formData.emergency_contact_name_2.trim() || null,
+          emergency_contact_phone_2: formData.emergency_contact_phone_2.trim() || null,
+          emergency_contact_relationship_2: formData.emergency_contact_relationship_2.trim() || null,
           updated_at: new Date().toISOString(),
-        })
+        } as any)
         .eq("id", driver.id);
 
       if (error) {
@@ -422,14 +437,16 @@ export function DriverProfileDialog({
 
           <Separator />
 
-          {/* Emergency Contact */}
+          {/* Emergency Contacts */}
           <div className="space-y-4">
             <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <AlertCircle className="h-4 w-4" />
-              Emergency Contact
+              Emergency Contacts
             </h3>
             
-            <div className="grid gap-4">
+            {/* Emergency Contact 1 */}
+            <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
+              <p className="text-xs font-medium text-muted-foreground">Primary Contact</p>
               <div className="space-y-2">
                 <Label htmlFor="profile-emergency-name">Contact Name</Label>
                 <Input
@@ -458,6 +475,42 @@ export function DriverProfileDialog({
                     value={formData.emergency_contact_relationship}
                     onChange={(e) => setFormData({ ...formData, emergency_contact_relationship: e.target.value })}
                     placeholder="e.g., Spouse, Parent"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Emergency Contact 2 */}
+            <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
+              <p className="text-xs font-medium text-muted-foreground">Secondary Contact</p>
+              <div className="space-y-2">
+                <Label htmlFor="profile-emergency-name-2">Contact Name</Label>
+                <Input
+                  id="profile-emergency-name-2"
+                  value={formData.emergency_contact_name_2}
+                  onChange={(e) => setFormData({ ...formData, emergency_contact_name_2: e.target.value })}
+                  placeholder="Emergency contact name"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="profile-emergency-phone-2">Contact Phone</Label>
+                  <Input
+                    id="profile-emergency-phone-2"
+                    value={formData.emergency_contact_phone_2}
+                    onChange={(e) => setFormData({ ...formData, emergency_contact_phone_2: e.target.value })}
+                    placeholder="555-0199"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="profile-emergency-relationship-2">Relationship</Label>
+                  <Input
+                    id="profile-emergency-relationship-2"
+                    value={formData.emergency_contact_relationship_2}
+                    onChange={(e) => setFormData({ ...formData, emergency_contact_relationship_2: e.target.value })}
+                    placeholder="e.g., Sibling, Friend"
                   />
                 </div>
               </div>
