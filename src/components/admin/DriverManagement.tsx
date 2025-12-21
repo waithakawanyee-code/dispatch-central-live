@@ -44,6 +44,7 @@ import { useDispatchData } from "@/hooks/useDispatchData";
 import { parseCSV, generateCSV, downloadCSV } from "@/lib/csv";
 import { Badge } from "@/components/ui/badge";
 import { DriverProfileDialog } from "./DriverProfileDialog";
+import { ImportPreviewDialog, validateImportRow } from "./ImportPreviewDialog";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriverRow = Database["public"]["Tables"]["drivers"]["Row"];
@@ -93,6 +94,8 @@ export function DriverManagement() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingDriver, setEditingDriver] = useState<DriverRow | null>(null);
   const [importing, setImporting] = useState(false);
+  const [importPreviewOpen, setImportPreviewOpen] = useState(false);
+  const [parsedImportRows, setParsedImportRows] = useState<ReturnType<typeof validateImportRow>[]>([]);
   const [cdlTab, setCdlTab] = useState<"cdl" | "non-cdl">("non-cdl");
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("active");
   const [searchQuery, setSearchQuery] = useState("");
@@ -270,26 +273,38 @@ export function DriverManagement() {
     Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 0
   };
 
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setImporting(true);
     try {
       const text = await file.text();
       const rows = parseCSV<Record<string, string>>(text);
 
       if (rows.length === 0) {
         toast({ title: "Error", description: "No valid data found in CSV", variant: "destructive" });
+        if (fileInputRef.current) fileInputRef.current.value = "";
         return;
       }
 
-      let driversImported = 0;
-      let schedulesImported = 0;
+      // Validate each row and open preview dialog
+      const validatedRows = rows.map((row, index) => validateImportRow(row, index + 1));
+      setParsedImportRows(validatedRows);
+      setImportPreviewOpen(true);
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to parse CSV file", variant: "destructive" });
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
-      for (const row of rows) {
-        if (!row.Name?.trim()) continue;
+  const handleConfirmImport = async (validRows: typeof parsedImportRows) => {
+    setImporting(true);
+    let driversImported = 0;
+    let schedulesImported = 0;
 
+    try {
+      for (const { data: row } of validRows) {
         // Insert driver with all fields including emergency contacts
         const { data: driverData, error: driverError } = await supabase
           .from("drivers")
@@ -350,18 +365,19 @@ export function DriverManagement() {
       }
 
       if (driversImported === 0) {
-        toast({ title: "Error", description: "No valid drivers found (name is required)", variant: "destructive" });
+        toast({ title: "Error", description: "No drivers were imported", variant: "destructive" });
       } else {
         toast({ 
           title: "Success", 
           description: `${driversImported} drivers imported${schedulesImported > 0 ? ` with ${schedulesImported} schedule entries` : ""}` 
         });
+        setImportPreviewOpen(false);
+        setParsedImportRows([]);
       }
     } catch (err) {
-      toast({ title: "Error", description: "Failed to parse CSV file", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to import drivers", variant: "destructive" });
     } finally {
       setImporting(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -465,7 +481,7 @@ export function DriverManagement() {
             type="file"
             accept=".csv"
             className="hidden"
-            onChange={handleImport}
+            onChange={handleFileSelect}
           />
           <Button
             size="sm"
@@ -566,6 +582,18 @@ export function DriverManagement() {
         open={editingDriver !== null}
         onOpenChange={(open) => !open && setEditingDriver(null)}
         mode="edit"
+      />
+
+      {/* Import Preview Dialog */}
+      <ImportPreviewDialog
+        open={importPreviewOpen}
+        onOpenChange={(open) => {
+          setImportPreviewOpen(open);
+          if (!open) setParsedImportRows([]);
+        }}
+        parsedRows={parsedImportRows}
+        onConfirmImport={handleConfirmImport}
+        importing={importing}
       />
     </div>
   );
