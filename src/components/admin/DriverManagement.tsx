@@ -261,9 +261,9 @@ export function DriverManagement() {
   };
 
   const handleDownloadTemplate = () => {
-    const template = "Name,Code,Phone,Vehicle,Active,CDL,Mon_In,Mon_Out,Tue_In,Tue_Out,Wed_In,Wed_Out,Thu_In,Thu_Out,Fri_In,Fri_Out,Sat_In,Sat_Out,Sun_In,Sun_Out\nJohn Doe,JDOE,555-0123,V-101,yes,yes,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,OFF,,OFF,";
+    const template = "Name,Code,Phone,Email,Address,Vehicle,Active,CDL,Default_Vehicle,Emergency1_Name,Emergency1_Phone,Emergency1_Relationship,Emergency2_Name,Emergency2_Phone,Emergency2_Relationship,Mon_In,Mon_Out,Tue_In,Tue_Out,Wed_In,Wed_Out,Thu_In,Thu_Out,Fri_In,Fri_Out,Sat_In,Sat_Out,Sun_In,Sun_Out\nJohn Doe,JDOE,555-0123,john@example.com,123 Main St,V-101,yes,yes,V-101,Jane Doe,555-0199,Spouse,Bob Smith,555-0188,Brother,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,OFF,,OFF,";
     downloadCSV(template, "drivers-template.csv");
-    toast({ title: "Template Downloaded", description: "CSV template with schedule columns (CDL: yes/no)" });
+    toast({ title: "Template Downloaded", description: "CSV template with emergency contacts and schedule columns" });
   };
 
   const dayMapping: Record<string, number> = {
@@ -290,17 +290,26 @@ export function DriverManagement() {
       for (const row of rows) {
         if (!row.Name?.trim()) continue;
 
-        // Insert driver
+        // Insert driver with all fields including emergency contacts
         const { data: driverData, error: driverError } = await supabase
           .from("drivers")
           .insert({
             name: row.Name.trim(),
             code: row.Code?.trim().toUpperCase().slice(0, 4) || null,
             phone: row.Phone?.trim() || null,
+            email: row.Email?.trim() || null,
+            address: row.Address?.trim() || null,
             vehicle: row.Vehicle?.trim() || null,
+            default_vehicle: row.Default_Vehicle?.trim() || null,
             is_active: row.Active?.toLowerCase() !== "no" && row.Active?.toLowerCase() !== "inactive",
             has_cdl: row.CDL?.toLowerCase() === "yes" || row.CDL?.toLowerCase() === "cdl",
-          })
+            emergency_contact_name: row.Emergency1_Name?.trim() || null,
+            emergency_contact_phone: row.Emergency1_Phone?.trim() || null,
+            emergency_contact_relationship: row.Emergency1_Relationship?.trim() || null,
+            emergency_contact_name_2: row.Emergency2_Name?.trim() || null,
+            emergency_contact_phone_2: row.Emergency2_Phone?.trim() || null,
+            emergency_contact_relationship_2: row.Emergency2_Relationship?.trim() || null,
+          } as any)
           .select("id")
           .single();
 
