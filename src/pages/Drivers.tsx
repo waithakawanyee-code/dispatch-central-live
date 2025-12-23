@@ -80,6 +80,14 @@ const Drivers = () => {
   const [isCallOutChecked, setIsCallOutChecked] = useState(false);
   const [callOutNote, setCallOutNote] = useState("");
   
+  // Punch In dialog state
+  const [showPunchInDialog, setShowPunchInDialog] = useState(false);
+  const [punchInDriver, setPunchInDriver] = useState<{ id: string; name: string } | null>(null);
+  
+  // Punch Out dialog state
+  const [showPunchOutDialog, setShowPunchOutDialog] = useState(false);
+  const [punchOutDriver, setPunchOutDriver] = useState<{ id: string; name: string } | null>(null);
+  
   // Driver picker state (for keyboard shortcuts when no driver selected)
   const [showDriverPicker, setShowDriverPicker] = useState(false);
   const [pendingAction, setPendingAction] = useState<"assign" | "punchIn" | "punchOut" | "off" | null>(null);
@@ -285,6 +293,16 @@ const Drivers = () => {
     setShowOffDialog(true);
   };
 
+  const openPunchInDialog = (driverId: string, driverName: string) => {
+    setPunchInDriver({ id: driverId, name: driverName });
+    setShowPunchInDialog(true);
+  };
+
+  const openPunchOutDialog = (driverId: string, driverName: string) => {
+    setPunchOutDriver({ id: driverId, name: driverName });
+    setShowPunchOutDialog(true);
+  };
+
   const handleConfirmOff = async () => {
     if (!offDriver) return;
     
@@ -371,12 +389,8 @@ const Drivers = () => {
       return;
     }
     
-    updateDriverStatus(driverId, "working");
-    toast({
-      title: "Punched In",
-      description: `${driver.name} is now working`,
-    });
-  }, [drivers, updateDriverStatus, toast]);
+    openPunchInDialog(driver.id, driver.name);
+  }, [drivers, toast]);
 
   const executePunchOut = useCallback((driverId: string) => {
     const driver = drivers.find(d => d.id === driverId);
@@ -391,12 +405,32 @@ const Drivers = () => {
       return;
     }
     
-    updateDriverStatus(driverId, "punched-out");
+    openPunchOutDialog(driver.id, driver.name);
+  }, [drivers, toast]);
+
+  const handleConfirmPunchIn = () => {
+    if (!punchInDriver) return;
+    
+    updateDriverStatus(punchInDriver.id, "working");
+    toast({
+      title: "Punched In",
+      description: `${punchInDriver.name} is now working`,
+    });
+    setShowPunchInDialog(false);
+    setPunchInDriver(null);
+  };
+
+  const handleConfirmPunchOut = () => {
+    if (!punchOutDriver) return;
+    
+    updateDriverStatus(punchOutDriver.id, "punched-out");
     toast({
       title: "Punched Out",
-      description: `${driver.name} has punched out`,
+      description: `${punchOutDriver.name} has punched out`,
     });
-  }, [drivers, updateDriverStatus, toast]);
+    setShowPunchOutDialog(false);
+    setPunchOutDriver(null);
+  };
 
   const executeOff = useCallback((driverId: string) => {
     const driver = drivers.find(d => d.id === driverId);
@@ -591,7 +625,7 @@ const Drivers = () => {
   }, [loading, schedulesLoading, selectableDrivers, displayDrivers, selectedDriverId]);
 
   // Check if any modal/dialog is currently open
-  const isAnyDialogOpen = showAssignDialog || showOffDialog || showDriverPicker || showDetailsPanel;
+  const isAnyDialogOpen = showAssignDialog || showOffDialog || showPunchInDialog || showPunchOutDialog || showDriverPicker || showDetailsPanel;
 
   // Keyboard navigation handler
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -1423,6 +1457,94 @@ const Drivers = () => {
             </Button>
             <Button onClick={handleConfirmOff} disabled={!offDriver}>
               Confirm OFF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Punch In Dialog */}
+      <Dialog open={showPunchInDialog} onOpenChange={setShowPunchInDialog}>
+        <DialogContent className="sm:max-w-[350px]">
+          <DialogHeader>
+            <DialogTitle>Punch In Driver</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="punch-in-driver">Driver</Label>
+              <Select 
+                value={punchInDriver?.id || ""} 
+                onValueChange={(val) => {
+                  const driver = drivers.find(d => d.id === val);
+                  if (driver) {
+                    setPunchInDriver({ id: driver.id, name: driver.name });
+                  }
+                }}
+              >
+                <SelectTrigger id="punch-in-driver">
+                  <SelectValue placeholder="Select driver" />
+                </SelectTrigger>
+                <SelectContent>
+                  {drivers
+                    .filter((d) => d.is_active && d.status === "assigned")
+                    .map((driver) => (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        {driver.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPunchInDialog(false)} tabIndex={-1}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmPunchIn} disabled={!punchInDriver}>
+              Punch In
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Punch Out Dialog */}
+      <Dialog open={showPunchOutDialog} onOpenChange={setShowPunchOutDialog}>
+        <DialogContent className="sm:max-w-[350px]">
+          <DialogHeader>
+            <DialogTitle>Punch Out Driver</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="punch-out-driver">Driver</Label>
+              <Select 
+                value={punchOutDriver?.id || ""} 
+                onValueChange={(val) => {
+                  const driver = drivers.find(d => d.id === val);
+                  if (driver) {
+                    setPunchOutDriver({ id: driver.id, name: driver.name });
+                  }
+                }}
+              >
+                <SelectTrigger id="punch-out-driver">
+                  <SelectValue placeholder="Select driver" />
+                </SelectTrigger>
+                <SelectContent>
+                  {drivers
+                    .filter((d) => d.is_active && ["working", "on-route"].includes(d.status))
+                    .map((driver) => (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        {driver.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPunchOutDialog(false)} tabIndex={-1}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmPunchOut} disabled={!punchOutDriver}>
+              Punch Out
             </Button>
           </DialogFooter>
         </DialogContent>
