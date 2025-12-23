@@ -180,11 +180,24 @@ export function VehicleManagement() {
         return;
       }
 
+      // Helper to match vehicle type by value or label
+      const matchVehicleType = (input?: string): VehicleType | null => {
+        if (!input) return null;
+        const trimmed = input.trim().toLowerCase();
+        // Try exact match on value
+        const byValue = VEHICLE_TYPES.find(t => t.value.toLowerCase() === trimmed);
+        if (byValue) return byValue.value;
+        // Try match on label
+        const byLabel = VEHICLE_TYPES.find(t => t.label.toLowerCase() === trimmed);
+        if (byLabel) return byLabel.value;
+        return null;
+      };
+
       const validRows = rows
         .filter(row => row.unit?.trim())
         .map(row => ({
           unit: row.unit.trim(),
-          vehicle_type: validVehicleTypes.includes(row.vehicle_type as VehicleType) ? row.vehicle_type as VehicleType : null,
+          vehicle_type: matchVehicleType(row.vehicle_type),
           driver: row.driver?.trim() || null,
           status: (validStatuses.includes(row.status as VehicleStatus) ? row.status : "active") as VehicleStatus,
           clean_status: (validCleanStatuses.includes(row.clean_status as CleanStatus) ? row.clean_status : "clean") as CleanStatus,
