@@ -5,16 +5,19 @@ import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
 import { DriverRow } from "@/components/DriverRow";
 import { DriverDetailsPanel } from "@/components/DriverDetailsPanel";
+import { DriverPicker } from "@/components/DriverPicker";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { TimeInput } from "@/components/ui/time-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -69,6 +72,16 @@ const Drivers = () => {
   const [assignVehicle, setAssignVehicle] = useState("__none__");
   const assignButtonRef = useRef<HTMLButtonElement>(null);
   const driverListRef = useRef<HTMLDivElement>(null);
+  
+  // OFF dialog state
+  const [showOffDialog, setShowOffDialog] = useState(false);
+  const [offDriver, setOffDriver] = useState<{ id: string; name: string } | null>(null);
+  const [isCallOutChecked, setIsCallOutChecked] = useState(false);
+  const [callOutNote, setCallOutNote] = useState("");
+  
+  // Driver picker state (for keyboard shortcuts when no driver selected)
+  const [showDriverPicker, setShowDriverPicker] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"assign" | "punchIn" | "punchOut" | "off" | null>(null);
 
   const today = startOfDay(new Date());
   const isToday = isSameDay(selectedDate, today);
@@ -264,6 +277,178 @@ const Drivers = () => {
     setShowAssignDialog(true);
   };
 
+  const openOffDialog = (driverId: string, driverName: string) => {
+    setOffDriver({ id: driverId, name: driverName });
+    setIsCallOutChecked(false);
+    setCallOutNote("");
+    setShowOffDialog(true);
+  };
+
+  const handleConfirmOff = async () => {
+    if (!offDriver) return;
+    
+    // If it's a call out, record it
+    if (isCallOutChecked) {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error } = await supabase.from("call_outs").insert({
+        driver_id: offDriver.id,
+        driver_name: offDriver.name,
+        note: callOutNote.trim() || null,
+        created_by: user?.id || null,
+      });
+
+      if (error) {
+        toast({
+          title: "Error recording call out",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Call out recorded",
+          description: `${offDriver.name} marked as called out`,
+        });
+        // Refresh call outs
+        const { data: callOutsRes } = await supabase
+          .from("call_outs")
+          .select("*")
+          .eq("call_out_date", format(today, "yyyy-MM-dd"));
+        if (callOutsRes) {
+          setTodayCallOuts(callOutsRes as CallOut[]);
+        }
+      }
+    }
+
+    updateDriverStatus(offDriver.id, "off");
+    setShowOffDialog(false);
+    setOffDriver(null);
+    setIsCallOutChecked(false);
+    setCallOutNote("");
+  };
+
+  // Shortcut action handlers with guardrails
+  const executeAssign = useCallback((driverId: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver) return;
+    
+    // Allow from unassigned, scheduled, or assigned
+    if (["unassigned", "scheduled", "assigned"].includes(driver.status)) {
+      openAssignDialog(driver.id, driver.name);
+    } else if (["working", "on-route"].includes(driver.status)) {
+      toast({
+        title: "Driver is working",
+        description: "Punch out first before reassigning",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Cannot assign",
+        description: `Driver is currently ${driver.status}`,
+        variant: "destructive",
+      });
+    }
+  }, [drivers, toast]);
+
+  const executePunchIn = useCallback((driverId: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver) return;
+    
+    if (["working", "on-route"].includes(driver.status)) {
+      toast({
+        title: "Already punched in",
+        description: `${driver.name} is already on the clock`,
+      });
+      return;
+    }
+    
+    if (driver.status !== "assigned") {
+      toast({
+        title: "Cannot punch in",
+        description: "Driver must be assigned first",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    updateDriverStatus(driverId, "working");
+    toast({
+      title: "Punched In",
+      description: `${driver.name} is now working`,
+    });
+  }, [drivers, updateDriverStatus, toast]);
+
+  const executePunchOut = useCallback((driverId: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver) return;
+    
+    if (!["working", "on-route"].includes(driver.status)) {
+      toast({
+        title: "Driver is not on the clock",
+        description: `${driver.name} must be working to punch out`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    updateDriverStatus(driverId, "punched-out");
+    toast({
+      title: "Punched Out",
+      description: `${driver.name} has punched out`,
+    });
+  }, [drivers, updateDriverStatus, toast]);
+
+  const executeOff = useCallback((driverId: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver) return;
+    
+    if (driver.status === "off") {
+      toast({
+        title: "Already OFF",
+        description: `${driver.name} is already marked OFF`,
+      });
+      return;
+    }
+    
+    if (["working", "on-route"].includes(driver.status)) {
+      toast({
+        title: "Driver is working",
+        description: "Punch out first before marking OFF",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    openOffDialog(driver.id, driver.name);
+  }, [drivers, toast]);
+
+  // Handle driver picker selection
+  const handleDriverPickerSelect = useCallback((driver: typeof drivers[0]) => {
+    setSelectedDriverId(driver.id);
+    setShowDriverPicker(false);
+    
+    // Execute the pending action
+    if (pendingAction) {
+      // Small delay to let selection settle
+      setTimeout(() => {
+        switch (pendingAction) {
+          case "assign":
+            executeAssign(driver.id);
+            break;
+          case "punchIn":
+            executePunchIn(driver.id);
+            break;
+          case "punchOut":
+            executePunchOut(driver.id);
+            break;
+          case "off":
+            executeOff(driver.id);
+            break;
+        }
+        setPendingAction(null);
+      }, 50);
+    }
+  }, [pendingAction, executeAssign, executePunchIn, executePunchOut, executeOff]);
+
   // Get drivers NOT scheduled for today (OFF drivers)
   const offDrivers = useMemo(() => {
     if (!isToday) return [];
@@ -371,9 +556,36 @@ const Drivers = () => {
     }
   }, [loading, schedulesLoading, selectableDrivers, displayDrivers, selectedDriverId]);
 
+  // Check if any modal/dialog is currently open
+  const isAnyDialogOpen = showAssignDialog || showOffDialog || showDriverPicker || showDetailsPanel;
+
   // Keyboard navigation handler
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (showAssignDialog) return; // Don't navigate when dialog is open
+    // Check if focus is in an input, textarea, select, or contenteditable
+    const activeElement = document.activeElement;
+    const isInputFocused = activeElement && (
+      activeElement.tagName === "INPUT" ||
+      activeElement.tagName === "TEXTAREA" ||
+      activeElement.tagName === "SELECT" ||
+      activeElement.getAttribute("contenteditable") === "true"
+    );
+    
+    // Don't run shortcuts if any dialog is open (except for escape)
+    const dialogOpen = showAssignDialog || showOffDialog || showDriverPicker;
+    
+    // Escape closes any open panel/dialog
+    if (e.key === "Escape") {
+      if (showDetailsPanel) {
+        e.preventDefault();
+        setShowDetailsPanel(false);
+        return;
+      }
+      // Let dialogs handle their own escape
+      return;
+    }
+    
+    // Don't process other shortcuts if dialog is open or input is focused
+    if (dialogOpen || isInputFocused) return;
     
     // Arrow keys navigate within current section
     if (e.key === "ArrowUp" || e.key === "ArrowDown") {
@@ -434,12 +646,68 @@ const Drivers = () => {
       setShowDetailsPanel(prev => !prev);
     }
     
-    // Escape closes the details panel
-    if (e.key === "Escape" && showDetailsPanel) {
+    // === SHORTCUT KEYS (A, P, D, O) ===
+    // Only work when not in future date mode (today only)
+    if (!isToday) return;
+    
+    // A → Assign
+    if (e.key === "a" || e.key === "A") {
       e.preventDefault();
-      setShowDetailsPanel(false);
+      if (!selectedDriverId) {
+        setPendingAction("assign");
+        setShowDriverPicker(true);
+      } else {
+        executeAssign(selectedDriverId);
+      }
     }
-  }, [selectedDriverId, showAssignDialog, showDetailsPanel, getCurrentSection, driverSections, sectionOrder]);
+    
+    // P → Punch In
+    if (e.key === "p" || e.key === "P") {
+      e.preventDefault();
+      if (!selectedDriverId) {
+        setPendingAction("punchIn");
+        setShowDriverPicker(true);
+      } else {
+        executePunchIn(selectedDriverId);
+      }
+    }
+    
+    // D → Punch Out
+    if (e.key === "d" || e.key === "D") {
+      e.preventDefault();
+      if (!selectedDriverId) {
+        setPendingAction("punchOut");
+        setShowDriverPicker(true);
+      } else {
+        executePunchOut(selectedDriverId);
+      }
+    }
+    
+    // O → Mark OFF
+    if (e.key === "o" || e.key === "O") {
+      e.preventDefault();
+      if (!selectedDriverId) {
+        setPendingAction("off");
+        setShowDriverPicker(true);
+      } else {
+        executeOff(selectedDriverId);
+      }
+    }
+  }, [
+    selectedDriverId, 
+    showAssignDialog, 
+    showOffDialog, 
+    showDriverPicker, 
+    showDetailsPanel, 
+    getCurrentSection, 
+    driverSections, 
+    sectionOrder, 
+    isToday, 
+    executeAssign, 
+    executePunchIn, 
+    executePunchOut, 
+    executeOff
+  ]);
 
   // Handler for driver pill click - select and show details
   const handleDriverSelect = useCallback((driverId: string) => {
@@ -1010,6 +1278,68 @@ const Drivers = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* OFF Dialog */}
+      <Dialog open={showOffDialog} onOpenChange={setShowOffDialog}>
+        <DialogContent className="sm:max-w-[350px]">
+          <DialogHeader>
+            <DialogTitle>Mark {offDriver?.name} as OFF</DialogTitle>
+            <DialogDescription>
+              Did the driver call out?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="call-out-page"
+                checked={isCallOutChecked}
+                onCheckedChange={(checked) => setIsCallOutChecked(checked === true)}
+              />
+              <Label htmlFor="call-out-page" className="text-sm font-normal">
+                Yes, driver called out
+              </Label>
+            </div>
+            {isCallOutChecked && (
+              <div className="grid gap-2">
+                <Label htmlFor="call-out-note-page">Note (optional)</Label>
+                <Textarea
+                  id="call-out-note-page"
+                  placeholder="Reason for call out..."
+                  value={callOutNote}
+                  onChange={(e) => setCallOutNote(e.target.value)}
+                  rows={2}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOffDialog(false)} tabIndex={-1}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmOff}>
+              Confirm OFF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Driver Picker for keyboard shortcuts */}
+      <DriverPicker
+        open={showDriverPicker}
+        onOpenChange={(open) => {
+          setShowDriverPicker(open);
+          if (!open) setPendingAction(null);
+        }}
+        drivers={selectableDrivers}
+        onSelect={handleDriverPickerSelect}
+        title={
+          pendingAction === "assign" ? "Select Driver to Assign" :
+          pendingAction === "punchIn" ? "Select Driver to Punch In" :
+          pendingAction === "punchOut" ? "Select Driver to Punch Out" :
+          pendingAction === "off" ? "Select Driver to Mark OFF" :
+          "Select Driver"
+        }
+      />
 
       {/* Driver Details Panel */}
       <DriverDetailsPanel 
