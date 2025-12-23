@@ -50,6 +50,8 @@ interface DriverRowProps {
   compact?: boolean;
   mini?: boolean;
   availableVehicles?: VehicleRowType[];
+  isSelected?: boolean;
+  onSelect?: (driverId: string) => void;
 }
 
 // Workflow: Unassigned → Assigned → Working → Punched Out
@@ -96,7 +98,7 @@ interface TimePunch {
   punch_time: string;
 }
 
-export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, mini = false, availableVehicles = [] }: DriverRowProps) {
+export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, mini = false, availableVehicles = [], isSelected = false, onSelect }: DriverRowProps) {
   const { toast } = useToast();
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showOffDialog, setShowOffDialog] = useState(false);
@@ -327,8 +329,13 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
 
   // Mini view - very compact for high-density lists
   if (mini) {
+    const handleMiniClick = () => {
+      onSelect?.(driver.id);
+    };
+
     const miniContent = (
       <div
+        onClick={handleMiniClick}
         className={cn(
           "inline-flex items-center gap-1.5 rounded border border-border bg-card px-2 py-1 text-xs transition-all duration-200",
           "hover:border-primary/30",
@@ -338,7 +345,9 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
           driver.status === "assigned" && "border-emerald-500/30 bg-emerald-500/5",
           ["working", "on-route"].includes(driver.status) && "border-status-available/30 bg-status-available/5",
           ["offline", "punched-out"].includes(driver.status) && "border-status-offline/30 opacity-70",
-          isUpdated && "animate-row-flash"
+          isUpdated && "animate-row-flash",
+          // Selection highlight
+          isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background border-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
         )}
       >
         <span
