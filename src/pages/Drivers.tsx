@@ -6,6 +6,7 @@ import { StatsCard } from "@/components/StatsCard";
 import { DriverRow } from "@/components/DriverRow";
 import { DriverDetailsPanel } from "@/components/DriverDetailsPanel";
 import { DriverPicker } from "@/components/DriverPicker";
+import { DriverActionToolbar } from "@/components/DriverActionToolbar";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -421,6 +422,39 @@ const Drivers = () => {
     openOffDialog(driver.id, driver.name);
   }, [drivers, toast]);
 
+  // Unassign - reset to unassigned
+  const executeUnassign = useCallback((driverId: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver) return;
+    
+    if (driver.status !== "assigned") {
+      toast({
+        title: "Cannot unassign",
+        description: `Driver is not currently assigned`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    updateDriverStatus(driverId, "unassigned");
+    toast({
+      title: "Driver unassigned",
+      description: `${driver.name} has been unassigned`,
+    });
+  }, [drivers, updateDriverStatus, toast]);
+
+  // Reset - set back to unassigned from punched-out/off
+  const executeReset = useCallback((driverId: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver) return;
+    
+    updateDriverStatus(driverId, "unassigned");
+    toast({
+      title: "Driver reset",
+      description: `${driver.name} reset to unassigned`,
+    });
+  }, [drivers, updateDriverStatus, toast]);
+
   // Handle driver picker selection
   const handleDriverPickerSelect = useCallback((driver: typeof drivers[0]) => {
     setSelectedDriverId(driver.id);
@@ -737,12 +771,32 @@ const Drivers = () => {
       <Header />
 
       <main className="p-4">
-        <div className="mb-4">
-          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            Driver Workbook
-          </h1>
-          <p className="text-sm text-muted-foreground">Manage driver status and assignments</p>
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Driver Workbook
+            </h1>
+            <p className="text-sm text-muted-foreground">Manage driver status and assignments</p>
+          </div>
+          
+          {/* Quick Action Toolbar - shows when driver is selected and on today */}
+          {isToday && selectedDriverId && (() => {
+            const selectedDriver = drivers.find(d => d.id === selectedDriverId);
+            if (!selectedDriver) return null;
+            return (
+              <DriverActionToolbar
+                driverName={selectedDriver.name}
+                status={selectedDriver.status}
+                onAssign={() => executeAssign(selectedDriverId)}
+                onPunchIn={() => executePunchIn(selectedDriverId)}
+                onPunchOut={() => executePunchOut(selectedDriverId)}
+                onMarkOff={() => executeOff(selectedDriverId)}
+                onUnassign={() => executeUnassign(selectedDriverId)}
+                onReset={() => executeReset(selectedDriverId)}
+              />
+            );
+          })()}
         </div>
 
         {/* Date Selector */}
