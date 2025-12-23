@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useDateFormat } from "@/hooks/useDateFormat";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -12,18 +13,14 @@ export function Header() {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { role, isAdmin } = useUserRole();
+  const { formatDate } = useDateFormat();
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const formattedDate = currentTime.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric"
-  });
+  const formattedDate = `${currentTime.toLocaleDateString("en-US", { weekday: "long" })}, ${formatDate(currentTime)}`;
 
   const formattedTime = currentTime.toLocaleTimeString("en-US", {
     hour: "2-digit",
@@ -48,11 +45,7 @@ export function Header() {
               {currentTime.toLocaleDateString("en-US", { weekday: "long" })}
             </span>
             <span className="text-muted-foreground text-sm">
-              {currentTime.toLocaleDateString("en-US", {
-                month: "2-digit",
-                day: "2-digit",
-                year: "2-digit"
-              })}
+              {formatDate(currentTime)}
             </span>
           </div>
 
