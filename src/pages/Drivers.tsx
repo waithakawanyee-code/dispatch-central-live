@@ -301,6 +301,41 @@ const Drivers = () => {
   const offDriverCount = offDrivers.length;
   const calledOutCount = todayCallOuts.length;
 
+  // Create section-based driver lists for keyboard navigation
+  const driverSections = useMemo(() => {
+    if (isToday) {
+      return {
+        assigned: displayDrivers.filter((d) => d.status === "assigned"),
+        unassigned: displayDrivers.filter((d) => d.status === "unassigned" || d.status === "scheduled"),
+        working: displayDrivers.filter((d) => ["on-route", "working"].includes(d.status)),
+        punchedOut: displayDrivers.filter((d) => ["offline", "punched-out"].includes(d.status)),
+      };
+    } else {
+      return {
+        unassigned: displayDrivers.filter(d => d.status === "unassigned"),
+        assigned: displayDrivers.filter(d => d.status === "assigned"),
+        working: [],
+        punchedOut: [],
+      };
+    }
+  }, [displayDrivers, isToday]);
+
+  // Section order for Tab navigation
+  const sectionOrder = isToday 
+    ? ["assigned", "unassigned", "working", "punchedOut"] as const
+    : ["unassigned", "assigned"] as const;
+
+  // Get current section for selected driver
+  const getCurrentSection = useCallback((driverId: string | null) => {
+    if (!driverId) return null;
+    for (const section of sectionOrder) {
+      if (driverSections[section]?.some(d => d.id === driverId)) {
+        return section;
+      }
+    }
+    return null;
+  }, [driverSections, sectionOrder]);
+
   // Create ordered list of all selectable drivers for keyboard navigation
   const selectableDrivers = useMemo(() => {
     if (isToday) {
@@ -340,21 +375,55 @@ const Drivers = () => {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (showAssignDialog) return; // Don't navigate when dialog is open
     
+    // Arrow keys navigate within current section
     if (e.key === "ArrowUp" || e.key === "ArrowDown") {
       e.preventDefault();
       
-      const currentIndex = selectableDrivers.findIndex(d => d.id === selectedDriverId);
+      const currentSection = getCurrentSection(selectedDriverId);
+      if (!currentSection) return;
+      
+      const sectionDrivers = driverSections[currentSection] || [];
+      if (sectionDrivers.length === 0) return;
+      
+      const currentIndex = sectionDrivers.findIndex(d => d.id === selectedDriverId);
       let newIndex: number;
       
       if (e.key === "ArrowUp") {
-        newIndex = currentIndex <= 0 ? selectableDrivers.length - 1 : currentIndex - 1;
+        newIndex = currentIndex <= 0 ? sectionDrivers.length - 1 : currentIndex - 1;
       } else {
-        newIndex = currentIndex >= selectableDrivers.length - 1 ? 0 : currentIndex + 1;
+        newIndex = currentIndex >= sectionDrivers.length - 1 ? 0 : currentIndex + 1;
       }
       
-      if (selectableDrivers[newIndex]) {
-        setSelectedDriverId(selectableDrivers[newIndex].id);
-        // Close details panel when navigating
+      if (sectionDrivers[newIndex]) {
+        setSelectedDriverId(sectionDrivers[newIndex].id);
+        setShowDetailsPanel(false);
+      }
+    }
+    
+    // Tab/Shift+Tab switches between sections
+    if (e.key === "Tab" && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      const currentSection = getCurrentSection(selectedDriverId);
+      const currentSectionIndex = currentSection ? sectionOrder.indexOf(currentSection as any) : -1;
+      
+      // Find next section with drivers
+      const direction = e.shiftKey ? -1 : 1;
+      let nextSectionIndex = currentSectionIndex;
+      let attempts = 0;
+      
+      do {
+        nextSectionIndex = (nextSectionIndex + direction + sectionOrder.length) % sectionOrder.length;
+        attempts++;
+      } while (
+        (driverSections[sectionOrder[nextSectionIndex]]?.length || 0) === 0 && 
+        attempts < sectionOrder.length
+      );
+      
+      const nextSection = sectionOrder[nextSectionIndex];
+      const nextSectionDrivers = driverSections[nextSection] || [];
+      
+      if (nextSectionDrivers.length > 0 && nextSection !== currentSection) {
+        e.preventDefault();
+        setSelectedDriverId(nextSectionDrivers[0].id);
         setShowDetailsPanel(false);
       }
     }
@@ -370,7 +439,7 @@ const Drivers = () => {
       e.preventDefault();
       setShowDetailsPanel(false);
     }
-  }, [selectableDrivers, selectedDriverId, showAssignDialog, showDetailsPanel]);
+  }, [selectedDriverId, showAssignDialog, showDetailsPanel, getCurrentSection, driverSections, sectionOrder]);
 
   // Handler for driver pill click - select and show details
   const handleDriverSelect = useCallback((driverId: string) => {
