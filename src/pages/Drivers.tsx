@@ -775,6 +775,7 @@ const Drivers = () => {
                 id="future-report-time"
                 value={assignReportTime}
                 onChange={setAssignReportTime}
+                autoFocus
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     assignButtonRef.current?.focus();
