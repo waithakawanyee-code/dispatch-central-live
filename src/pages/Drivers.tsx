@@ -59,6 +59,7 @@ const Drivers = () => {
   
   // Selected driver state
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
+  const [openMenuDriverId, setOpenMenuDriverId] = useState<string | null>(null);
   
   // Assign dialog state
   const [showAssignDialog, setShowAssignDialog] = useState(false);
@@ -352,9 +353,17 @@ const Drivers = () => {
       
       if (selectableDrivers[newIndex]) {
         setSelectedDriverId(selectableDrivers[newIndex].id);
+        // Close any open menu when navigating
+        setOpenMenuDriverId(null);
       }
     }
-  }, [selectableDrivers, selectedDriverId, showAssignDialog]);
+    
+    // Enter key opens action menu for selected driver
+    if (e.key === "Enter" && selectedDriverId && !openMenuDriverId) {
+      e.preventDefault();
+      setOpenMenuDriverId(selectedDriverId);
+    }
+  }, [selectableDrivers, selectedDriverId, showAssignDialog, openMenuDriverId]);
 
   // Attach keyboard listener
   useEffect(() => {
@@ -646,6 +655,8 @@ const Drivers = () => {
                           mini
                           isSelected={selectedDriverId === driver.id}
                           onSelect={setSelectedDriverId}
+                          isMenuOpen={openMenuDriverId === driver.id}
+                          onMenuOpenChange={(open) => setOpenMenuDriverId(open ? driver.id : null)}
                         />
                       ))}
                     {assignedDrivers === 0 && (
@@ -676,6 +687,8 @@ const Drivers = () => {
                           mini
                           isSelected={selectedDriverId === driver.id}
                           onSelect={setSelectedDriverId}
+                          isMenuOpen={openMenuDriverId === driver.id}
+                          onMenuOpenChange={(open) => setOpenMenuDriverId(open ? driver.id : null)}
                         />
                       ))}
                     {unassignedDrivers === 0 && (
@@ -759,6 +772,8 @@ const Drivers = () => {
                           mini
                           isSelected={selectedDriverId === driver.id}
                           onSelect={setSelectedDriverId}
+                          isMenuOpen={openMenuDriverId === driver.id}
+                          onMenuOpenChange={(open) => setOpenMenuDriverId(open ? driver.id : null)}
                         />
                       ))}
                     {workingDrivers === 0 && (
@@ -789,6 +804,8 @@ const Drivers = () => {
                           mini
                           isSelected={selectedDriverId === driver.id}
                           onSelect={setSelectedDriverId}
+                          isMenuOpen={openMenuDriverId === driver.id}
+                          onMenuOpenChange={(open) => setOpenMenuDriverId(open ? driver.id : null)}
                         />
                       ))}
                     {punchedOutDrivers === 0 && (

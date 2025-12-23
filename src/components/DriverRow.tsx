@@ -52,6 +52,8 @@ interface DriverRowProps {
   availableVehicles?: VehicleRowType[];
   isSelected?: boolean;
   onSelect?: (driverId: string) => void;
+  isMenuOpen?: boolean;
+  onMenuOpenChange?: (open: boolean) => void;
 }
 
 // Workflow: Unassigned → Assigned → Working → Punched Out
@@ -98,7 +100,7 @@ interface TimePunch {
   punch_time: string;
 }
 
-export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, mini = false, availableVehicles = [], isSelected = false, onSelect }: DriverRowProps) {
+export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, mini = false, availableVehicles = [], isSelected = false, onSelect, isMenuOpen, onMenuOpenChange }: DriverRowProps) {
   const { toast } = useToast();
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showOffDialog, setShowOffDialog] = useState(false);
@@ -420,7 +422,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
             <Tooltip>
               <TooltipTrigger asChild>
                 <div>
-                  <DropdownMenu>
+                  <DropdownMenu open={isMenuOpen} onOpenChange={onMenuOpenChange}>
                     <DropdownMenuTrigger asChild>
                       {miniContent}
                     </DropdownMenuTrigger>
