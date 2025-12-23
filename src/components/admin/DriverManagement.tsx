@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, Pencil, Trash2, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, Home, Phone, User, Circle, UserCheck, UserX } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, Home, Phone, User, Circle, UserCheck, UserX, CheckCircle, XCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -43,6 +43,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { parseCSV, generateCSV, downloadCSV } from "@/lib/csv";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DriverProfileDialog } from "./DriverProfileDialog";
 import { ImportPreviewDialog, validateImportRow } from "./ImportPreviewDialog";
 import type { Database } from "@/integrations/supabase/types";
@@ -109,6 +110,7 @@ export function DriverManagement() {
   const [scheduleColors, setScheduleColors] = useState<ScheduleColorConfig>(defaultColors);
   const [displayPrefs, setDisplayPrefs] = useState<DisplayPreferences>(defaultDisplayPrefs);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Load saved preferences from localStorage
   useEffect(() => {
@@ -391,6 +393,48 @@ export function DriverManagement() {
     }
   };
 
+  const toggleSelectDriver = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const bulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const { error } = await supabase
+      .from("drivers")
+      .delete()
+      .in("id", Array.from(selectedIds));
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to delete drivers", variant: "destructive" });
+    } else {
+      toast({ title: "Success", description: `${selectedIds.size} driver(s) deleted` });
+      setSelectedIds(new Set());
+    }
+  };
+
+  const bulkSetActive = async (isActive: boolean) => {
+    if (selectedIds.size === 0) return;
+    const { error } = await supabase
+      .from("drivers")
+      .update({ is_active: isActive, updated_at: new Date().toISOString() })
+      .in("id", Array.from(selectedIds));
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to update drivers", variant: "destructive" });
+    } else {
+      toast({ title: "Success", description: `${selectedIds.size} driver(s) set to ${isActive ? "active" : "inactive"}` });
+      setSelectedIds(new Set());
+    }
+  };
+
   const openEditProfile = (driver: DriverRow) => {
     setEditingDriver(driver);
   };
@@ -499,6 +543,44 @@ export function DriverManagement() {
           </Button>
         </div>
       </div>
+
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded-lg border border-border">
+          <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
+          <Button size="sm" variant="outline" onClick={() => bulkSetActive(true)}>
+            <CheckCircle className="h-4 w-4 mr-1" />
+            Set Active
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => bulkSetActive(false)}>
+            <XCircle className="h-4 w-4 mr-1" />
+            Set Inactive
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="destructive">
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {selectedIds.size} driver(s)?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete the selected drivers.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={bulkDelete}>Delete</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+            Clear
+          </Button>
+        </div>
+      )}
 
       <Tabs value={cdlTab} onValueChange={(v) => { setCdlTab(v as "cdl" | "non-cdl"); setCurrentPage(1); }}>
         <div className="flex items-center justify-between">
@@ -617,14 +699,51 @@ export function DriverManagement() {
     };
 
     const gridCols = displayPrefs.showScheduleInTable
-      ? "grid-cols-[24px_minmax(140px,1fr)_repeat(7,32px)_60px_80px]"
-      : "grid-cols-[24px_minmax(200px,1fr)_80px_80px]";
+      ? "grid-cols-[32px_24px_minmax(140px,1fr)_repeat(7,32px)_60px_80px]"
+      : "grid-cols-[32px_24px_minmax(200px,1fr)_80px_80px]";
 
     const rowPadding = displayPrefs.compactMode ? "py-1" : "py-2";
+
+    const allCurrentPageSelected = paginatedDrivers.length > 0 && paginatedDrivers.every(d => selectedIds.has(d.id));
 
     return (
       <div className="rounded-lg border border-border bg-card">
         <div className={`grid ${gridCols} gap-2 border-b border-border bg-secondary/50 px-4 ${rowPadding} text-xs font-medium uppercase text-muted-foreground items-center`}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center justify-center">
+                <Checkbox
+                  checked={allCurrentPageSelected}
+                  className="pointer-events-none"
+                  aria-label="Select all"
+                />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="bg-popover">
+              <DropdownMenuLabel>Select</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup
+                value=""
+                onValueChange={(val) => {
+                  if (val === "page") {
+                    setSelectedIds((prev) => {
+                      const next = new Set(prev);
+                      paginatedDrivers.forEach((d) => next.add(d.id));
+                      return next;
+                    });
+                  } else if (val === "all") {
+                    setSelectedIds(new Set(filteredDrivers.map((d) => d.id)));
+                  } else if (val === "none") {
+                    setSelectedIds(new Set());
+                  }
+                }}
+              >
+                <DropdownMenuRadioItem value="page">This Page</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="all">All ({filteredDrivers.length})</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="none">None</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <span></span>
           <span>Name</span>
           {displayPrefs.showScheduleInTable && DAY_LABELS.map((d, i) => (
@@ -649,8 +768,13 @@ export function DriverManagement() {
             return (
               <div key={driver.id} className="border-b border-border last:border-0">
                 <div
-                  className={`grid ${gridCols} gap-2 px-4 ${rowPadding} text-sm items-center ${isInactive ? "bg-muted/30" : ""}`}
+                  className={`grid ${gridCols} gap-2 px-4 ${rowPadding} text-sm items-center ${isInactive ? "bg-muted/30" : ""} ${selectedIds.has(driver.id) ? "bg-primary/5" : ""}`}
                 >
+                  <Checkbox
+                    checked={selectedIds.has(driver.id)}
+                    onCheckedChange={() => toggleSelectDriver(driver.id)}
+                    aria-label={`Select ${driver.name}`}
+                  />
                   <TooltipProvider delayDuration={300}>
                     <Tooltip>
                       <TooltipTrigger asChild>
