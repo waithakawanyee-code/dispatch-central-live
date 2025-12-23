@@ -1,21 +1,22 @@
 import { User, Truck, ArrowRight } from "lucide-react";
 import { useStatusHistory } from "@/hooks/useStatusHistory";
+import { useDateFormat } from "@/hooks/useDateFormat";
 import { StatusBadge } from "@/components/StatusBadge";
 import { cn } from "@/lib/utils";
 
 export function HistoryLog() {
   const { history, loading } = useStatusHistory(100);
+  const { formatDate } = useDateFormat();
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
-    return date.toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
+    const timeStr = date.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
       hour12: false,
     });
+    return `${formatDate(date)} ${timeStr}`;
   };
 
   const formatFieldName = (field: string) => {

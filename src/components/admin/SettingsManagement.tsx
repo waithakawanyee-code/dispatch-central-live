@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings, Palette, Clock, LayoutList, Filter, Sun, Moon, Monitor } from "lucide-react";
+import { Settings, Palette, Clock, LayoutList, Filter, Sun, Moon, Monitor, Calendar } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useDateFormat, DATE_FORMAT_OPTIONS, type DateFormatOption } from "@/hooks/useDateFormat";
 
 interface ScheduleColorConfig {
   veryEarly: { label: string; range: string; color: string };
@@ -52,6 +53,7 @@ const defaultDisplayPrefs: DisplayPreferences = {
 export function SettingsManagement() {
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
+  const { dateFormat, setDateFormat } = useDateFormat();
   const [colors, setColors] = useState<ScheduleColorConfig>(defaultColors);
   const [displayPrefs, setDisplayPrefs] = useState<DisplayPreferences>(defaultDisplayPrefs);
 
@@ -158,6 +160,44 @@ export function SettingsManagement() {
               <Monitor className="h-4 w-4" />
               System
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Date Format */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Date Format
+          </CardTitle>
+          <CardDescription>
+            Choose how dates are displayed throughout the application.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="dateFormat">Date Display Format</Label>
+              <Select value={dateFormat} onValueChange={(v) => setDateFormat(v as DateFormatOption)}>
+                <SelectTrigger id="dateFormat" className="w-full max-w-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DATE_FORMAT_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <span className="flex items-center gap-2">
+                        <span>{option.label}</span>
+                        <span className="text-muted-foreground text-xs">({option.example})</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                This affects how dates appear in tables, reports, and forms.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
