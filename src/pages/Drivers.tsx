@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock, PhoneOff, Truck, X } from "lucide-react";
 import { format, addDays, isSameDay, startOfDay, getDay } from "date-fns";
 import { Header } from "@/components/Header";
@@ -57,12 +57,16 @@ const Drivers = () => {
   const [offDriversOpen, setOffDriversOpen] = useState(false);
   const [futureAssignments, setFutureAssignments] = useState<FutureAssignment[]>([]);
   
+  // Selected driver state
+  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
+  
   // Assign dialog state
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [assigningDriver, setAssigningDriver] = useState<{ id: string; name: string } | null>(null);
   const [assignReportTime, setAssignReportTime] = useState("");
   const [assignVehicle, setAssignVehicle] = useState("__none__");
   const assignButtonRef = useRef<HTMLButtonElement>(null);
+  const driverListRef = useRef<HTMLDivElement>(null);
 
   const today = startOfDay(new Date());
   const isToday = isSameDay(selectedDate, today);
@@ -295,6 +299,69 @@ const Drivers = () => {
   const offDriverCount = offDrivers.length;
   const calledOutCount = todayCallOuts.length;
 
+  // Create ordered list of all selectable drivers for keyboard navigation
+  const selectableDrivers = useMemo(() => {
+    if (isToday) {
+      // Today: Assigned -> Unassigned -> Working -> Punched Out
+      return [
+        ...displayDrivers.filter((d) => d.status === "assigned"),
+        ...displayDrivers.filter((d) => d.status === "unassigned" || d.status === "scheduled"),
+        ...displayDrivers.filter((d) => ["on-route", "working"].includes(d.status)),
+        ...displayDrivers.filter((d) => ["offline", "punched-out"].includes(d.status)),
+      ];
+    } else {
+      // Future: Unassigned -> Assigned
+      return [
+        ...displayDrivers.filter(d => d.status === "unassigned"),
+        ...displayDrivers.filter(d => d.status === "assigned"),
+      ];
+    }
+  }, [displayDrivers, isToday]);
+
+  // Auto-select first unassigned driver on page load or when drivers change
+  useEffect(() => {
+    if (!loading && !schedulesLoading && selectableDrivers.length > 0) {
+      // Only auto-select if no driver is currently selected or selected driver no longer exists
+      if (!selectedDriverId || !selectableDrivers.find(d => d.id === selectedDriverId)) {
+        // Prefer first unassigned driver
+        const firstUnassigned = displayDrivers.find((d) => d.status === "unassigned" || d.status === "scheduled");
+        if (firstUnassigned) {
+          setSelectedDriverId(firstUnassigned.id);
+        } else if (selectableDrivers.length > 0) {
+          setSelectedDriverId(selectableDrivers[0].id);
+        }
+      }
+    }
+  }, [loading, schedulesLoading, selectableDrivers, displayDrivers, selectedDriverId]);
+
+  // Keyboard navigation handler
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (showAssignDialog) return; // Don't navigate when dialog is open
+    
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+      
+      const currentIndex = selectableDrivers.findIndex(d => d.id === selectedDriverId);
+      let newIndex: number;
+      
+      if (e.key === "ArrowUp") {
+        newIndex = currentIndex <= 0 ? selectableDrivers.length - 1 : currentIndex - 1;
+      } else {
+        newIndex = currentIndex >= selectableDrivers.length - 1 ? 0 : currentIndex + 1;
+      }
+      
+      if (selectableDrivers[newIndex]) {
+        setSelectedDriverId(selectableDrivers[newIndex].id);
+      }
+    }
+  }, [selectableDrivers, selectedDriverId, showAssignDialog]);
+
+  // Attach keyboard listener
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
   if (loading || schedulesLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -461,10 +528,14 @@ const Drivers = () => {
                     .map((driver) => (
                       <div
                         key={driver.id}
-                        onClick={() => isAdmin && openAssignDialog(driver.id, driver.name)}
+                        onClick={() => {
+                          setSelectedDriverId(driver.id);
+                          if (isAdmin) openAssignDialog(driver.id, driver.name);
+                        }}
                         className={cn(
-                          "flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm transition-colors",
-                          isAdmin && "cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-500/5"
+                          "flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm transition-all duration-200",
+                          isAdmin && "cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-500/5",
+                          selectedDriverId === driver.id && "ring-2 ring-primary ring-offset-1 ring-offset-background border-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
                         )}
                       >
                         <span className="h-2 w-2 rounded-full bg-slate-500 shrink-0" />
@@ -504,7 +575,11 @@ const Drivers = () => {
                     .map((driver) => (
                       <div
                         key={driver.id}
-                        className="flex items-center gap-3 rounded border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm group"
+                        onClick={() => setSelectedDriverId(driver.id)}
+                        className={cn(
+                          "flex items-center gap-3 rounded border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm group cursor-pointer transition-all duration-200",
+                          selectedDriverId === driver.id && "ring-2 ring-primary ring-offset-1 ring-offset-background border-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
+                        )}
                       >
                         <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
                         <span className="font-medium text-foreground flex-1">{driver.name}</span>
@@ -528,7 +603,10 @@ const Drivers = () => {
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                            onClick={() => handleUnassignFutureDriver(driver.id, driver.name)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUnassignFutureDriver(driver.id, driver.name);
+                            }}
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -566,6 +644,8 @@ const Drivers = () => {
                           onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
                           availableVehicles={vehicles}
                           mini
+                          isSelected={selectedDriverId === driver.id}
+                          onSelect={setSelectedDriverId}
                         />
                       ))}
                     {assignedDrivers === 0 && (
@@ -594,6 +674,8 @@ const Drivers = () => {
                           onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
                           availableVehicles={vehicles}
                           mini
+                          isSelected={selectedDriverId === driver.id}
+                          onSelect={setSelectedDriverId}
                         />
                       ))}
                     {unassignedDrivers === 0 && (
@@ -675,6 +757,8 @@ const Drivers = () => {
                           onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
                           availableVehicles={vehicles}
                           mini
+                          isSelected={selectedDriverId === driver.id}
+                          onSelect={setSelectedDriverId}
                         />
                       ))}
                     {workingDrivers === 0 && (
@@ -703,6 +787,8 @@ const Drivers = () => {
                           onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
                           availableVehicles={vehicles}
                           mini
+                          isSelected={selectedDriverId === driver.id}
+                          onSelect={setSelectedDriverId}
                         />
                       ))}
                     {punchedOutDrivers === 0 && (
