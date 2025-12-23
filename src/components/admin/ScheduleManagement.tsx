@@ -163,11 +163,7 @@ export function ScheduleManagement() {
 
   const formatTime = (time: string | null) => {
     if (!time) return "-";
-    const [hours, minutes] = time.split(":");
-    const h = parseInt(hours);
-    const ampm = h >= 12 ? "PM" : "AM";
-    const h12 = h % 12 || 12;
-    return `${h12}:${minutes} ${ampm}`;
+    return time.slice(0, 5);
   };
 
   const selectedDriver = drivers.find(d => d.id === selectedDriverId);
