@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock, PhoneOff, Truck, X } from "lucide-react";
 import { format, addDays, isSameDay, startOfDay, getDay } from "date-fns";
 import { Header } from "@/components/Header";
@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { TimeInput } from "@/components/ui/time-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,6 +62,7 @@ const Drivers = () => {
   const [assigningDriver, setAssigningDriver] = useState<{ id: string; name: string } | null>(null);
   const [assignReportTime, setAssignReportTime] = useState("");
   const [assignVehicle, setAssignVehicle] = useState("__none__");
+  const assignButtonRef = useRef<HTMLButtonElement>(null);
 
   const today = startOfDay(new Date());
   const isToday = isSameDay(selectedDate, today);
@@ -770,17 +771,35 @@ const Drivers = () => {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="future-report-time">Report Time (optional)</Label>
-              <Input
+              <TimeInput
                 id="future-report-time"
-                type="time"
                 value={assignReportTime}
-                onChange={(e) => setAssignReportTime(e.target.value)}
+                onChange={setAssignReportTime}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    assignButtonRef.current?.focus();
+                  }
+                }}
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="future-vehicle">Vehicle (optional)</Label>
-              <Select value={assignVehicle} onValueChange={setAssignVehicle}>
-                <SelectTrigger>
+              <Select 
+                value={assignVehicle} 
+                onValueChange={(val) => {
+                  setAssignVehicle(val);
+                  // Focus assign button after selection
+                  setTimeout(() => assignButtonRef.current?.focus(), 0);
+                }}
+              >
+                <SelectTrigger 
+                  onKeyDown={(e) => {
+                    if (e.key === "Tab" && !e.shiftKey) {
+                      e.preventDefault();
+                      assignButtonRef.current?.focus();
+                    }
+                  }}
+                >
                   <SelectValue placeholder="Select vehicle" />
                 </SelectTrigger>
                 <SelectContent>
@@ -797,10 +816,17 @@ const Drivers = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAssignDialog(false)}
+              tabIndex={-1}
+            >
               Cancel
             </Button>
-            <Button onClick={handleAssignFutureDriver}>
+            <Button 
+              ref={assignButtonRef}
+              onClick={handleAssignFutureDriver}
+            >
               Assign
             </Button>
           </DialogFooter>
