@@ -144,6 +144,7 @@ export function VehicleManagement() {
     const csv = generateCSV(vehicles, [
       { key: "unit", header: "Unit" },
       { key: "vehicle_type", header: "Vehicle Type" },
+      { key: "classification", header: "Classification" },
       { key: "driver", header: "Driver" },
       { key: "status", header: "Status" },
       { key: "clean_status", header: "Clean Status" },
@@ -154,7 +155,7 @@ export function VehicleManagement() {
   };
 
   const handleDownloadTemplate = () => {
-    const template = "Unit,Vehicle Type,Driver,Status,Clean Status,Notes\nV-109,sedan_volvo,Jane Smith,active,clean,Maintenance note";
+    const template = "Unit,Vehicle Type,Classification,Driver,Status,Clean Status,Notes\nV-109,sedan_volvo,house,Jane Smith,active,clean,Maintenance note";
     downloadCSV(template, "vehicles-template.csv");
     toast({ title: "Template Downloaded", description: "CSV template with example row" });
   };
@@ -169,6 +170,7 @@ export function VehicleManagement() {
       const rows = parseCSV<{
         unit: string;
         vehicle_type?: string;
+        classification?: string;
         driver?: string;
         status?: string;
         clean_status?: string;
@@ -193,11 +195,20 @@ export function VehicleManagement() {
         return null;
       };
 
+      // Helper to match classification
+      const matchClassification = (input?: string): VehicleClassification => {
+        if (!input) return "house";
+        const trimmed = input.trim().toLowerCase().replace(/\s+/g, '_');
+        if (trimmed === "take_home" || trimmed === "takehome") return "take_home";
+        return "house";
+      };
+
       const validRows = rows
         .filter(row => row.unit?.trim())
         .map(row => ({
           unit: row.unit.trim(),
           vehicle_type: matchVehicleType(row.vehicle_type),
+          classification: matchClassification(row.classification),
           driver: row.driver?.trim() || null,
           status: (validStatuses.includes(row.status as VehicleStatus) ? row.status : "active") as VehicleStatus,
           clean_status: (validCleanStatuses.includes(row.clean_status as CleanStatus) ? row.clean_status : "clean") as CleanStatus,
