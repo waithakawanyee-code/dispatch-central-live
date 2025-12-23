@@ -1258,23 +1258,49 @@ const Drivers = () => {
         </Collapsible>
       </main>
 
-      {/* Assign Dialog for Future Dates */}
+      {/* Assign Dialog */}
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
         <DialogContent className="sm:max-w-[350px]">
           <DialogHeader>
-            <DialogTitle>Assign {assigningDriver?.name}</DialogTitle>
+            <DialogTitle>Assign Driver</DialogTitle>
           </DialogHeader>
           <p className="text-xs text-muted-foreground">
             Assign for {format(selectedDate, "EEEE, MMMM d, yyyy")}
           </p>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
+              <Label htmlFor="assign-driver">Driver</Label>
+              <Select 
+                value={assigningDriver?.id || ""} 
+                onValueChange={(val) => {
+                  const driver = drivers.find(d => d.id === val);
+                  if (driver) {
+                    const defaultVehicle = (driver as any)?.default_vehicle;
+                    setAssigningDriver({ id: driver.id, name: driver.name });
+                    setAssignVehicle(defaultVehicle || "__none__");
+                  }
+                }}
+              >
+                <SelectTrigger id="assign-driver">
+                  <SelectValue placeholder="Select driver" />
+                </SelectTrigger>
+                <SelectContent>
+                  {drivers
+                    .filter((d) => d.is_active && ["unassigned", "scheduled", "assigned"].includes(d.status))
+                    .map((driver) => (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        {driver.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
               <Label htmlFor="future-report-time">Report Time (optional)</Label>
               <TimeInput
                 id="future-report-time"
                 value={assignReportTime}
                 onChange={setAssignReportTime}
-                autoFocus
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     assignButtonRef.current?.focus();
@@ -1288,7 +1314,6 @@ const Drivers = () => {
                 value={assignVehicle} 
                 onValueChange={(val) => {
                   setAssignVehicle(val);
-                  // Focus assign button after selection
                   setTimeout(() => assignButtonRef.current?.focus(), 0);
                 }}
               >
@@ -1326,6 +1351,7 @@ const Drivers = () => {
             <Button 
               ref={assignButtonRef}
               onClick={handleAssignFutureDriver}
+              disabled={!assigningDriver}
             >
               Assign
             </Button>
@@ -1337,12 +1363,37 @@ const Drivers = () => {
       <Dialog open={showOffDialog} onOpenChange={setShowOffDialog}>
         <DialogContent className="sm:max-w-[350px]">
           <DialogHeader>
-            <DialogTitle>Mark {offDriver?.name} as OFF</DialogTitle>
+            <DialogTitle>Mark Driver OFF</DialogTitle>
             <DialogDescription>
               Did the driver call out?
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="off-driver">Driver</Label>
+              <Select 
+                value={offDriver?.id || ""} 
+                onValueChange={(val) => {
+                  const driver = drivers.find(d => d.id === val);
+                  if (driver) {
+                    setOffDriver({ id: driver.id, name: driver.name });
+                  }
+                }}
+              >
+                <SelectTrigger id="off-driver">
+                  <SelectValue placeholder="Select driver" />
+                </SelectTrigger>
+                <SelectContent>
+                  {drivers
+                    .filter((d) => d.is_active && d.status !== "off" && !["working", "on-route"].includes(d.status))
+                    .map((driver) => (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        {driver.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="call-out-page"
@@ -1370,7 +1421,7 @@ const Drivers = () => {
             <Button variant="outline" onClick={() => setShowOffDialog(false)} tabIndex={-1}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmOff}>
+            <Button onClick={handleConfirmOff} disabled={!offDriver}>
               Confirm OFF
             </Button>
           </DialogFooter>
