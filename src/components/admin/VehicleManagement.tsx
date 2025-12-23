@@ -140,6 +140,21 @@ export function VehicleManagement() {
     }
   };
 
+  const bulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const { error } = await supabase
+      .from("vehicles")
+      .delete()
+      .in("id", Array.from(selectedIds));
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to delete vehicles", variant: "destructive" });
+    } else {
+      toast({ title: "Success", description: `${selectedIds.size} vehicle(s) deleted` });
+      setSelectedIds(new Set());
+    }
+  };
+
   const handleExport = () => {
     const csv = generateCSV(vehicles, [
       { key: "unit", header: "Unit" },
@@ -579,6 +594,26 @@ export function VehicleManagement() {
               <XCircle className="h-4 w-4 mr-1" />
               Out of Service
             </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="destructive">
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {selectedIds.size} vehicle(s)?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the selected vehicles.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={bulkDelete}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
               Clear
             </Button>
