@@ -1,19 +1,13 @@
 import { useState } from "react";
 import { User, Phone, Clock, Truck, Pencil, Trash2, Check, X, Plus, Award, Home } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import {
   Dialog,
   DialogContent,
@@ -52,8 +46,6 @@ interface DriverRowProps {
   availableVehicles?: VehicleRowType[];
   isSelected?: boolean;
   onSelect?: (driverId: string) => void;
-  isMenuOpen?: boolean;
-  onMenuOpenChange?: (open: boolean) => void;
 }
 
 // Workflow: Unassigned → Assigned → Working → Punched Out
@@ -100,7 +92,7 @@ interface TimePunch {
   punch_time: string;
 }
 
-export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, mini = false, availableVehicles = [], isSelected = false, onSelect, isMenuOpen, onMenuOpenChange }: DriverRowProps) {
+export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, mini = false, availableVehicles = [], isSelected = false, onSelect }: DriverRowProps) {
   const { toast } = useToast();
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showOffDialog, setShowOffDialog] = useState(false);
@@ -384,22 +376,22 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
     if (canEdit) {
       return (
         <>
-          <DropdownMenu open={isMenuOpen} onOpenChange={onMenuOpenChange}>
-            <DropdownMenuTrigger asChild>
+          <ContextMenu>
+            <ContextMenuTrigger asChild>
               {miniContent}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-[140px]">
+            </ContextMenuTrigger>
+            <ContextMenuContent className="min-w-[140px]">
               {["punched-out", "offline"].includes(driver.status) && (
-                <DropdownMenuItem
+                <ContextMenuItem
                   onClick={handlePunchedOutClick}
                   className="cursor-pointer text-sm"
                 >
                   <Clock className="h-4 w-4 mr-2" />
                   <span>View Times</span>
-                </DropdownMenuItem>
+                </ContextMenuItem>
               )}
               {getMiniOptions().map((option) => (
-                <DropdownMenuItem
+                <ContextMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
                   className={cn(
@@ -408,10 +400,10 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                   )}
                 >
                   <span>{option.label}</span>
-                </DropdownMenuItem>
+                </ContextMenuItem>
               ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </ContextMenuContent>
+          </ContextMenu>
 
           <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
             <DialogContent className="sm:max-w-[350px]">
@@ -747,22 +739,22 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
     if (canEdit) {
       return (
         <>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <ContextMenu>
+            <ContextMenuTrigger asChild>
               {content}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-[140px]">
+            </ContextMenuTrigger>
+            <ContextMenuContent className="min-w-[140px]">
               {["punched-out", "offline"].includes(driver.status) && (
-                <DropdownMenuItem
+                <ContextMenuItem
                   onClick={handlePunchedOutClick}
                   className="cursor-pointer text-sm"
                 >
                   <Clock className="h-4 w-4 mr-2" />
                   <span>View Times</span>
-                </DropdownMenuItem>
+                </ContextMenuItem>
               )}
               {(["punched-out", "offline", "off"].includes(driver.status) ? compactPunchedOutOptions : ["working", "on-route"].includes(driver.status) ? compactWorkingOptions : driver.status === "assigned" ? compactAssignedOptions : compactUnassignedOptions).map((option) => (
-                <DropdownMenuItem
+                <ContextMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
                   className={cn(
@@ -771,10 +763,10 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                   )}
                 >
                   <span>{option.label}</span>
-                </DropdownMenuItem>
+                </ContextMenuItem>
               ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </ContextMenuContent>
+          </ContextMenu>
 
           <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
             <DialogContent className="sm:max-w-[350px]">
@@ -1086,24 +1078,24 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
         )}
 
         {canEdit ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <ContextMenu>
+            <ContextMenuTrigger asChild>
               <button className="cursor-pointer focus:outline-none">
                 <StatusBadge status={driver.status} showPulse={driver.status !== "offline"} size="sm" />
               </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[140px]">
+            </ContextMenuTrigger>
+            <ContextMenuContent className="min-w-[140px]">
               {["punched-out", "offline"].includes(driver.status) && (
-                <DropdownMenuItem
+                <ContextMenuItem
                   onClick={handlePunchedOutClick}
                   className="cursor-pointer text-sm"
                 >
                   <Clock className="h-4 w-4 mr-2" />
                   <span>View Times</span>
-                </DropdownMenuItem>
+                </ContextMenuItem>
               )}
               {(["punched-out", "offline", "off"].includes(driver.status) ? punchedOutStatusOptions : ["working", "on-route"].includes(driver.status) ? workingStatusOptions : driver.status === "assigned" ? assignedStatusOptions : unassignedStatusOptions).map((option) => (
-                <DropdownMenuItem
+                <ContextMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
                   className={cn(
@@ -1113,10 +1105,10 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
                 >
                   <StatusBadge status={option.value} size="sm" />
                   <span className="ml-2">{option.label}</span>
-                </DropdownMenuItem>
+                </ContextMenuItem>
               ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </ContextMenuContent>
+          </ContextMenu>
         ) : (
           <StatusBadge status={driver.status} showPulse={driver.status !== "offline"} size="sm" />
         )}

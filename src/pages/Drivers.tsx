@@ -4,6 +4,7 @@ import { format, addDays, isSameDay, startOfDay, getDay } from "date-fns";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
 import { DriverRow } from "@/components/DriverRow";
+import { DriverDetailsPanel } from "@/components/DriverDetailsPanel";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -59,7 +60,7 @@ const Drivers = () => {
   
   // Selected driver state
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
-  const [openMenuDriverId, setOpenMenuDriverId] = useState<string | null>(null);
+  const [showDetailsPanel, setShowDetailsPanel] = useState(false);
   
   // Assign dialog state
   const [showAssignDialog, setShowAssignDialog] = useState(false);
@@ -353,17 +354,29 @@ const Drivers = () => {
       
       if (selectableDrivers[newIndex]) {
         setSelectedDriverId(selectableDrivers[newIndex].id);
-        // Close any open menu when navigating
-        setOpenMenuDriverId(null);
+        // Close details panel when navigating
+        setShowDetailsPanel(false);
       }
     }
     
-    // Enter key opens action menu for selected driver
-    if (e.key === "Enter" && selectedDriverId && !openMenuDriverId) {
+    // "V" key toggles driver details panel
+    if ((e.key === "v" || e.key === "V") && selectedDriverId) {
       e.preventDefault();
-      setOpenMenuDriverId(selectedDriverId);
+      setShowDetailsPanel(prev => !prev);
     }
-  }, [selectableDrivers, selectedDriverId, showAssignDialog, openMenuDriverId]);
+    
+    // Escape closes the details panel
+    if (e.key === "Escape" && showDetailsPanel) {
+      e.preventDefault();
+      setShowDetailsPanel(false);
+    }
+  }, [selectableDrivers, selectedDriverId, showAssignDialog, showDetailsPanel]);
+
+  // Handler for driver pill click - select and show details
+  const handleDriverSelect = useCallback((driverId: string) => {
+    setSelectedDriverId(driverId);
+    setShowDetailsPanel(true);
+  }, []);
 
   // Attach keyboard listener
   useEffect(() => {
@@ -538,7 +551,7 @@ const Drivers = () => {
                       <div
                         key={driver.id}
                         onClick={() => {
-                          setSelectedDriverId(driver.id);
+                          handleDriverSelect(driver.id);
                           if (isAdmin) openAssignDialog(driver.id, driver.name);
                         }}
                         className={cn(
@@ -584,7 +597,7 @@ const Drivers = () => {
                     .map((driver) => (
                       <div
                         key={driver.id}
-                        onClick={() => setSelectedDriverId(driver.id)}
+                        onClick={() => handleDriverSelect(driver.id)}
                         className={cn(
                           "flex items-center gap-3 rounded border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm group cursor-pointer transition-all duration-200",
                           selectedDriverId === driver.id && "ring-2 ring-primary ring-offset-1 ring-offset-background border-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
@@ -654,9 +667,7 @@ const Drivers = () => {
                           availableVehicles={vehicles}
                           mini
                           isSelected={selectedDriverId === driver.id}
-                          onSelect={setSelectedDriverId}
-                          isMenuOpen={openMenuDriverId === driver.id}
-                          onMenuOpenChange={(open) => setOpenMenuDriverId(open ? driver.id : null)}
+                          onSelect={handleDriverSelect}
                         />
                       ))}
                     {assignedDrivers === 0 && (
@@ -686,9 +697,7 @@ const Drivers = () => {
                           availableVehicles={vehicles}
                           mini
                           isSelected={selectedDriverId === driver.id}
-                          onSelect={setSelectedDriverId}
-                          isMenuOpen={openMenuDriverId === driver.id}
-                          onMenuOpenChange={(open) => setOpenMenuDriverId(open ? driver.id : null)}
+                          onSelect={handleDriverSelect}
                         />
                       ))}
                     {unassignedDrivers === 0 && (
@@ -771,9 +780,7 @@ const Drivers = () => {
                           availableVehicles={vehicles}
                           mini
                           isSelected={selectedDriverId === driver.id}
-                          onSelect={setSelectedDriverId}
-                          isMenuOpen={openMenuDriverId === driver.id}
-                          onMenuOpenChange={(open) => setOpenMenuDriverId(open ? driver.id : null)}
+                          onSelect={handleDriverSelect}
                         />
                       ))}
                     {workingDrivers === 0 && (
@@ -803,9 +810,7 @@ const Drivers = () => {
                           availableVehicles={vehicles}
                           mini
                           isSelected={selectedDriverId === driver.id}
-                          onSelect={setSelectedDriverId}
-                          isMenuOpen={openMenuDriverId === driver.id}
-                          onMenuOpenChange={(open) => setOpenMenuDriverId(open ? driver.id : null)}
+                          onSelect={handleDriverSelect}
                         />
                       ))}
                     {punchedOutDrivers === 0 && (
@@ -936,6 +941,12 @@ const Drivers = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Driver Details Panel */}
+      <DriverDetailsPanel 
+        driver={showDetailsPanel && selectedDriverId ? drivers.find(d => d.id === selectedDriverId) || null : null}
+        onClose={() => setShowDetailsPanel(false)}
+      />
     </div>
   );
 };
