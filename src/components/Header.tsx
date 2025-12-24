@@ -1,4 +1,4 @@
-import { Clock, Settings, LogOut, Shield, Calendar, Users, Truck, Monitor } from "lucide-react";
+import { Clock, Settings, LogOut, Shield, Calendar, Users, Truck, Monitor, Ticket } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,6 +32,7 @@ export function Header() {
   const navLinks = [
     { to: "/drivers", icon: Users, label: "Drivers" },
     { to: "/vehicles", icon: Truck, label: "Vehicles" },
+    { to: "/service-tickets", icon: Ticket, label: "Tickets" },
     { to: "/display", icon: Monitor, label: "Display" },
     { to: "/scheduler", icon: Calendar, label: "Schedule" },
   ];
