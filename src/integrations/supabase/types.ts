@@ -397,6 +397,59 @@ export type Database = {
           },
         ]
       }
+      vehicle_service_tickets: {
+        Row: {
+          assigned_to_user_id: string | null
+          category: Database["public"]["Enums"]["maintenance_category"]
+          closed_at: string | null
+          created_at: string
+          description: string
+          estimated_completion_at: string | null
+          id: string
+          priority: Database["public"]["Enums"]["maintenance_priority"]
+          requested_by_user_id: string | null
+          ticket_status: Database["public"]["Enums"]["ticket_status"]
+          title: string
+          vehicle_id: string
+        }
+        Insert: {
+          assigned_to_user_id?: string | null
+          category?: Database["public"]["Enums"]["maintenance_category"]
+          closed_at?: string | null
+          created_at?: string
+          description: string
+          estimated_completion_at?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["maintenance_priority"]
+          requested_by_user_id?: string | null
+          ticket_status?: Database["public"]["Enums"]["ticket_status"]
+          title: string
+          vehicle_id: string
+        }
+        Update: {
+          assigned_to_user_id?: string | null
+          category?: Database["public"]["Enums"]["maintenance_category"]
+          closed_at?: string | null
+          created_at?: string
+          description?: string
+          estimated_completion_at?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["maintenance_priority"]
+          requested_by_user_id?: string | null
+          ticket_status?: Database["public"]["Enums"]["ticket_status"]
+          title?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_service_tickets_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
           assigned_driver_id: string | null
@@ -508,6 +561,7 @@ export type Database = {
         | "cleaning"
         | "other"
       maintenance_priority: "low" | "medium" | "high" | "critical"
+      ticket_status: "open" | "in_progress" | "waiting_parts" | "closed"
       vehicle_classification: "house" | "take_home"
       vehicle_status: "active" | "out-of-service" | "maintenance" | "returned"
       vehicle_type:
@@ -673,6 +727,7 @@ export const Constants = {
         "other",
       ],
       maintenance_priority: ["low", "medium", "high", "critical"],
+      ticket_status: ["open", "in_progress", "waiting_parts", "closed"],
       vehicle_classification: ["house", "take_home"],
       vehicle_status: ["active", "out-of-service", "maintenance", "returned"],
       vehicle_type: [
