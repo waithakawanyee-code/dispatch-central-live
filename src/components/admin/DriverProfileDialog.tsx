@@ -1,22 +1,26 @@
 import { useState, useEffect } from "react";
-import { User, Phone, Mail, MapPin, Car, FileText, AlertCircle, Shield, Calendar, Clock, Copy, Plus, X, MessageSquare } from "lucide-react";
+import {
+  User,
+  Phone,
+  Mail,
+  MapPin,
+  Car,
+  FileText,
+  AlertCircle,
+  Shield,
+  Calendar,
+  Clock,
+  Copy,
+  Plus,
+  X,
+  MessageSquare,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
@@ -54,13 +58,13 @@ interface DaySchedule {
 type WeeklySchedule = Record<number, DaySchedule>;
 
 const DAYS_OF_WEEK = [
-  { value: 0, label: "Sunday", short: "Sun" },
-  { value: 1, label: "Monday", short: "Mon" },
-  { value: 2, label: "Tuesday", short: "Tue" },
-  { value: 3, label: "Wednesday", short: "Wed" },
-  { value: 4, label: "Thursday", short: "Thu" },
-  { value: 5, label: "Friday", short: "Fri" },
-  { value: 6, label: "Saturday", short: "Sat" },
+  { value: 0, label: "Monday", short: "Sun" },
+  { value: 1, label: "Tuesday", short: "Mon" },
+  { value: 2, label: "Wednesday", short: "Tue" },
+  { value: 3, label: "Thursday", short: "Wed" },
+  { value: 4, label: "Friday", short: "Thu" },
+  { value: 5, label: "Saturday", short: "Fri" },
+  { value: 6, label: "Sunday", short: "Sat" },
 ];
 
 const initialSchedule: WeeklySchedule = {
@@ -119,10 +123,7 @@ export function DriverProfileDialog({
   useEffect(() => {
     const fetchSchedule = async () => {
       if (driver && !isAddMode && open) {
-        const { data } = await supabase
-          .from("driver_schedules")
-          .select("*")
-          .eq("driver_id", driver.id);
+        const { data } = await supabase.from("driver_schedules").select("*").eq("driver_id", driver.id);
 
         if (data && data.length > 0) {
           const scheduleMap: WeeklySchedule = { ...initialSchedule };
@@ -206,9 +207,9 @@ export function DriverProfileDialog({
       driver_id: driverId,
       day_of_week: parseInt(day),
       is_off: data.is_off,
-      start_time: data.is_off ? null : (data.start_time || null),
-      end_time: data.is_off ? null : (data.end_time || null),
-      note: data.is_off ? null : (data.note || null),
+      start_time: data.is_off ? null : data.start_time || null,
+      end_time: data.is_off ? null : data.end_time || null,
+      note: data.is_off ? null : data.note || null,
     }));
 
     const { error } = await supabase.from("driver_schedules").insert(scheduleInserts);
@@ -225,23 +226,27 @@ export function DriverProfileDialog({
 
     if (isAddMode) {
       // Insert new driver
-      const { data: newDriver, error } = await supabase.from("drivers").insert({
-        name: formData.name.trim(),
-        code: formData.code.trim().toUpperCase().slice(0, 4) || null,
-        phone: formData.phone.trim() || null,
-        email: formData.email.trim() || null,
-        address: formData.address.trim() || null,
-        is_active: formData.is_active,
-        has_cdl: formData.has_cdl,
-        notes: formData.notes.trim() || null,
-        default_vehicle: formData.default_vehicle.trim() || null,
-        emergency_contact_name: formData.emergency_contact_name.trim() || null,
-        emergency_contact_phone: formData.emergency_contact_phone.trim() || null,
-        emergency_contact_relationship: formData.emergency_contact_relationship.trim() || null,
-        emergency_contact_name_2: formData.emergency_contact_name_2.trim() || null,
-        emergency_contact_phone_2: formData.emergency_contact_phone_2.trim() || null,
-        emergency_contact_relationship_2: formData.emergency_contact_relationship_2.trim() || null,
-      } as any).select("id").single();
+      const { data: newDriver, error } = await supabase
+        .from("drivers")
+        .insert({
+          name: formData.name.trim(),
+          code: formData.code.trim().toUpperCase().slice(0, 4) || null,
+          phone: formData.phone.trim() || null,
+          email: formData.email.trim() || null,
+          address: formData.address.trim() || null,
+          is_active: formData.is_active,
+          has_cdl: formData.has_cdl,
+          notes: formData.notes.trim() || null,
+          default_vehicle: formData.default_vehicle.trim() || null,
+          emergency_contact_name: formData.emergency_contact_name.trim() || null,
+          emergency_contact_phone: formData.emergency_contact_phone.trim() || null,
+          emergency_contact_relationship: formData.emergency_contact_relationship.trim() || null,
+          emergency_contact_name_2: formData.emergency_contact_name_2.trim() || null,
+          emergency_contact_phone_2: formData.emergency_contact_phone_2.trim() || null,
+          emergency_contact_relationship_2: formData.emergency_contact_relationship_2.trim() || null,
+        } as any)
+        .select("id")
+        .single();
 
       if (error || !newDriver) {
         setSaving(false);
@@ -314,7 +319,7 @@ export function DriverProfileDialog({
               <User className="h-4 w-4" />
               Basic Information
             </h3>
-            
+
             <div className="grid gap-4">
               <div className="space-y-2">
                 <Label htmlFor="profile-name">Full Name *</Label>
@@ -387,7 +392,7 @@ export function DriverProfileDialog({
               <Phone className="h-4 w-4" />
               Contact Information
             </h3>
-            
+
             <div className="grid gap-4">
               <div className="space-y-2">
                 <Label htmlFor="profile-phone">Phone Number</Label>
@@ -443,7 +448,7 @@ export function DriverProfileDialog({
               <AlertCircle className="h-4 w-4" />
               Emergency Contacts
             </h3>
-            
+
             {/* Emergency Contact 1 */}
             <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
               <p className="text-xs font-medium text-muted-foreground">Primary Contact</p>
@@ -526,13 +531,7 @@ export function DriverProfileDialog({
                 <Calendar className="h-4 w-4" />
                 Weekly Schedule
               </h3>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={copyMondayToAll}
-                className="text-xs"
-              >
+              <Button type="button" variant="outline" size="sm" onClick={copyMondayToAll} className="text-xs">
                 <Copy className="h-3 w-3 mr-1" />
                 Copy All
               </Button>
@@ -633,12 +632,14 @@ export function DriverProfileDialog({
               <Car className="h-4 w-4" />
               Vehicle Assignment
             </h3>
-            
+
             <div className="space-y-2">
               <Label htmlFor="profile-vehicle">Default Vehicle (Take-Home)</Label>
               <Select
                 value={formData.default_vehicle || "__none__"}
-                onValueChange={(value) => setFormData({ ...formData, default_vehicle: value === "__none__" ? "" : value })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, default_vehicle: value === "__none__" ? "" : value })
+                }
               >
                 <SelectTrigger id="profile-vehicle">
                   <SelectValue placeholder="None" />
@@ -646,7 +647,9 @@ export function DriverProfileDialog({
                 <SelectContent>
                   <SelectItem value="__none__">None</SelectItem>
                   {vehicles.map((v) => (
-                    <SelectItem key={v.id} value={v.unit}>{v.unit}</SelectItem>
+                    <SelectItem key={v.id} value={v.unit}>
+                      {v.unit}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -661,7 +664,7 @@ export function DriverProfileDialog({
               <FileText className="h-4 w-4" />
               Notes
             </h3>
-            
+
             <div className="space-y-2">
               <Textarea
                 id="profile-notes"
@@ -675,18 +678,10 @@ export function DriverProfileDialog({
 
           {/* Actions */}
           <div className="flex gap-3 pt-4">
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1"
-            >
+            <Button onClick={handleSave} disabled={saving} className="flex-1">
               {saving ? "Saving..." : isAddMode ? "Add Driver" : "Save Changes"}
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
               Cancel
             </Button>
           </div>
