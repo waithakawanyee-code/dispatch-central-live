@@ -4,19 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useDispatchData } from "@/hooks/useDispatchData";
@@ -65,6 +54,10 @@ export function ScheduleManagement() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingDay, setEditingDay] = useState<number | null>(null);
   const [formData, setFormData] = useState<ScheduleFormData>(initialFormData);
+  const [noteOpen, setNoteOpen] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    setNoteOpen({});
+  }, [selectedDriverId]);
 
   useEffect(() => {
     if (selectedDriverId) {
@@ -91,7 +84,7 @@ export function ScheduleManagement() {
   };
 
   const getScheduleForDay = (day: number) => {
-    return schedules.find(s => s.day_of_week === day);
+    return schedules.find((s) => s.day_of_week === day);
   };
 
   const openEditDialog = (day: number) => {
@@ -117,11 +110,11 @@ export function ScheduleManagement() {
     if (!selectedDriverId) return;
 
     const existing = getScheduleForDay(formData.day_of_week);
-    
+
     // If "ANY", store as 00:00 to 23:59
-    const startTime = formData.is_off ? null : (formData.is_any ? "00:00" : formData.start_time);
-    const endTime = formData.is_off ? null : (formData.is_any ? "23:59" : formData.end_time);
-    
+    const startTime = formData.is_off ? null : formData.is_any ? "00:00" : formData.start_time;
+    const endTime = formData.is_off ? null : formData.is_any ? "23:59" : formData.end_time;
+
     const scheduleData = {
       driver_id: selectedDriverId,
       day_of_week: formData.day_of_week,
@@ -132,15 +125,10 @@ export function ScheduleManagement() {
 
     let error;
     if (existing) {
-      const result = await supabase
-        .from("driver_schedules")
-        .update(scheduleData)
-        .eq("id", existing.id);
+      const result = await supabase.from("driver_schedules").update(scheduleData).eq("id", existing.id);
       error = result.error;
     } else {
-      const result = await supabase
-        .from("driver_schedules")
-        .insert(scheduleData);
+      const result = await supabase.from("driver_schedules").insert(scheduleData);
       error = result.error;
     }
 
@@ -157,10 +145,7 @@ export function ScheduleManagement() {
     const existing = getScheduleForDay(day);
     if (!existing) return;
 
-    const { error } = await supabase
-      .from("driver_schedules")
-      .delete()
-      .eq("id", existing.id);
+    const { error } = await supabase.from("driver_schedules").delete().eq("id", existing.id);
 
     if (error) {
       toast({ title: "Error", description: "Failed to clear schedule", variant: "destructive" });
@@ -175,7 +160,7 @@ export function ScheduleManagement() {
     return time.slice(0, 5);
   };
 
-  const selectedDriver = drivers.find(d => d.id === selectedDriverId);
+  const selectedDriver = drivers.find((d) => d.id === selectedDriverId);
 
   return (
     <div className="space-y-4">
@@ -193,7 +178,7 @@ export function ScheduleManagement() {
             <SelectValue placeholder="Choose a driver..." />
           </SelectTrigger>
           <SelectContent>
-            {drivers.map(driver => (
+            {drivers.map((driver) => (
               <SelectItem key={driver.id} value={driver.id}>
                 {driver.name}
               </SelectItem>
@@ -215,13 +200,10 @@ export function ScheduleManagement() {
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {DAYS_OF_WEEK.map(day => {
+              {DAYS_OF_WEEK.map((day) => {
                 const schedule = getScheduleForDay(day.value);
                 return (
-                  <div
-                    key={day.value}
-                    className="grid grid-cols-[100px_1fr_80px] items-center gap-4 px-4 py-3"
-                  >
+                  <div key={day.value} className="grid grid-cols-[100px_1fr_80px] items-center gap-4 px-4 py-3">
                     <span className="font-medium">{day.label}</span>
                     <div className="flex items-center gap-2 text-sm">
                       {schedule ? (
@@ -243,11 +225,7 @@ export function ScheduleManagement() {
                       )}
                     </div>
                     <div className="flex justify-end gap-1">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openEditDialog(day.value)}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => openEditDialog(day.value)}>
                         Edit
                       </Button>
                       {schedule && (
@@ -272,9 +250,7 @@ export function ScheduleManagement() {
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              Edit {DAYS_OF_WEEK.find(d => d.value === editingDay)?.label} Schedule
-            </DialogTitle>
+            <DialogTitle>Edit {DAYS_OF_WEEK.find((d) => d.value === editingDay)?.label} Schedule</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex items-center justify-between">
@@ -325,7 +301,9 @@ export function ScheduleManagement() {
               </>
             )}
 
-            <Button onClick={handleSave} className="w-full">Save Schedule</Button>
+            <Button onClick={handleSave} className="w-full">
+              Save Schedule
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
