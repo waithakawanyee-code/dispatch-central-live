@@ -5,6 +5,7 @@ import { StatsCard } from "@/components/StatsCard";
 import { VehicleRow } from "@/components/VehicleRow";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useVehicleServiceTickets } from "@/hooks/useVehicleServiceTickets";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const Vehicles = () => {
@@ -17,6 +18,7 @@ const Vehicles = () => {
     updateVehicleCleanStatus,
   } = useDispatchData();
   const { isAdmin } = useUserRole();
+  const { getOpenTicketCount, getVehicleTickets } = useVehicleServiceTickets();
   const [statsOpen, setStatsOpen] = useState(false);
 
   // Calculate stats - active means available for assignment
@@ -28,6 +30,11 @@ const Vehicles = () => {
   const cleanVehicles = vehicles.filter((v) => v.clean_status === "clean").length;
   const dirtyVehicles = vehicles.filter((v) => v.clean_status === "dirty").length;
 
+  // Count vehicles with open tickets (yellow health state)
+  const vehiclesWithOpenTickets = vehicles.filter(
+    (v) => v.status === "active" && getOpenTicketCount(v.id) > 0
+  ).length;
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -38,6 +45,20 @@ const Vehicles = () => {
       </div>
     );
   }
+
+  const renderVehicleRow = (vehicle: typeof vehicles[0]) => (
+    <VehicleRow
+      key={vehicle.id}
+      vehicle={vehicle}
+      canEdit={isAdmin}
+      isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
+      onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
+      onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
+      drivers={drivers}
+      openTicketCount={getOpenTicketCount(vehicle.id)}
+      hasAnyTickets={getVehicleTickets(vehicle.id).length > 0}
+    />
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -67,12 +88,16 @@ const Vehicles = () => {
           {/* Color Legend */}
           <div className="mb-3 flex flex-wrap gap-3 text-[10px] text-muted-foreground">
             <div className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-status-clean" />
-              <span>Clean</span>
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span>OK</span>
             </div>
             <div className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-status-dirty" />
-              <span>Dirty</span>
+              <span className="h-2 w-2 rounded-full bg-amber-500" />
+              <span>Open Ticket(s)</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-red-500" />
+              <span>OOS</span>
             </div>
           </div>
 
@@ -86,17 +111,7 @@ const Vehicles = () => {
                 </span>
               </h3>
               <div className="space-y-2">
-                {unassignedVehicles.map((vehicle) => (
-                  <VehicleRow
-                    key={vehicle.id}
-                    vehicle={vehicle}
-                    canEdit={isAdmin}
-                    isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
-                    onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
-                    onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
-                    drivers={drivers}
-                  />
-                ))}
+                {unassignedVehicles.map(renderVehicleRow)}
                 {unassignedVehicles.length === 0 && (
                   <p className="text-xs text-muted-foreground italic py-2">No unassigned vehicles</p>
                 )}
@@ -112,17 +127,7 @@ const Vehicles = () => {
                 </span>
               </h3>
               <div className="space-y-2">
-                {assignedVehicles.map((vehicle) => (
-                  <VehicleRow
-                    key={vehicle.id}
-                    vehicle={vehicle}
-                    canEdit={isAdmin}
-                    isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
-                    onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
-                    onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
-                    drivers={drivers}
-                  />
-                ))}
+                {assignedVehicles.map(renderVehicleRow)}
                 {assignedVehicles.length === 0 && (
                   <p className="text-xs text-muted-foreground italic py-2">No assigned vehicles</p>
                 )}
@@ -143,17 +148,7 @@ const Vehicles = () => {
             </span>
           </div>
           <div className="space-y-2">
-            {outOfServiceVehicles.map((vehicle) => (
-              <VehicleRow
-                key={vehicle.id}
-                vehicle={vehicle}
-                canEdit={isAdmin}
-                isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
-                onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
-                onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
-                drivers={drivers}
-              />
-            ))}
+            {outOfServiceVehicles.map(renderVehicleRow)}
             {outOfServiceVehicles.length === 0 && (
               <p className="text-xs text-muted-foreground italic py-2">No out of service vehicles</p>
             )}
@@ -172,17 +167,7 @@ const Vehicles = () => {
             </span>
           </div>
           <div className="space-y-2">
-            {maintenanceVehicles.map((vehicle) => (
-              <VehicleRow
-                key={vehicle.id}
-                vehicle={vehicle}
-                canEdit={isAdmin}
-                isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
-                onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
-                onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
-                drivers={drivers}
-              />
-            ))}
+            {maintenanceVehicles.map(renderVehicleRow)}
             {maintenanceVehicles.length === 0 && (
               <p className="text-xs text-muted-foreground italic py-2">No vehicles in maintenance</p>
             )}
@@ -206,6 +191,13 @@ const Vehicles = () => {
                 subtitle="In operation"
                 icon={Truck}
                 accentColor="primary"
+              />
+              <StatsCard
+                title="With Open Tickets"
+                value={vehiclesWithOpenTickets}
+                subtitle="Need attention"
+                icon={AlertTriangle}
+                accentColor="accent"
               />
               <StatsCard
                 title="Out of Service"
