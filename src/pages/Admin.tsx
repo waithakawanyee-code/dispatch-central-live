@@ -1,5 +1,5 @@
 import { Link, Navigate } from "react-router-dom";
-import { ArrowLeft, Users, Truck, History, ShieldAlert, UserCog, Calendar, Clock, Car, Settings } from "lucide-react";
+import { ArrowLeft, Users, Truck, History, ShieldAlert, UserCog, Calendar, Clock, Car, Settings, Wrench } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DriverManagement } from "@/components/admin/DriverManagement";
 import { VehicleManagement } from "@/components/admin/VehicleManagement";
@@ -9,6 +9,7 @@ import { UserManagement } from "@/components/admin/UserManagement";
 import { ScheduleManagement } from "@/components/admin/ScheduleManagement";
 import { TimePunchReport } from "@/components/admin/TimePunchReport";
 import { SettingsManagement } from "@/components/admin/SettingsManagement";
+import { IssueCatalogManagement } from "@/components/admin/IssueCatalogManagement";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 
@@ -89,6 +90,10 @@ const Admin = () => {
               <History className="h-4 w-4" />
               History
             </TabsTrigger>
+            <TabsTrigger value="issues" className="flex items-center gap-2">
+              <Wrench className="h-4 w-4" />
+              Issues
+            </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Settings
@@ -121,6 +126,10 @@ const Admin = () => {
 
           <TabsContent value="history">
             <HistoryLog />
+          </TabsContent>
+
+          <TabsContent value="issues">
+            <IssueCatalogManagement />
           </TabsContent>
 
           <TabsContent value="settings">
