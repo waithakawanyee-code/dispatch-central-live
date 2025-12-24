@@ -53,32 +53,12 @@ interface VehicleRowProps {
   hasAnyTickets?: boolean;
 }
 
-// Status transition rules: active → out_of_service → maintenance → returned → active (auto)
+// Status transition rules: active ↔ out-of-service
 const getAvailableStatusTransitions = (currentStatus: VehicleStatus): { value: VehicleStatus; label: string }[] => {
-  switch (currentStatus) {
-    case "active":
-      return [
-        { value: "active", label: "Active" },
-        { value: "out-of-service", label: "Out of Service" },
-      ];
-    case "out-of-service":
-      return [
-        { value: "out-of-service", label: "Out of Service" },
-        { value: "maintenance", label: "Maintenance" },
-      ];
-    case "maintenance":
-      return [
-        { value: "maintenance", label: "Maintenance" },
-        { value: "returned", label: "Returned (Inspection Complete)" },
-      ];
-    case "returned":
-      // Returned auto-transitions to active, but show current state
-      return [
-        { value: "returned", label: "Returned" },
-      ];
-    default:
-      return [{ value: currentStatus, label: currentStatus }];
-  }
+  return [
+    { value: "active", label: "Active" },
+    { value: "out-of-service", label: "Out of Service" },
+  ];
 };
 
 const cleanStatusOptions: { value: CleanStatus; label: string }[] = [
@@ -109,10 +89,6 @@ export function VehicleRow({
         return <Truck className="h-3.5 w-3.5 text-status-active" />;
       case "out-of-service":
         return <Wrench className="h-3.5 w-3.5 text-status-out-of-service" />;
-      case "maintenance":
-        return <Wrench className="h-3.5 w-3.5 text-amber-500" />;
-      case "returned":
-        return <Truck className="h-3.5 w-3.5 text-status-available" />;
       default:
         return <Truck className="h-3.5 w-3.5 text-muted-foreground" />;
     }
@@ -124,10 +100,6 @@ export function VehicleRow({
         return "bg-status-active/20";
       case "out-of-service":
         return "bg-status-out-of-service/20";
-      case "maintenance":
-        return "bg-amber-500/20";
-      case "returned":
-        return "bg-status-available/20";
       default:
         return "bg-muted/20";
     }
@@ -139,10 +111,6 @@ export function VehicleRow({
         return "border-l-4 border-l-status-active";
       case "out-of-service":
         return "border-l-4 border-l-status-out-of-service";
-      case "maintenance":
-        return "border-l-4 border-l-amber-500";
-      case "returned":
-        return "border-l-4 border-l-status-available";
       default:
         return "";
     }

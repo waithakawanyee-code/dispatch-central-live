@@ -349,42 +349,36 @@ export type Database = {
       }
       vehicle_maintenance_events: {
         Row: {
-          category: Database["public"]["Enums"]["maintenance_category"]
+          actual_back_in_service_at: string | null
+          closed_at: string | null
           created_at: string
-          created_by_user_id: string | null
-          estimated_return_at: string | null
+          created_by: string | null
+          expected_back_in_service_at: string | null
           id: string
-          issue_description: string
           notes: string | null
-          priority: Database["public"]["Enums"]["maintenance_priority"]
-          resolved_at: string | null
-          status: Database["public"]["Enums"]["vehicle_status"]
+          opened_at: string
           vehicle_id: string
         }
         Insert: {
-          category?: Database["public"]["Enums"]["maintenance_category"]
+          actual_back_in_service_at?: string | null
+          closed_at?: string | null
           created_at?: string
-          created_by_user_id?: string | null
-          estimated_return_at?: string | null
+          created_by?: string | null
+          expected_back_in_service_at?: string | null
           id?: string
-          issue_description: string
           notes?: string | null
-          priority?: Database["public"]["Enums"]["maintenance_priority"]
-          resolved_at?: string | null
-          status?: Database["public"]["Enums"]["vehicle_status"]
+          opened_at?: string
           vehicle_id: string
         }
         Update: {
-          category?: Database["public"]["Enums"]["maintenance_category"]
+          actual_back_in_service_at?: string | null
+          closed_at?: string | null
           created_at?: string
-          created_by_user_id?: string | null
-          estimated_return_at?: string | null
+          created_by?: string | null
+          expected_back_in_service_at?: string | null
           id?: string
-          issue_description?: string
           notes?: string | null
-          priority?: Database["public"]["Enums"]["maintenance_priority"]
-          resolved_at?: string | null
-          status?: Database["public"]["Enums"]["vehicle_status"]
+          opened_at?: string
           vehicle_id?: string
         }
         Relationships: [
@@ -393,6 +387,44 @@ export type Database = {
             columns: ["vehicle_id"]
             isOneToOne: false
             referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_maintenance_issues: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          details: string | null
+          id: string
+          maintenance_event_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          details?: string | null
+          id?: string
+          maintenance_event_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          details?: string | null
+          id?: string
+          maintenance_event_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_maintenance_issues_maintenance_event_id_fkey"
+            columns: ["maintenance_event_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_maintenance_events"
             referencedColumns: ["id"]
           },
         ]
@@ -563,7 +595,7 @@ export type Database = {
       maintenance_priority: "low" | "medium" | "high" | "critical"
       ticket_status: "open" | "in_progress" | "waiting_parts" | "closed"
       vehicle_classification: "house" | "take_home"
-      vehicle_status: "active" | "out-of-service" | "maintenance" | "returned"
+      vehicle_status: "active" | "out-of-service"
       vehicle_type:
         | "sedan_volvo"
         | "sedan_aviator"
@@ -729,7 +761,7 @@ export const Constants = {
       maintenance_priority: ["low", "medium", "high", "critical"],
       ticket_status: ["open", "in_progress", "waiting_parts", "closed"],
       vehicle_classification: ["house", "take_home"],
-      vehicle_status: ["active", "out-of-service", "maintenance", "returned"],
+      vehicle_status: ["active", "out-of-service"],
       vehicle_type: [
         "sedan_volvo",
         "sedan_aviator",

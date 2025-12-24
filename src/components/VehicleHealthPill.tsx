@@ -16,7 +16,7 @@ export function getHealthState(
   openTicketCount: number
 ): HealthState {
   // Red: vehicle is out-of-service (regardless of tickets)
-  if (vehicleStatus === "out-of-service" || vehicleStatus === "maintenance") {
+  if (vehicleStatus === "out-of-service") {
     return "red";
   }
   
