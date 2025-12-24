@@ -441,7 +441,7 @@ export type Database = {
         | "unassigned"
         | "punched-out"
       vehicle_classification: "house" | "take_home"
-      vehicle_status: "active" | "out-of-service"
+      vehicle_status: "active" | "out-of-service" | "maintenance" | "returned"
       vehicle_type:
         | "sedan_volvo"
         | "sedan_aviator"
@@ -597,7 +597,7 @@ export const Constants = {
         "punched-out",
       ],
       vehicle_classification: ["house", "take_home"],
-      vehicle_status: ["active", "out-of-service"],
+      vehicle_status: ["active", "out-of-service", "maintenance", "returned"],
       vehicle_type: [
         "sedan_volvo",
         "sedan_aviator",

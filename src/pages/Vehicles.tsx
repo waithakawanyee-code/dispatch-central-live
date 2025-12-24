@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Truck, AlertTriangle, Droplets, BarChart3, ChevronDown } from "lucide-react";
+import { Truck, AlertTriangle, Droplets, BarChart3, ChevronDown, Wrench } from "lucide-react";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
 import { VehicleRow } from "@/components/VehicleRow";
@@ -19,11 +19,12 @@ const Vehicles = () => {
   const { isAdmin } = useUserRole();
   const [statsOpen, setStatsOpen] = useState(false);
 
-  // Calculate stats
+  // Calculate stats - active means available for assignment
   const activeVehicles = vehicles.filter((v) => v.status === "active");
   const unassignedVehicles = activeVehicles.filter((v) => !v.driver);
   const assignedVehicles = activeVehicles.filter((v) => v.driver);
   const outOfServiceVehicles = vehicles.filter((v) => v.status === "out-of-service");
+  const maintenanceVehicles = vehicles.filter((v) => v.status === "maintenance");
   const cleanVehicles = vehicles.filter((v) => v.clean_status === "clean").length;
   const dirtyVehicles = vehicles.filter((v) => v.clean_status === "dirty").length;
 
@@ -159,6 +160,35 @@ const Vehicles = () => {
           </div>
         </section>
 
+        {/* Maintenance Vehicles */}
+        <section className="rounded-lg border border-border bg-card/50 p-3 mb-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Wrench className="h-4 w-4 text-amber-500" />
+              In Maintenance
+            </h2>
+            <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+              {maintenanceVehicles.length}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {maintenanceVehicles.map((vehicle) => (
+              <VehicleRow
+                key={vehicle.id}
+                vehicle={vehicle}
+                canEdit={isAdmin}
+                isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
+                onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
+                onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
+                drivers={drivers}
+              />
+            ))}
+            {maintenanceVehicles.length === 0 && (
+              <p className="text-xs text-muted-foreground italic py-2">No vehicles in maintenance</p>
+            )}
+          </div>
+        </section>
+
         {/* Stats Overview - Collapsible */}
         <Collapsible open={statsOpen} onOpenChange={setStatsOpen}>
           <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-border bg-card/50 px-3 py-2 hover:bg-card/80 transition-colors">
@@ -180,9 +210,16 @@ const Vehicles = () => {
               <StatsCard
                 title="Out of Service"
                 value={outOfServiceVehicles.length}
-                subtitle="Attention"
+                subtitle="Reported issues"
                 icon={AlertTriangle}
                 accentColor="destructive"
+              />
+              <StatsCard
+                title="In Maintenance"
+                value={maintenanceVehicles.length}
+                subtitle="Being worked on"
+                icon={Wrench}
+                accentColor="accent"
               />
               <StatsCard
                 title="Clean"

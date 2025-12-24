@@ -91,7 +91,7 @@ const initialFormData: VehicleFormData = {
   assigned_driver_id: "",
 };
 
-const validStatuses: VehicleStatus[] = ["active", "out-of-service"];
+const validStatuses: VehicleStatus[] = ["active", "out-of-service", "maintenance", "returned"];
 const validCleanStatuses: CleanStatus[] = ["clean", "dirty"];
 const validVehicleTypes: VehicleType[] = VEHICLE_TYPES.map(t => t.value);
 
@@ -537,8 +537,12 @@ export function VehicleManagement() {
                       <SelectContent>
                         <SelectItem value="active">Active</SelectItem>
                         <SelectItem value="out-of-service">Out of Service</SelectItem>
+                        <SelectItem value="maintenance">Maintenance</SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Only active vehicles can be assigned
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="clean_status">Clean Status</Label>
