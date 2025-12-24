@@ -14,7 +14,6 @@ const Vehicles = () => {
     vehicles,
     loading,
     recentlyUpdatedVehicles,
-    updateVehicleStatus,
     updateVehicleCleanStatus,
   } = useDispatchData();
   const { isAdmin } = useUserRole();
@@ -51,7 +50,6 @@ const Vehicles = () => {
       vehicle={vehicle}
       canEdit={isAdmin}
       isUpdated={recentlyUpdatedVehicles.has(vehicle.id)}
-      onStatusChange={(newStatus) => updateVehicleStatus(vehicle.id, newStatus)}
       onCleanStatusChange={(newCleanStatus) => updateVehicleCleanStatus(vehicle.id, newCleanStatus)}
       drivers={drivers}
       openTicketCount={getOpenTicketCount(vehicle.id)}
