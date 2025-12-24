@@ -68,12 +68,12 @@ const DAYS_OF_WEEK = [
 ];
 
 const initialSchedule: WeeklySchedule = {
-  0: { is_off: true, start_time: "", end_time: "", note: "" },
-  1: { is_off: false, start_time: "08:00", end_time: "", note: "" },
-  2: { is_off: false, start_time: "08:00", end_time: "", note: "" },
-  3: { is_off: false, start_time: "08:00", end_time: "", note: "" },
-  4: { is_off: false, start_time: "08:00", end_time: "", note: "" },
-  5: { is_off: false, start_time: "08:00", end_time: "", note: "" },
+  0: { is_off: false, start_time: "00:00", end_time: "", note: "" },
+  1: { is_off: false, start_time: "00:00", end_time: "", note: "" },
+  2: { is_off: false, start_time: "00:00", end_time: "", note: "" },
+  3: { is_off: false, start_time: "00:00", end_time: "", note: "" },
+  4: { is_off: false, start_time: "00:00", end_time: "", note: "" },
+  5: { is_off: false, start_time: "00:00", end_time: "", note: "" },
   6: { is_off: true, start_time: "", end_time: "", note: "" },
 };
 
@@ -402,7 +402,7 @@ export function DriverProfileDialog({
                     id="profile-phone"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="555-0100"
+                    placeholder="555-555-5555"
                     className="pl-10"
                   />
                 </div>
@@ -469,7 +469,7 @@ export function DriverProfileDialog({
                     id="profile-emergency-phone"
                     value={formData.emergency_contact_phone}
                     onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
-                    placeholder="555-0199"
+                    placeholder="555-555-0199"
                   />
                 </div>
 
@@ -505,7 +505,7 @@ export function DriverProfileDialog({
                     id="profile-emergency-phone-2"
                     value={formData.emergency_contact_phone_2}
                     onChange={(e) => setFormData({ ...formData, emergency_contact_phone_2: e.target.value })}
-                    placeholder="555-0199"
+                    placeholder="555-555-0199"
                   />
                 </div>
 
@@ -612,7 +612,7 @@ export function DriverProfileDialog({
                       <MessageSquare className="h-3 w-3 text-muted-foreground" />
                       <Input
                         type="text"
-                        placeholder="Add note (e.g., school pickup, doctor appt)"
+                        placeholder="Add note (e.g., sick, doctor appt)"
                         value={schedule[day.value]?.note || ""}
                         onChange={(e) => updateDaySchedule(day.value, "note", e.target.value)}
                         className="h-7 text-xs flex-1"

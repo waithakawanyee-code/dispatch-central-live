@@ -1,5 +1,23 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertTriangle, StickyNote, ChevronDown, ChevronUp, Home, User } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  Check,
+  Download,
+  Upload,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  StickyNote,
+  ChevronDown,
+  ChevronUp,
+  Home,
+  User,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,13 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -93,7 +105,7 @@ const initialFormData: VehicleFormData = {
 
 const validStatuses: VehicleStatus[] = ["active", "out-of-service"];
 const validCleanStatuses: CleanStatus[] = ["clean", "dirty"];
-const validVehicleTypes: VehicleType[] = VEHICLE_TYPES.map(t => t.value);
+const validVehicleTypes: VehicleType[] = VEHICLE_TYPES.map((t) => t.value);
 
 export function VehicleManagement() {
   const { vehicles, allDrivers } = useDispatchData();
@@ -142,10 +154,7 @@ export function VehicleManagement() {
 
   const bulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    const { error } = await supabase
-      .from("vehicles")
-      .delete()
-      .in("id", Array.from(selectedIds));
+    const { error } = await supabase.from("vehicles").delete().in("id", Array.from(selectedIds));
 
     if (error) {
       toast({ title: "Error", description: "Failed to delete vehicles", variant: "destructive" });
@@ -170,7 +179,8 @@ export function VehicleManagement() {
   };
 
   const handleDownloadTemplate = () => {
-    const template = "Unit,Vehicle Type,Classification,Driver,Status,Clean Status,Notes\nV-109,sedan_volvo,house,Jane Smith,active,clean,Maintenance note";
+    const template =
+      "Unit,Vehicle Type,Classification,Driver,Status,Clean Status,Notes\nV-109,sedan_volvo,house,Jane Smith,active,clean,Maintenance note";
     downloadCSV(template, "vehicles-template.csv");
     toast({ title: "Template Downloaded", description: "CSV template with example row" });
   };
@@ -181,7 +191,7 @@ export function VehicleManagement() {
 
     setImporting(true);
     try {
-        const text = await file.text();
+      const text = await file.text();
       const rows = parseCSV<{
         unit: string;
         vehicle_type?: string;
@@ -202,10 +212,10 @@ export function VehicleManagement() {
         if (!input) return null;
         const trimmed = input.trim().toLowerCase();
         // Try exact match on value
-        const byValue = VEHICLE_TYPES.find(t => t.value.toLowerCase() === trimmed);
+        const byValue = VEHICLE_TYPES.find((t) => t.value.toLowerCase() === trimmed);
         if (byValue) return byValue.value;
         // Try match on label
-        const byLabel = VEHICLE_TYPES.find(t => t.label.toLowerCase() === trimmed);
+        const byLabel = VEHICLE_TYPES.find((t) => t.label.toLowerCase() === trimmed);
         if (byLabel) return byLabel.value;
         return null;
       };
@@ -213,20 +223,22 @@ export function VehicleManagement() {
       // Helper to match classification
       const matchClassification = (input?: string): VehicleClassification => {
         if (!input) return "house";
-        const trimmed = input.trim().toLowerCase().replace(/\s+/g, '_');
+        const trimmed = input.trim().toLowerCase().replace(/\s+/g, "_");
         if (trimmed === "take_home" || trimmed === "takehome") return "take_home";
         return "house";
       };
 
       const validRows = rows
-        .filter(row => row.unit?.trim())
-        .map(row => ({
+        .filter((row) => row.unit?.trim())
+        .map((row) => ({
           unit: row.unit.trim(),
           vehicle_type: matchVehicleType(row.vehicle_type),
           classification: matchClassification(row.classification),
           driver: row.driver?.trim() || null,
           status: (validStatuses.includes(row.status as VehicleStatus) ? row.status : "active") as VehicleStatus,
-          clean_status: (validCleanStatuses.includes(row.clean_status as CleanStatus) ? row.clean_status : "clean") as CleanStatus,
+          clean_status: (validCleanStatuses.includes(row.clean_status as CleanStatus)
+            ? row.clean_status
+            : "clean") as CleanStatus,
           notes: row.notes?.trim() || null,
         }));
 
@@ -324,7 +336,7 @@ export function VehicleManagement() {
     }
   };
 
-  const startEdit = (vehicle: typeof vehicles[0]) => {
+  const startEdit = (vehicle: (typeof vehicles)[0]) => {
     setEditingId(vehicle.id);
     setExpandedId(vehicle.id);
     setFormData({
@@ -341,22 +353,22 @@ export function VehicleManagement() {
 
   const getVehicleTypeLabel = (type: VehicleType | null) => {
     if (!type) return "-";
-    const found = VEHICLE_TYPES.find(t => t.value === type);
+    const found = VEHICLE_TYPES.find((t) => t.value === type);
     return found?.label || type;
   };
 
   // Check if selected vehicle type requires CDL
   const vehicleRequiresCdl = (vehicleType: VehicleType | "") => {
     if (!vehicleType) return false;
-    const found = VEHICLE_TYPES.find(t => t.value === vehicleType);
+    const found = VEHICLE_TYPES.find((t) => t.value === vehicleType);
     return found?.requiresCdl || false;
   };
 
   // Filter drivers based on vehicle type CDL requirement
   const getAvailableDrivers = () => {
-    const activeDrivers = allDrivers.filter(d => d.is_active);
+    const activeDrivers = allDrivers.filter((d) => d.is_active);
     if (vehicleRequiresCdl(formData.vehicle_type)) {
-      return activeDrivers.filter(d => d.has_cdl);
+      return activeDrivers.filter((d) => d.has_cdl);
     }
     return activeDrivers;
   };
@@ -366,16 +378,16 @@ export function VehicleManagement() {
     if (!formData.driver || !formData.vehicle_type) return false;
     const requiresCdl = vehicleRequiresCdl(formData.vehicle_type);
     if (!requiresCdl) return false;
-    const driver = allDrivers.find(d => d.name === formData.driver);
+    const driver = allDrivers.find((d) => d.name === formData.driver);
     return driver && !driver.has_cdl;
   };
 
   // Check if a specific vehicle has CDL mismatch
-  const vehicleHasCdlMismatch = (vehicle: typeof vehicles[0]) => {
+  const vehicleHasCdlMismatch = (vehicle: (typeof vehicles)[0]) => {
     if (!vehicle.driver || !vehicle.vehicle_type) return false;
-    const typeInfo = VEHICLE_TYPES.find(t => t.value === vehicle.vehicle_type);
+    const typeInfo = VEHICLE_TYPES.find((t) => t.value === vehicle.vehicle_type);
     if (!typeInfo?.requiresCdl) return false;
-    const driver = allDrivers.find(d => d.name === vehicle.driver);
+    const driver = allDrivers.find((d) => d.name === vehicle.driver);
     return driver && !driver.has_cdl;
   };
 
@@ -392,13 +404,7 @@ export function VehicleManagement() {
             <Download className="h-4 w-4" />
             Export
           </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv"
-            className="hidden"
-            onChange={handleImport}
-          />
+          <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
           <Button
             size="sm"
             variant="outline"
@@ -427,7 +433,7 @@ export function VehicleManagement() {
                     id="unit"
                     value={formData.unit}
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    placeholder="V-109"
+                    placeholder="Veh ID"
                   />
                 </div>
                 <div className="space-y-2">
@@ -446,13 +452,15 @@ export function VehicleManagement() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="_none">No driver</SelectItem>
-                      {getAvailableDrivers().map(driver => (
+                      {getAvailableDrivers().map((driver) => (
                         <SelectItem key={driver.id} value={driver.name}>
                           {driver.name} {driver.has_cdl && <span className="text-muted-foreground">(CDL)</span>}
                         </SelectItem>
                       ))}
                       {vehicleRequiresCdl(formData.vehicle_type) && getAvailableDrivers().length === 0 && (
-                        <SelectItem value="_none" disabled>No CDL drivers available</SelectItem>
+                        <SelectItem value="_none" disabled>
+                          No CDL drivers available
+                        </SelectItem>
                       )}
                     </SelectContent>
                   </Select>
@@ -469,14 +477,18 @@ export function VehicleManagement() {
                     <SelectContent>
                       <SelectGroup>
                         <SelectLabel>Non-CDL</SelectLabel>
-                        {VEHICLE_TYPES.filter(t => !t.requiresCdl).map(t => (
-                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        {VEHICLE_TYPES.filter((t) => !t.requiresCdl).map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label}
+                          </SelectItem>
                         ))}
                       </SelectGroup>
                       <SelectGroup>
                         <SelectLabel>CDL Required</SelectLabel>
-                        {VEHICLE_TYPES.filter(t => t.requiresCdl).map(t => (
-                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        {VEHICLE_TYPES.filter((t) => t.requiresCdl).map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label}
+                          </SelectItem>
                         ))}
                       </SelectGroup>
                     </SelectContent>
@@ -487,10 +499,10 @@ export function VehicleManagement() {
                   <Select
                     value={formData.classification}
                     onValueChange={(value: VehicleClassification) => {
-                      setFormData({ 
-                        ...formData, 
+                      setFormData({
+                        ...formData,
                         classification: value,
-                        assigned_driver_id: value === "house" ? "" : formData.assigned_driver_id
+                        assigned_driver_id: value === "house" ? "" : formData.assigned_driver_id,
                       });
                     }}
                   >
@@ -508,18 +520,22 @@ export function VehicleManagement() {
                     <Label>Take-Home Driver</Label>
                     <Select
                       value={formData.assigned_driver_id}
-                      onValueChange={(value) => setFormData({ ...formData, assigned_driver_id: value === "_none" ? "" : value })}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, assigned_driver_id: value === "_none" ? "" : value })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select driver" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="_none">No driver assigned</SelectItem>
-                        {allDrivers.filter(d => d.is_active).map(driver => (
-                          <SelectItem key={driver.id} value={driver.id}>
-                            {driver.name} {driver.has_cdl && <span className="text-muted-foreground">(CDL)</span>}
-                          </SelectItem>
-                        ))}
+                        {allDrivers
+                          .filter((d) => d.is_active)
+                          .map((driver) => (
+                            <SelectItem key={driver.id} value={driver.id}>
+                              {driver.name} {driver.has_cdl && <span className="text-muted-foreground">(CDL)</span>}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -540,9 +556,7 @@ export function VehicleManagement() {
                         <SelectItem value="maintenance">Maintenance</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Only active vehicles can be assigned
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Only active vehicles can be assigned</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="clean_status">Clean Status</Label>
@@ -576,7 +590,9 @@ export function VehicleManagement() {
                     <span>Warning: {formData.driver} does not have a CDL but this vehicle type requires one.</span>
                   </div>
                 )}
-                <Button onClick={handleAdd} className="w-full">Add Vehicle</Button>
+                <Button onClick={handleAdd} className="w-full">
+                  Add Vehicle
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -641,10 +657,16 @@ export function VehicleManagement() {
               <DropdownMenuLabel>Selection</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuRadioGroup value="">
-                <DropdownMenuRadioItem value="all-page" onClick={() => setSelectedIds(new Set(paginatedVehicles.map((v) => v.id)))}>
+                <DropdownMenuRadioItem
+                  value="all-page"
+                  onClick={() => setSelectedIds(new Set(paginatedVehicles.map((v) => v.id)))}
+                >
                   Select page ({paginatedVehicles.length})
                 </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="all-vehicles" onClick={() => setSelectedIds(new Set(vehicles.map((v) => v.id)))}>
+                <DropdownMenuRadioItem
+                  value="all-vehicles"
+                  onClick={() => setSelectedIds(new Set(vehicles.map((v) => v.id)))}
+                >
                   Select all vehicles ({vehicles.length})
                 </DropdownMenuRadioItem>
                 <DropdownMenuSeparator />
@@ -659,7 +681,7 @@ export function VehicleManagement() {
           <span>Status</span>
           <span className="text-right">Actions</span>
         </div>
-        
+
         {vehicles.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-muted-foreground">
             No vehicles found. Add your first vehicle above.
@@ -692,14 +714,18 @@ export function VehicleManagement() {
                     <SelectContent>
                       <SelectGroup>
                         <SelectLabel>Non-CDL</SelectLabel>
-                        {VEHICLE_TYPES.filter(t => !t.requiresCdl).map(t => (
-                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        {VEHICLE_TYPES.filter((t) => !t.requiresCdl).map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label}
+                          </SelectItem>
                         ))}
                       </SelectGroup>
                       <SelectGroup>
                         <SelectLabel>CDL Required</SelectLabel>
-                        {VEHICLE_TYPES.filter(t => t.requiresCdl).map(t => (
-                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        {VEHICLE_TYPES.filter((t) => t.requiresCdl).map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label}
+                          </SelectItem>
                         ))}
                       </SelectGroup>
                     </SelectContent>
@@ -729,21 +755,27 @@ export function VehicleManagement() {
                 <>
                   <span className="font-mono font-medium flex items-center gap-1">
                     {vehicle.unit}
-                    {(vehicle as any).classification === 'take_home' ? (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400" title="Take-Home Vehicle">
+                    {(vehicle as any).classification === "take_home" ? (
+                      <span
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                        title="Take-Home Vehicle"
+                      >
                         <User className="h-3 w-3" />
                         TH
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground" title="House Vehicle">
+                      <span
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground"
+                        title="House Vehicle"
+                      >
                         <Home className="h-3 w-3" />
                       </span>
                     )}
-                    {(vehicle as any).notes && (
-                      <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />
-                    )}
+                    {(vehicle as any).notes && <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />}
                   </span>
-                  <span className="text-xs text-muted-foreground truncate">{getVehicleTypeLabel(vehicle.vehicle_type)}</span>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {getVehicleTypeLabel(vehicle.vehicle_type)}
+                  </span>
                   <StatusBadge status={vehicle.status} size="sm" />
                   <div className="flex justify-end gap-1">
                     {((vehicle as any).notes || editingId === vehicle.id) && (
@@ -806,13 +838,19 @@ export function VehicleManagement() {
             </div>
           ))
         )}
-        
+
         {/* Pagination Controls */}
         {vehicles.length > 0 && (
           <div className="flex items-center justify-between border-t border-border px-4 py-3">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>Show</span>
-              <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
+              <Select
+                value={pageSize.toString()}
+                onValueChange={(v) => {
+                  setPageSize(Number(v));
+                  setCurrentPage(1);
+                }}
+              >
                 <SelectTrigger className="h-8 w-[70px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -825,7 +863,7 @@ export function VehicleManagement() {
               </Select>
               <span>per page</span>
             </div>
-            
+
             <div className="flex items-center gap-1 text-sm">
               <span className="text-muted-foreground mr-2">
                 {startIndex + 1}-{Math.min(startIndex + pageSize, vehicles.length)} of {vehicles.length}
