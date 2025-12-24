@@ -201,6 +201,36 @@ export type Database = {
           },
         ]
       }
+      maintenance_issue_templates: {
+        Row: {
+          created_at: string
+          default_details: string | null
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_details?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_details?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       status_history: {
         Row: {
           changed_at: string
