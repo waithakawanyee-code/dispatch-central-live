@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import Scheduler from "./pages/Scheduler";
 import Drivers from "./pages/Drivers";
 import Vehicles from "./pages/Vehicles";
+import ServiceTickets from "./pages/ServiceTickets";
 import Display from "./pages/Display";
 import NotFound from "./pages/NotFound";
 
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/drivers" element={<ProtectedRoute><Drivers /></ProtectedRoute>} />
             <Route path="/vehicles" element={<ProtectedRoute><Vehicles /></ProtectedRoute>} />
+            <Route path="/service-tickets" element={<ProtectedRoute><ServiceTickets /></ProtectedRoute>} />
             <Route path="/display" element={<ProtectedRoute><Display /></ProtectedRoute>} />
             <Route path="/scheduler" element={<ProtectedRoute><Scheduler /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
