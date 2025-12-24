@@ -4,6 +4,8 @@ import { StatusBadge } from "./StatusBadge";
 import { VehicleHealthPill } from "./VehicleHealthPill";
 import { ServiceTicketDialog } from "./ServiceTicketDialog";
 import { VehicleTicketsSheet } from "./VehicleTicketsSheet";
+import { MarkOOSDialog } from "./MarkOOSDialog";
+import { MaintenanceEventSheet } from "./MaintenanceEventSheet";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +21,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { Database } from "@/integrations/supabase/types";
+import { useOpenMaintenanceEvent } from "@/hooks/useMaintenanceEvents";
 
 type VehicleStatus = Database["public"]["Enums"]["vehicle_status"];
 type CleanStatus = Database["public"]["Enums"]["clean_status"];
@@ -44,7 +47,6 @@ type DriverRowType = Database["public"]["Tables"]["drivers"]["Row"];
 
 interface VehicleRowProps {
   vehicle: VehicleRowType;
-  onStatusChange?: (newStatus: VehicleStatus) => void;
   onCleanStatusChange?: (newCleanStatus: CleanStatus) => void;
   canEdit?: boolean;
   isUpdated?: boolean;
@@ -53,12 +55,13 @@ interface VehicleRowProps {
   hasAnyTickets?: boolean;
 }
 
-// Status transition rules: active ↔ out-of-service
-const getAvailableStatusTransitions = (currentStatus: VehicleStatus): { value: VehicleStatus; label: string }[] => {
-  return [
-    { value: "active", label: "Active" },
-    { value: "out-of-service", label: "Out of Service" },
-  ];
+// Status transition rules: Mark OOS opens dialog, Return to Service closes maintenance event
+const getAvailableStatusActions = (currentStatus: VehicleStatus): { action: "mark-oos" | "return-to-service"; label: string }[] => {
+  if (currentStatus === "active") {
+    return [{ action: "mark-oos", label: "Mark Out of Service" }];
+  } else {
+    return [{ action: "return-to-service", label: "Return to Service" }];
+  }
 };
 
 const cleanStatusOptions: { value: CleanStatus; label: string }[] = [
@@ -68,7 +71,6 @@ const cleanStatusOptions: { value: CleanStatus; label: string }[] = [
 
 export function VehicleRow({ 
   vehicle, 
-  onStatusChange, 
   onCleanStatusChange, 
   canEdit = true, 
   isUpdated = false, 
@@ -78,10 +80,14 @@ export function VehicleRow({
 }: VehicleRowProps) {
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const [ticketsSheetOpen, setTicketsSheetOpen] = useState(false);
+  const [markOOSDialogOpen, setMarkOOSDialogOpen] = useState(false);
+  const [maintenanceSheetOpen, setMaintenanceSheetOpen] = useState(false);
+  
+  const { openEvent } = useOpenMaintenanceEvent(vehicle.id);
 
   // Find the driver details if the vehicle has a driver assigned
   const assignedDriver = vehicle.driver ? drivers.find(d => d.name === vehicle.driver) : null;
-  const availableTransitions = getAvailableStatusTransitions(vehicle.status);
+  const availableActions = getAvailableStatusActions(vehicle.status);
 
   const getStatusIcon = () => {
     switch (vehicle.status) {
@@ -258,17 +264,24 @@ export function VehicleRow({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-[180px]">
-                {availableTransitions.map((option) => (
+                {availableActions.map((option) => (
                   <DropdownMenuItem
-                    key={option.value}
-                    onClick={() => onStatusChange?.(option.value)}
-                    className={cn(
-                      "cursor-pointer text-xs",
-                      vehicle.status === option.value && "bg-secondary"
-                    )}
+                    key={option.action}
+                    onClick={() => {
+                      if (option.action === "mark-oos") {
+                        setMarkOOSDialogOpen(true);
+                      } else if (option.action === "return-to-service") {
+                        setMaintenanceSheetOpen(true);
+                      }
+                    }}
+                    className="cursor-pointer text-xs"
                   >
-                    <StatusBadge status={option.value} size="sm" />
-                    <span className="ml-2">{option.label}</span>
+                    {option.action === "mark-oos" ? (
+                      <Wrench className="h-3 w-3 mr-2 text-status-out-of-service" />
+                    ) : (
+                      <Truck className="h-3 w-3 mr-2 text-status-active" />
+                    )}
+                    <span>{option.label}</span>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -291,6 +304,21 @@ export function VehicleRow({
         open={ticketsSheetOpen}
         onOpenChange={setTicketsSheetOpen}
         vehicleId={vehicle.id}
+        vehicleUnit={vehicle.unit}
+      />
+
+      <MarkOOSDialog
+        open={markOOSDialogOpen}
+        onOpenChange={setMarkOOSDialogOpen}
+        vehicleId={vehicle.id}
+        vehicleUnit={vehicle.unit}
+        onOpenExistingTicket={() => setMaintenanceSheetOpen(true)}
+      />
+
+      <MaintenanceEventSheet
+        open={maintenanceSheetOpen}
+        onOpenChange={setMaintenanceSheetOpen}
+        event={openEvent || null}
         vehicleUnit={vehicle.unit}
       />
     </>
