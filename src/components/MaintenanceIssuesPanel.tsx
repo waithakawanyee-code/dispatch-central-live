@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useMaintenanceIssues, MaintenanceIssue } from "@/hooks/useMaintenanceIssues";
+import { IssueCatalogPicker } from "@/components/IssueCatalogPicker";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -41,36 +42,19 @@ export function MaintenanceIssuesPanel({
     isDeleting,
   } = useMaintenanceIssues(maintenanceEventId);
 
-  const [isAdding, setIsAdding] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [newTitle, setNewTitle] = useState("");
-  const [newDetails, setNewDetails] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [editDetails, setEditDetails] = useState("");
 
-  const resetAddForm = () => {
-    setNewTitle("");
-    setNewDetails("");
-    setIsAdding(false);
-  };
-
-  const handleAdd = async () => {
-    if (!newTitle.trim()) {
-      toast({
-        title: "Error",
-        description: "Issue title is required",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleAddFromPicker = async (title: string, details?: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
       await createIssue({
         maintenance_event_id: maintenanceEventId,
-        title: newTitle.trim(),
-        details: newDetails.trim() || null,
+        title: title.trim(),
+        details: details || null,
         created_by: user?.id || null,
       });
 
@@ -78,7 +62,7 @@ export function MaintenanceIssuesPanel({
         title: "Success",
         description: "Issue added successfully",
       });
-      resetAddForm();
+      setShowPicker(false);
     } catch (error) {
       toast({
         title: "Error",
@@ -164,12 +148,12 @@ export function MaintenanceIssuesPanel({
           <AlertCircle className="h-4 w-4 text-primary" />
           Issues ({issues.length})
         </h3>
-        {!isTicketClosed && !isAdding && (
+        {!isTicketClosed && !showPicker && (
           <Button
             size="sm"
             variant="outline"
             className="gap-1"
-            onClick={() => setIsAdding(true)}
+            onClick={() => setShowPicker(true)}
           >
             <Plus className="h-3 w-3" />
             Add Issue
@@ -177,56 +161,20 @@ export function MaintenanceIssuesPanel({
         )}
       </div>
 
-      {/* Add New Issue Form */}
-      {isAdding && !isTicketClosed && (
-        <div className="rounded-lg border border-border bg-card p-3 space-y-3">
-          <div className="space-y-2">
-            <Label htmlFor="new-issue-title" className="text-xs">
-              Title *
-            </Label>
-            <Input
-              id="new-issue-title"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Brief issue summary"
-              className="h-8 text-sm"
-              maxLength={100}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="new-issue-details" className="text-xs">
-              Details
-            </Label>
-            <Textarea
-              id="new-issue-details"
-              value={newDetails}
-              onChange={(e) => setNewDetails(e.target.value)}
-              placeholder="Additional details (optional)"
-              rows={2}
-              className="text-sm"
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={resetAddForm}
-              disabled={isCreating}
-            >
-              <X className="h-3 w-3 mr-1" />
-              Cancel
-            </Button>
-            <Button size="sm" onClick={handleAdd} disabled={isCreating}>
-              <Check className="h-3 w-3 mr-1" />
-              {isCreating ? "Adding..." : "Add"}
-            </Button>
-          </div>
+      {/* Issue Catalog Picker */}
+      {showPicker && !isTicketClosed && (
+        <div className="rounded-lg border border-border bg-card p-3">
+          <IssueCatalogPicker
+            onSelect={handleAddFromPicker}
+            onCancel={() => setShowPicker(false)}
+            isSubmitting={isCreating}
+          />
         </div>
       )}
 
       {/* Issues List */}
       <div className="space-y-2">
-        {issues.length === 0 && !isAdding && (
+        {issues.length === 0 && !showPicker && (
           <p className="text-xs text-muted-foreground italic py-2 text-center">
             No issues reported yet
           </p>
