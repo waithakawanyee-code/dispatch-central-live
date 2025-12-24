@@ -45,6 +45,7 @@ interface ScheduleFormData {
   start_time: string;
   end_time: string;
   is_off: boolean;
+  is_any: boolean;
 }
 
 const initialFormData: ScheduleFormData = {
@@ -52,6 +53,7 @@ const initialFormData: ScheduleFormData = {
   start_time: "08:00",
   end_time: "17:00",
   is_off: false,
+  is_any: false,
 };
 
 export function ScheduleManagement() {
@@ -95,11 +97,14 @@ export function ScheduleManagement() {
   const openEditDialog = (day: number) => {
     const existing = getScheduleForDay(day);
     if (existing) {
+      // "ANY" is stored as start_time="00:00" and end_time="23:59"
+      const isAny = existing.start_time === "00:00:00" && existing.end_time === "23:59:00";
       setFormData({
         day_of_week: day,
         start_time: existing.start_time || "08:00",
         end_time: existing.end_time || "17:00",
         is_off: existing.is_off,
+        is_any: isAny,
       });
     } else {
       setFormData({ ...initialFormData, day_of_week: day });
@@ -113,11 +118,15 @@ export function ScheduleManagement() {
 
     const existing = getScheduleForDay(formData.day_of_week);
     
+    // If "ANY", store as 00:00 to 23:59
+    const startTime = formData.is_off ? null : (formData.is_any ? "00:00" : formData.start_time);
+    const endTime = formData.is_off ? null : (formData.is_any ? "23:59" : formData.end_time);
+    
     const scheduleData = {
       driver_id: selectedDriverId,
       day_of_week: formData.day_of_week,
-      start_time: formData.is_off ? null : formData.start_time,
-      end_time: formData.is_off ? null : formData.end_time,
+      start_time: startTime,
+      end_time: endTime,
       is_off: formData.is_off,
     };
 
@@ -218,6 +227,11 @@ export function ScheduleManagement() {
                       {schedule ? (
                         schedule.is_off ? (
                           <span className="text-muted-foreground italic">Day Off</span>
+                        ) : schedule.start_time === "00:00:00" && schedule.end_time === "23:59:00" ? (
+                          <span className="flex items-center gap-1 text-primary font-medium">
+                            <Clock className="h-3.5 w-3.5" />
+                            ANY
+                          </span>
                         ) : (
                           <span className="flex items-center gap-1">
                             <Clock className="h-3.5 w-3.5 text-muted-foreground" />
@@ -268,30 +282,46 @@ export function ScheduleManagement() {
               <Switch
                 id="is_off"
                 checked={formData.is_off}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_off: checked })}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_off: checked, is_any: false })}
               />
             </div>
 
             {!formData.is_off && (
               <>
-                <div className="space-y-2">
-                  <Label htmlFor="start_time">Start Time</Label>
-                  <Input
-                    id="start_time"
-                    type="time"
-                    value={formData.start_time}
-                    onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="is_any">Any Hours</Label>
+                    <p className="text-xs text-muted-foreground">Open availability for this day</p>
+                  </div>
+                  <Switch
+                    id="is_any"
+                    checked={formData.is_any}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_any: checked })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="end_time">End Time</Label>
-                  <Input
-                    id="end_time"
-                    type="time"
-                    value={formData.end_time}
-                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                  />
-                </div>
+
+                {!formData.is_any && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="start_time">Start Time</Label>
+                      <Input
+                        id="start_time"
+                        type="time"
+                        value={formData.start_time}
+                        onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="end_time">End Time</Label>
+                      <Input
+                        id="end_time"
+                        type="time"
+                        value={formData.end_time}
+                        onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                      />
+                    </div>
+                  </>
+                )}
               </>
             )}
 
