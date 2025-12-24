@@ -91,7 +91,7 @@ const initialFormData: VehicleFormData = {
   assigned_driver_id: "",
 };
 
-const validStatuses: VehicleStatus[] = ["active", "out-of-service", "maintenance", "returned"];
+const validStatuses: VehicleStatus[] = ["active", "out-of-service"];
 const validCleanStatuses: CleanStatus[] = ["clean", "dirty"];
 const validVehicleTypes: VehicleType[] = VEHICLE_TYPES.map(t => t.value);
 
