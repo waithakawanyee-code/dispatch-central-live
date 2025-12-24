@@ -347,12 +347,63 @@ export type Database = {
           },
         ]
       }
+      vehicle_maintenance_events: {
+        Row: {
+          category: Database["public"]["Enums"]["maintenance_category"]
+          created_at: string
+          created_by_user_id: string | null
+          estimated_return_at: string | null
+          id: string
+          issue_description: string
+          notes: string | null
+          priority: Database["public"]["Enums"]["maintenance_priority"]
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["vehicle_status"]
+          vehicle_id: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["maintenance_category"]
+          created_at?: string
+          created_by_user_id?: string | null
+          estimated_return_at?: string | null
+          id?: string
+          issue_description: string
+          notes?: string | null
+          priority?: Database["public"]["Enums"]["maintenance_priority"]
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["vehicle_status"]
+          vehicle_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["maintenance_category"]
+          created_at?: string
+          created_by_user_id?: string | null
+          estimated_return_at?: string | null
+          id?: string
+          issue_description?: string
+          notes?: string | null
+          priority?: Database["public"]["Enums"]["maintenance_priority"]
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["vehicle_status"]
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_maintenance_events_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
           assigned_driver_id: string | null
           classification: Database["public"]["Enums"]["vehicle_classification"]
           clean_status: Database["public"]["Enums"]["clean_status"]
           created_at: string
+          current_maintenance_event_id: string | null
           driver: string | null
           id: string
           mileage: number | null
@@ -367,6 +418,7 @@ export type Database = {
           classification?: Database["public"]["Enums"]["vehicle_classification"]
           clean_status?: Database["public"]["Enums"]["clean_status"]
           created_at?: string
+          current_maintenance_event_id?: string | null
           driver?: string | null
           id?: string
           mileage?: number | null
@@ -381,6 +433,7 @@ export type Database = {
           classification?: Database["public"]["Enums"]["vehicle_classification"]
           clean_status?: Database["public"]["Enums"]["clean_status"]
           created_at?: string
+          current_maintenance_event_id?: string | null
           driver?: string | null
           id?: string
           mileage?: number | null
@@ -396,6 +449,13 @@ export type Database = {
             columns: ["assigned_driver_id"]
             isOneToOne: false
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_current_maintenance_event_id_fkey"
+            columns: ["current_maintenance_event_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_maintenance_events"
             referencedColumns: ["id"]
           },
         ]
@@ -440,6 +500,14 @@ export type Database = {
         | "working"
         | "unassigned"
         | "punched-out"
+      maintenance_category:
+        | "mechanical"
+        | "electrical"
+        | "tire"
+        | "body"
+        | "cleaning"
+        | "other"
+      maintenance_priority: "low" | "medium" | "high" | "critical"
       vehicle_classification: "house" | "take_home"
       vehicle_status: "active" | "out-of-service" | "maintenance" | "returned"
       vehicle_type:
@@ -596,6 +664,15 @@ export const Constants = {
         "unassigned",
         "punched-out",
       ],
+      maintenance_category: [
+        "mechanical",
+        "electrical",
+        "tire",
+        "body",
+        "cleaning",
+        "other",
+      ],
+      maintenance_priority: ["low", "medium", "high", "critical"],
       vehicle_classification: ["house", "take_home"],
       vehicle_status: ["active", "out-of-service", "maintenance", "returned"],
       vehicle_type: [
