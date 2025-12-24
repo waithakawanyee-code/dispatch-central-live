@@ -46,10 +46,33 @@ interface VehicleRowProps {
   drivers?: DriverRowType[];
 }
 
-const vehicleStatusOptions: { value: VehicleStatus; label: string }[] = [
-  { value: "active", label: "Active" },
-  { value: "out-of-service", label: "Out of Service" },
-];
+// Status transition rules: active → out_of_service → maintenance → returned → active (auto)
+const getAvailableStatusTransitions = (currentStatus: VehicleStatus): { value: VehicleStatus; label: string }[] => {
+  switch (currentStatus) {
+    case "active":
+      return [
+        { value: "active", label: "Active" },
+        { value: "out-of-service", label: "Out of Service" },
+      ];
+    case "out-of-service":
+      return [
+        { value: "out-of-service", label: "Out of Service" },
+        { value: "maintenance", label: "Maintenance" },
+      ];
+    case "maintenance":
+      return [
+        { value: "maintenance", label: "Maintenance" },
+        { value: "returned", label: "Returned (Inspection Complete)" },
+      ];
+    case "returned":
+      // Returned auto-transitions to active, but show current state
+      return [
+        { value: "returned", label: "Returned" },
+      ];
+    default:
+      return [{ value: currentStatus, label: currentStatus }];
+  }
+};
 
 const cleanStatusOptions: { value: CleanStatus; label: string }[] = [
   { value: "clean", label: "Clean" },
@@ -59,28 +82,69 @@ const cleanStatusOptions: { value: CleanStatus; label: string }[] = [
 export function VehicleRow({ vehicle, onStatusChange, onCleanStatusChange, canEdit = true, isUpdated = false, drivers = [] }: VehicleRowProps) {
   // Find the driver details if the vehicle has a driver assigned
   const assignedDriver = vehicle.driver ? drivers.find(d => d.name === vehicle.driver) : null;
+  const availableTransitions = getAvailableStatusTransitions(vehicle.status);
+
+  const getStatusIcon = () => {
+    switch (vehicle.status) {
+      case "active":
+        return <Truck className="h-3.5 w-3.5 text-status-active" />;
+      case "out-of-service":
+        return <Wrench className="h-3.5 w-3.5 text-status-out-of-service" />;
+      case "maintenance":
+        return <Wrench className="h-3.5 w-3.5 text-amber-500" />;
+      case "returned":
+        return <Truck className="h-3.5 w-3.5 text-status-available" />;
+      default:
+        return <Truck className="h-3.5 w-3.5 text-muted-foreground" />;
+    }
+  };
+
+  const getStatusBgClass = () => {
+    switch (vehicle.status) {
+      case "active":
+        return "bg-status-active/20";
+      case "out-of-service":
+        return "bg-status-out-of-service/20";
+      case "maintenance":
+        return "bg-amber-500/20";
+      case "returned":
+        return "bg-status-available/20";
+      default:
+        return "bg-muted/20";
+    }
+  };
+
+  const getBorderClass = () => {
+    switch (vehicle.status) {
+      case "active":
+        return "border-l-4 border-l-status-active";
+      case "out-of-service":
+        return "border-l-4 border-l-status-out-of-service";
+      case "maintenance":
+        return "border-l-4 border-l-amber-500";
+      case "returned":
+        return "border-l-4 border-l-status-available";
+      default:
+        return "";
+    }
+  };
 
   return (
     <div
       className={cn(
         "flex items-center gap-4 rounded-lg border border-border bg-card px-3 py-2 transition-all duration-200",
         "hover:border-primary/30",
-        vehicle.status === "active" && "border-l-4 border-l-status-active",
-        vehicle.status === "out-of-service" && "border-l-4 border-l-status-out-of-service",
+        getBorderClass(),
         isUpdated && "animate-row-flash"
       )}
     >
       <div
         className={cn(
           "flex h-7 w-7 shrink-0 items-center justify-center rounded",
-          vehicle.status === "active" ? "bg-status-active/20" : "bg-status-out-of-service/20"
+          getStatusBgClass()
         )}
       >
-        {vehicle.status === "active" ? (
-          <Truck className="h-3.5 w-3.5 text-status-active" />
-        ) : (
-          <Wrench className="h-3.5 w-3.5 text-status-out-of-service" />
-        )}
+        {getStatusIcon()}
       </div>
 
       <div className="min-w-[90px] flex-1">
@@ -160,8 +224,8 @@ export function VehicleRow({ vehicle, onStatusChange, onCleanStatusChange, canEd
                 <StatusBadge status={vehicle.status} showPulse={vehicle.status === "active"} size="sm" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[130px]">
-              {vehicleStatusOptions.map((option) => (
+            <DropdownMenuContent align="end" className="min-w-[180px]">
+              {availableTransitions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => onStatusChange?.(option.value)}

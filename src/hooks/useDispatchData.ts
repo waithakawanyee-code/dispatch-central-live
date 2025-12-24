@@ -260,15 +260,33 @@ export function useDispatchData() {
     if (!vehicle) return;
 
     const oldStatus = vehicle.status;
+    
+    // If status is "returned", auto-transition to "active" after a brief moment
+    const finalStatus = newStatus === "returned" ? "returned" : newStatus;
+    
     const { error } = await supabase
       .from("vehicles")
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .update({ status: finalStatus, updated_at: new Date().toISOString() })
       .eq("id", vehicleId);
 
     if (error) {
       console.error("Failed to update vehicle status:", error);
     } else {
-      await logStatusChange("vehicle", vehicleId, vehicle.unit, "status", oldStatus, newStatus);
+      await logStatusChange("vehicle", vehicleId, vehicle.unit, "status", oldStatus, finalStatus);
+      
+      // Auto-transition from "returned" to "active" after logging the returned status
+      if (newStatus === "returned") {
+        setTimeout(async () => {
+          const { error: autoError } = await supabase
+            .from("vehicles")
+            .update({ status: "active" as VehicleStatus, updated_at: new Date().toISOString() })
+            .eq("id", vehicleId);
+          
+          if (!autoError) {
+            await logStatusChange("vehicle", vehicleId, vehicle.unit, "status", "returned", "active");
+          }
+        }, 1500); // Brief delay to show the "returned" status before auto-transitioning
+      }
     }
   };
 
