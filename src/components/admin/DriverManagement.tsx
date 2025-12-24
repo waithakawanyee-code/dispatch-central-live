@@ -266,9 +266,9 @@ export function DriverManagement() {
   };
 
   const handleDownloadTemplate = () => {
-    const template = "Name,Code,Phone,Email,Address,Vehicle,Active,CDL,Default_Vehicle,Emergency1_Name,Emergency1_Phone,Emergency1_Relationship,Emergency2_Name,Emergency2_Phone,Emergency2_Relationship,Mon_In,Mon_Out,Tue_In,Tue_Out,Wed_In,Wed_Out,Thu_In,Thu_Out,Fri_In,Fri_Out,Sat_In,Sat_Out,Sun_In,Sun_Out\nJohn Doe,JDOE,555-0123,john@example.com,123 Main St,V-101,yes,yes,V-101,Jane Doe,555-0199,Spouse,Bob Smith,555-0188,Brother,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,08:00,17:00,OFF,,OFF,";
+    const template = "Name,Code,Phone,Email,Address,Active,CDL,Emergency1_Name,Emergency1_Phone,Emergency1_Relationship,Emergency2_Name,Emergency2_Phone,Emergency2_Relationship,Mon_In,Mon_Out,Tue_In,Tue_Out,Wed_In,Wed_Out,Thu_In,Thu_Out,Fri_In,Fri_Out,Sat_In,Sat_Out,Sun_In,Sun_Out\nJohn Doe,JDOE,555-0123,john@example.com,123 Main St,yes,yes,Jane Doe,555-0199,Spouse,Bob Smith,555-0188,Brother,08:00,17:00,ANY,,08:00,17:00,08:00,17:00,08:00,17:00,OFF,,OFF,";
     downloadCSV(template, "drivers-template.csv");
-    toast({ title: "Template Downloaded", description: "CSV template with emergency contacts and schedule columns" });
+    toast({ title: "Template Downloaded", description: "Use ANY for open availability, OFF for days off, or HH:MM times" });
   };
 
   const dayMapping: Record<string, number> = {
@@ -307,7 +307,7 @@ export function DriverManagement() {
 
     try {
       for (const { data: row } of validRows) {
-        // Insert driver with all fields including emergency contacts
+        // Insert driver with all fields including emergency contacts (without vehicle fields)
         const { data: driverData, error: driverError } = await supabase
           .from("drivers")
           .insert({
@@ -316,8 +316,6 @@ export function DriverManagement() {
             phone: row.Phone?.trim() || null,
             email: row.Email?.trim() || null,
             address: row.Address?.trim() || null,
-            vehicle: row.Vehicle?.trim() || null,
-            default_vehicle: row.Default_Vehicle?.trim() || null,
             is_active: row.Active?.toLowerCase() !== "no" && row.Active?.toLowerCase() !== "inactive",
             has_cdl: row.CDL?.toLowerCase() === "yes" || row.CDL?.toLowerCase() === "cdl",
             emergency_contact_name: row.Emergency1_Name?.trim() || null,
@@ -337,7 +335,7 @@ export function DriverManagement() {
 
         driversImported++;
 
-        // Parse and insert schedules
+        // Parse and insert schedules (supports ANY, OFF, or HH:MM)
         const scheduleInserts = [];
         for (const [dayAbbrev, dayNum] of Object.entries(dayMapping)) {
           const inTime = row[`${dayAbbrev}_In`]?.trim();
@@ -345,12 +343,13 @@ export function DriverManagement() {
 
           if (inTime) {
             const isOff = inTime.toUpperCase() === "OFF";
+            const isAny = inTime.toUpperCase() === "ANY";
             scheduleInserts.push({
               driver_id: driverData.id,
               day_of_week: dayNum,
               is_off: isOff,
-              start_time: isOff ? null : inTime,
-              end_time: isOff ? null : (outTime || null),
+              start_time: isOff ? null : (isAny ? "00:00" : inTime),
+              end_time: isOff ? null : (isAny ? "23:59" : (outTime || null)),
             });
           }
         }

@@ -66,12 +66,12 @@ export function validateImportRow(row: Record<string, string>, rowNumber: number
     warnings.push("Code will be truncated to 4 characters");
   }
 
-  // Time format validation
+  // Time format validation (accepts ANY, OFF, or HH:MM)
   const timeFields = ["Mon_In", "Mon_Out", "Tue_In", "Tue_Out", "Wed_In", "Wed_Out", "Thu_In", "Thu_Out", "Fri_In", "Fri_Out", "Sat_In", "Sat_Out", "Sun_In", "Sun_Out"];
   for (const field of timeFields) {
     const value = row[field]?.trim();
-    if (value && value.toUpperCase() !== "OFF" && !/^\d{1,2}:\d{2}$/.test(value)) {
-      warnings.push(`${field} should be HH:MM format or OFF`);
+    if (value && value.toUpperCase() !== "OFF" && value.toUpperCase() !== "ANY" && !/^\d{1,2}:\d{2}$/.test(value)) {
+      warnings.push(`${field} should be HH:MM, ANY, or OFF`);
       break; // Only show one time warning
     }
   }
