@@ -1,6 +1,11 @@
-import { Truck, Wrench, Droplets, User, Phone } from "lucide-react";
+import { useState } from "react";
+import { Truck, Wrench, Droplets, User, Phone, Plus, FileText } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
+import { VehicleHealthPill } from "./VehicleHealthPill";
+import { ServiceTicketDialog } from "./ServiceTicketDialog";
+import { VehicleTicketsSheet } from "./VehicleTicketsSheet";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +49,8 @@ interface VehicleRowProps {
   canEdit?: boolean;
   isUpdated?: boolean;
   drivers?: DriverRowType[];
+  openTicketCount?: number;
+  hasAnyTickets?: boolean;
 }
 
 // Status transition rules: active → out_of_service → maintenance → returned → active (auto)
@@ -79,7 +86,19 @@ const cleanStatusOptions: { value: CleanStatus; label: string }[] = [
   { value: "dirty", label: "Dirty" },
 ];
 
-export function VehicleRow({ vehicle, onStatusChange, onCleanStatusChange, canEdit = true, isUpdated = false, drivers = [] }: VehicleRowProps) {
+export function VehicleRow({ 
+  vehicle, 
+  onStatusChange, 
+  onCleanStatusChange, 
+  canEdit = true, 
+  isUpdated = false, 
+  drivers = [],
+  openTicketCount = 0,
+  hasAnyTickets = false,
+}: VehicleRowProps) {
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const [ticketsSheetOpen, setTicketsSheetOpen] = useState(false);
+
   // Find the driver details if the vehicle has a driver assigned
   const assignedDriver = vehicle.driver ? drivers.find(d => d.name === vehicle.driver) : null;
   const availableTransitions = getAvailableStatusTransitions(vehicle.status);
@@ -130,108 +149,123 @@ export function VehicleRow({ vehicle, onStatusChange, onCleanStatusChange, canEd
   };
 
   return (
-    <div
-      className={cn(
-        "flex items-center gap-4 rounded-lg border border-border bg-card px-3 py-2 transition-all duration-200",
-        "hover:border-primary/30",
-        getBorderClass(),
-        isUpdated && "animate-row-flash"
-      )}
-    >
+    <>
       <div
         className={cn(
-          "flex h-7 w-7 shrink-0 items-center justify-center rounded",
-          getStatusBgClass()
+          "flex items-center gap-4 rounded-lg border border-border bg-card px-3 py-2 transition-all duration-200",
+          "hover:border-primary/30",
+          getBorderClass(),
+          isUpdated && "animate-row-flash"
         )}
       >
-        {getStatusIcon()}
-      </div>
-
-      <div className="min-w-[90px] flex-1">
-        <p className="font-mono text-sm font-medium text-foreground">{vehicle.unit}</p>
-        {vehicle.vehicle_type && (
-          <p className="text-[10px] text-muted-foreground">{VEHICLE_TYPE_LABELS[vehicle.vehicle_type]}</p>
-        )}
-        {vehicle.driver && (
-          <TooltipProvider delayDuration={1000}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <p className="text-[10px] text-muted-foreground cursor-default hover:text-foreground transition-colors">
-                  {vehicle.driver}
-                </p>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="p-3">
-                <div className="flex flex-col gap-1.5 text-xs">
-                  <div className="font-semibold text-foreground">{vehicle.driver}</div>
-                  {assignedDriver?.code && (
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <User className="h-3 w-3" />
-                      <span className="font-mono">{assignedDriver.code}</span>
-                    </div>
-                  )}
-                  {assignedDriver?.phone && (
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <Phone className="h-3 w-3" />
-                      <span className="font-mono">{assignedDriver.phone}</span>
-                    </div>
-                  )}
-                  {(!assignedDriver?.code && !assignedDriver?.phone) && (
-                    <span className="text-muted-foreground italic">No contact info</span>
-                  )}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-      </div>
-
-      {canEdit ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex cursor-pointer items-center gap-1.5 focus:outline-none">
-              <Droplets className="h-3 w-3 text-muted-foreground" />
-              <StatusBadge status={vehicle.clean_status} size="sm" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[100px]">
-            {cleanStatusOptions.map((option) => (
-              <DropdownMenuItem
-                key={option.value}
-                onClick={() => onCleanStatusChange?.(option.value)}
-                className={cn(
-                  "cursor-pointer text-xs",
-                  vehicle.clean_status === option.value && "bg-secondary"
-                )}
-              >
-                <StatusBadge status={option.value} size="sm" />
-                <span className="ml-2">{option.label}</span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : (
-        <div className="flex items-center gap-1.5">
-          <Droplets className="h-3 w-3 text-muted-foreground" />
-          <StatusBadge status={vehicle.clean_status} size="sm" />
+        <div
+          className={cn(
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded",
+            getStatusBgClass()
+          )}
+        >
+          {getStatusIcon()}
         </div>
-      )}
 
-      <div className="ml-auto">
+        <div className="min-w-[90px] flex-1">
+          <p className="font-mono text-sm font-medium text-foreground">{vehicle.unit}</p>
+          {vehicle.vehicle_type && (
+            <p className="text-[10px] text-muted-foreground">{VEHICLE_TYPE_LABELS[vehicle.vehicle_type]}</p>
+          )}
+          {vehicle.driver && (
+            <TooltipProvider delayDuration={1000}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <p className="text-[10px] text-muted-foreground cursor-default hover:text-foreground transition-colors">
+                    {vehicle.driver}
+                  </p>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="p-3">
+                  <div className="flex flex-col gap-1.5 text-xs">
+                    <div className="font-semibold text-foreground">{vehicle.driver}</div>
+                    {assignedDriver?.code && (
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        <span className="font-mono">{assignedDriver.code}</span>
+                      </div>
+                    )}
+                    {assignedDriver?.phone && (
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Phone className="h-3 w-3" />
+                        <span className="font-mono">{assignedDriver.phone}</span>
+                      </div>
+                    )}
+                    {(!assignedDriver?.code && !assignedDriver?.phone) && (
+                      <span className="text-muted-foreground italic">No contact info</span>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+
+        {/* Health Pill */}
+        <VehicleHealthPill
+          vehicleStatus={vehicle.status}
+          openTicketCount={openTicketCount}
+        />
+
+        {/* Quick Actions */}
+        {canEdit && (
+          <div className="flex items-center gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => setTicketDialogOpen(true)}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>New Ticket</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            {hasAnyTickets && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      onClick={() => setTicketsSheetOpen(true)}
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>View Tickets</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+        )}
+
         {canEdit ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="cursor-pointer focus:outline-none">
-                <StatusBadge status={vehicle.status} showPulse={vehicle.status === "active"} size="sm" />
+              <button className="flex cursor-pointer items-center gap-1.5 focus:outline-none">
+                <Droplets className="h-3 w-3 text-muted-foreground" />
+                <StatusBadge status={vehicle.clean_status} size="sm" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[180px]">
-              {availableTransitions.map((option) => (
+            <DropdownMenuContent align="end" className="min-w-[100px]">
+              {cleanStatusOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}
-                  onClick={() => onStatusChange?.(option.value)}
+                  onClick={() => onCleanStatusChange?.(option.value)}
                   className={cn(
                     "cursor-pointer text-xs",
-                    vehicle.status === option.value && "bg-secondary"
+                    vehicle.clean_status === option.value && "bg-secondary"
                   )}
                 >
                   <StatusBadge status={option.value} size="sm" />
@@ -241,9 +275,56 @@ export function VehicleRow({ vehicle, onStatusChange, onCleanStatusChange, canEd
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <StatusBadge status={vehicle.status} showPulse={vehicle.status === "active"} size="sm" />
+          <div className="flex items-center gap-1.5">
+            <Droplets className="h-3 w-3 text-muted-foreground" />
+            <StatusBadge status={vehicle.clean_status} size="sm" />
+          </div>
         )}
+
+        <div className="ml-auto">
+          {canEdit ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="cursor-pointer focus:outline-none">
+                  <StatusBadge status={vehicle.status} showPulse={vehicle.status === "active"} size="sm" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[180px]">
+                {availableTransitions.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => onStatusChange?.(option.value)}
+                    className={cn(
+                      "cursor-pointer text-xs",
+                      vehicle.status === option.value && "bg-secondary"
+                    )}
+                  >
+                    <StatusBadge status={option.value} size="sm" />
+                    <span className="ml-2">{option.label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <StatusBadge status={vehicle.status} showPulse={vehicle.status === "active"} size="sm" />
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Dialogs */}
+      <ServiceTicketDialog
+        open={ticketDialogOpen}
+        onOpenChange={setTicketDialogOpen}
+        vehicleId={vehicle.id}
+        vehicleUnit={vehicle.unit}
+      />
+
+      <VehicleTicketsSheet
+        open={ticketsSheetOpen}
+        onOpenChange={setTicketsSheetOpen}
+        vehicleId={vehicle.id}
+        vehicleUnit={vehicle.unit}
+      />
+    </>
   );
 }
