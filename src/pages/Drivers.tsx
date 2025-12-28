@@ -83,14 +83,16 @@ const Drivers = () => {
   // Punch In dialog state
   const [showPunchInDialog, setShowPunchInDialog] = useState(false);
   const [punchInDriver, setPunchInDriver] = useState<{ id: string; name: string } | null>(null);
+  const punchInSelectRef = useRef<HTMLButtonElement>(null);
   
   // Punch Out dialog state
   const [showPunchOutDialog, setShowPunchOutDialog] = useState(false);
   const [punchOutDriver, setPunchOutDriver] = useState<{ id: string; name: string } | null>(null);
+  const punchOutSelectRef = useRef<HTMLButtonElement>(null);
   
   // Driver picker state (for keyboard shortcuts when no driver selected)
   const [showDriverPicker, setShowDriverPicker] = useState(false);
-  const [pendingAction, setPendingAction] = useState<"assign" | "punchIn" | "punchOut" | "off" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"assign" | "off" | null>(null);
 
   const today = startOfDay(new Date());
   const isToday = isSameDay(selectedDate, today);
@@ -379,15 +381,42 @@ const Drivers = () => {
     }
   }, [drivers, toast]);
 
-  const executePunchIn = useCallback((driverId: string) => {
-    const driver = drivers.find(d => d.id === driverId);
+  // Always open the modal - validation happens on submit
+  const executePunchIn = useCallback((driverId?: string) => {
+    if (driverId) {
+      const driver = drivers.find(d => d.id === driverId);
+      if (driver) {
+        setPunchInDriver({ id: driver.id, name: driver.name });
+      }
+    }
+    setShowPunchInDialog(true);
+  }, [drivers]);
+
+  // Always open the modal - validation happens on submit
+  const executePunchOut = useCallback((driverId?: string) => {
+    if (driverId) {
+      const driver = drivers.find(d => d.id === driverId);
+      if (driver) {
+        setPunchOutDriver({ id: driver.id, name: driver.name });
+      }
+    }
+    setShowPunchOutDialog(true);
+  }, [drivers]);
+
+  const handleConfirmPunchIn = () => {
+    if (!punchInDriver) return;
+    
+    const driver = drivers.find(d => d.id === punchInDriver.id);
     if (!driver) return;
     
+    // Validate on submit
     if (["working", "on-route"].includes(driver.status)) {
       toast({
         title: "Already punched in",
         description: `${driver.name} is already on the clock`,
       });
+      setShowPunchInDialog(false);
+      setPunchInDriver(null);
       return;
     }
     
@@ -397,30 +426,8 @@ const Drivers = () => {
         description: "Driver must be assigned first",
         variant: "destructive",
       });
-      return;
+      return; // Keep dialog open so user can select a different driver
     }
-    
-    openPunchInDialog(driver.id, driver.name);
-  }, [drivers, toast]);
-
-  const executePunchOut = useCallback((driverId: string) => {
-    const driver = drivers.find(d => d.id === driverId);
-    if (!driver) return;
-    
-    if (!["working", "on-route"].includes(driver.status)) {
-      toast({
-        title: "Driver is not on the clock",
-        description: `${driver.name} must be working to punch out`,
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    openPunchOutDialog(driver.id, driver.name);
-  }, [drivers, toast]);
-
-  const handleConfirmPunchIn = () => {
-    if (!punchInDriver) return;
     
     updateDriverStatus(punchInDriver.id, "working");
     toast({
@@ -433,6 +440,19 @@ const Drivers = () => {
 
   const handleConfirmPunchOut = () => {
     if (!punchOutDriver) return;
+    
+    const driver = drivers.find(d => d.id === punchOutDriver.id);
+    if (!driver) return;
+    
+    // Validate on submit - must be working to punch out
+    if (!["working", "on-route"].includes(driver.status)) {
+      toast({
+        title: "Cannot punch out",
+        description: `${driver.name} must be working to punch out`,
+        variant: "destructive",
+      });
+      return; // Keep dialog open so user can select a different driver
+    }
     
     updateDriverStatus(punchOutDriver.id, "punched-out");
     toast({
@@ -500,7 +520,7 @@ const Drivers = () => {
     });
   }, [drivers, updateDriverStatus, toast]);
 
-  // Handle driver picker selection
+  // Handle driver picker selection (only used for assign and off actions now)
   const handleDriverPickerSelect = useCallback((driver: typeof drivers[0]) => {
     setSelectedDriverId(driver.id);
     setShowDriverPicker(false);
@@ -513,12 +533,6 @@ const Drivers = () => {
           case "assign":
             executeAssign(driver.id);
             break;
-          case "punchIn":
-            executePunchIn(driver.id);
-            break;
-          case "punchOut":
-            executePunchOut(driver.id);
-            break;
           case "off":
             executeOff(driver.id);
             break;
@@ -526,7 +540,7 @@ const Drivers = () => {
         setPendingAction(null);
       }, 50);
     }
-  }, [pendingAction, executeAssign, executePunchIn, executePunchOut, executeOff]);
+  }, [pendingAction, executeAssign, executeOff]);
 
   // Get drivers NOT scheduled for today (OFF drivers)
   const offDrivers = useMemo(() => {
@@ -740,26 +754,16 @@ const Drivers = () => {
       }
     }
     
-    // P → Punch In
+    // P → Punch In - always opens dialog, validates on submit
     if (e.key === "p" || e.key === "P") {
       e.preventDefault();
-      if (!selectedDriverId) {
-        setPendingAction("punchIn");
-        setShowDriverPicker(true);
-      } else {
-        executePunchIn(selectedDriverId);
-      }
+      executePunchIn(selectedDriverId || undefined);
     }
     
-    // D → Punch Out
+    // D → Punch Out - always opens dialog, validates on submit
     if (e.key === "d" || e.key === "D") {
       e.preventDefault();
-      if (!selectedDriverId) {
-        setPendingAction("punchOut");
-        setShowDriverPicker(true);
-      } else {
-        executePunchOut(selectedDriverId);
-      }
+      executePunchOut(selectedDriverId || undefined);
     }
     
     // O → Mark OFF
@@ -1474,8 +1478,20 @@ const Drivers = () => {
       </Dialog>
 
       {/* Punch In Dialog */}
-      <Dialog open={showPunchInDialog} onOpenChange={setShowPunchInDialog}>
-        <DialogContent className="sm:max-w-[350px]">
+      <Dialog 
+        open={showPunchInDialog} 
+        onOpenChange={(open) => {
+          setShowPunchInDialog(open);
+          if (!open) setPunchInDriver(null);
+        }}
+      >
+        <DialogContent 
+          className="sm:max-w-[350px]"
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            setTimeout(() => punchInSelectRef.current?.focus(), 0);
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Punch In Driver</DialogTitle>
           </DialogHeader>
@@ -1491,15 +1507,20 @@ const Drivers = () => {
                   }
                 }}
               >
-                <SelectTrigger id="punch-in-driver">
+                <SelectTrigger id="punch-in-driver" ref={punchInSelectRef}>
                   <SelectValue placeholder="Select driver" />
                 </SelectTrigger>
                 <SelectContent>
                   {drivers
-                    .filter((d) => d.is_active && d.status === "assigned")
+                    .filter((d) => d.is_active)
                     .map((driver) => (
                       <SelectItem key={driver.id} value={driver.id}>
                         {driver.name}
+                        {driver.status !== "assigned" && (
+                          <span className="text-muted-foreground ml-2 text-xs">
+                            ({driver.status})
+                          </span>
+                        )}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -1518,8 +1539,20 @@ const Drivers = () => {
       </Dialog>
 
       {/* Punch Out Dialog */}
-      <Dialog open={showPunchOutDialog} onOpenChange={setShowPunchOutDialog}>
-        <DialogContent className="sm:max-w-[350px]">
+      <Dialog 
+        open={showPunchOutDialog} 
+        onOpenChange={(open) => {
+          setShowPunchOutDialog(open);
+          if (!open) setPunchOutDriver(null);
+        }}
+      >
+        <DialogContent 
+          className="sm:max-w-[350px]"
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            setTimeout(() => punchOutSelectRef.current?.focus(), 0);
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Punch Out Driver</DialogTitle>
           </DialogHeader>
@@ -1535,15 +1568,20 @@ const Drivers = () => {
                   }
                 }}
               >
-                <SelectTrigger id="punch-out-driver">
+                <SelectTrigger id="punch-out-driver" ref={punchOutSelectRef}>
                   <SelectValue placeholder="Select driver" />
                 </SelectTrigger>
                 <SelectContent>
                   {drivers
-                    .filter((d) => d.is_active && ["working", "on-route"].includes(d.status))
+                    .filter((d) => d.is_active)
                     .map((driver) => (
                       <SelectItem key={driver.id} value={driver.id}>
                         {driver.name}
+                        {!["working", "on-route"].includes(driver.status) && (
+                          <span className="text-muted-foreground ml-2 text-xs">
+                            ({driver.status})
+                          </span>
+                        )}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -1572,8 +1610,6 @@ const Drivers = () => {
         onSelect={handleDriverPickerSelect}
         title={
           pendingAction === "assign" ? "Select Driver to Assign" :
-          pendingAction === "punchIn" ? "Select Driver to Punch In" :
-          pendingAction === "punchOut" ? "Select Driver to Punch Out" :
           pendingAction === "off" ? "Select Driver to Mark OFF" :
           "Select Driver"
         }
