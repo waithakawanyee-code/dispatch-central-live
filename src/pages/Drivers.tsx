@@ -208,38 +208,49 @@ const Drivers = () => {
     });
   }, [isToday, getAvailableDriversWithSchedule, drivers, futureAssignments]);
 
-  // Handler for assigning a driver for future date
-  const handleAssignFutureDriver = async () => {
-    if (!assigningDriver || !isFutureDate) return;
+  // Handler for assigning a driver
+  const handleAssignDriver = async () => {
+    if (!assigningDriver) return;
     
-    const dateStr = format(selectedDate, "yyyy-MM-dd");
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    const { data, error } = await supabase
-      .from("future_assignments")
-      .insert({
-        driver_id: assigningDriver.id,
-        driver_name: assigningDriver.name,
-        assignment_date: dateStr,
-        report_time: assignReportTime || null,
-        vehicle: assignVehicle === "__none__" ? null : assignVehicle,
-        created_by: user?.id || null,
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      toast({
-        title: "Error assigning driver",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else if (data) {
+    if (isFutureDate) {
+      // Future date: insert into future_assignments table
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { data, error } = await supabase
+        .from("future_assignments")
+        .insert({
+          driver_id: assigningDriver.id,
+          driver_name: assigningDriver.name,
+          assignment_date: dateStr,
+          report_time: assignReportTime || null,
+          vehicle: assignVehicle === "__none__" ? null : assignVehicle,
+          created_by: user?.id || null,
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        toast({
+          title: "Error assigning driver",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else if (data) {
+        toast({
+          title: "Driver assigned",
+          description: `${assigningDriver.name} assigned for ${format(selectedDate, "EEEE, MMM d")}`,
+        });
+        setFutureAssignments([...futureAssignments, data as FutureAssignment]);
+      }
+    } else {
+      // Today: update driver status directly
+      const vehicleValue = assignVehicle === "__none__" ? undefined : assignVehicle;
+      await updateDriverStatus(assigningDriver.id, "assigned", assignReportTime || undefined, vehicleValue);
       toast({
         title: "Driver assigned",
-        description: `${assigningDriver.name} assigned for ${format(selectedDate, "EEEE, MMM d")}`,
+        description: `${assigningDriver.name} has been assigned`,
       });
-      setFutureAssignments([...futureAssignments, data as FutureAssignment]);
     }
     
     setShowAssignDialog(false);
@@ -1384,7 +1395,7 @@ const Drivers = () => {
             </Button>
             <Button 
               ref={assignButtonRef}
-              onClick={handleAssignFutureDriver}
+              onClick={handleAssignDriver}
               disabled={!assigningDriver}
             >
               Assign
