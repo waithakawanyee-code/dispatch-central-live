@@ -754,7 +754,7 @@ const Drivers = () => {
     );
     
     // Don't run shortcuts if any dialog is open (except for escape)
-    const dialogOpen = showAssignDialog || showOffDialog || showDriverPicker;
+    const dialogOpen = showAssignDialog || showOffDialog || showPunchInDialog || showPunchOutDialog || showDriverPicker;
     
     // Escape closes any open panel/dialog
     if (e.key === "Escape") {
