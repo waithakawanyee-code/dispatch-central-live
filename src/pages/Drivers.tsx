@@ -83,11 +83,13 @@ const Drivers = () => {
   // Punch In dialog state
   const [showPunchInDialog, setShowPunchInDialog] = useState(false);
   const [punchInDriver, setPunchInDriver] = useState<{ id: string; name: string } | null>(null);
+  const [punchInTime, setPunchInTime] = useState("");
   const punchInSelectRef = useRef<HTMLButtonElement>(null);
   
   // Punch Out dialog state
   const [showPunchOutDialog, setShowPunchOutDialog] = useState(false);
   const [punchOutDriver, setPunchOutDriver] = useState<{ id: string; name: string } | null>(null);
+  const [punchOutTime, setPunchOutTime] = useState("");
   const punchOutSelectRef = useRef<HTMLButtonElement>(null);
   
   // Driver picker state (for keyboard shortcuts when no driver selected)
@@ -306,13 +308,20 @@ const Drivers = () => {
     setShowOffDialog(true);
   };
 
+  const getCurrentTimeString = () => {
+    const now = new Date();
+    return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+  };
+
   const openPunchInDialog = (driverId: string, driverName: string) => {
     setPunchInDriver({ id: driverId, name: driverName });
+    setPunchInTime(getCurrentTimeString());
     setShowPunchInDialog(true);
   };
 
   const openPunchOutDialog = (driverId: string, driverName: string) => {
     setPunchOutDriver({ id: driverId, name: driverName });
+    setPunchOutTime(getCurrentTimeString());
     setShowPunchOutDialog(true);
   };
 
@@ -383,23 +392,35 @@ const Drivers = () => {
 
   // Always open the modal - validation happens on submit
   const executePunchIn = useCallback((driverId?: string) => {
+    const currentTime = (() => {
+      const now = new Date();
+      return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+    })();
+    
     if (driverId) {
       const driver = drivers.find(d => d.id === driverId);
       if (driver) {
         setPunchInDriver({ id: driver.id, name: driver.name });
       }
     }
+    setPunchInTime(currentTime);
     setShowPunchInDialog(true);
   }, [drivers]);
 
   // Always open the modal - validation happens on submit
   const executePunchOut = useCallback((driverId?: string) => {
+    const currentTime = (() => {
+      const now = new Date();
+      return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+    })();
+    
     if (driverId) {
       const driver = drivers.find(d => d.id === driverId);
       if (driver) {
         setPunchOutDriver({ id: driver.id, name: driver.name });
       }
     }
+    setPunchOutTime(currentTime);
     setShowPunchOutDialog(true);
   }, [drivers]);
 
@@ -429,13 +450,14 @@ const Drivers = () => {
       return; // Keep dialog open so user can select a different driver
     }
     
-    updateDriverStatus(punchInDriver.id, "working");
+    updateDriverStatus(punchInDriver.id, "working", undefined, undefined, punchInTime);
     toast({
       title: "Punched In",
       description: `${punchInDriver.name} is now working`,
     });
     setShowPunchInDialog(false);
     setPunchInDriver(null);
+    setPunchInTime("");
   };
 
   const handleConfirmPunchOut = () => {
@@ -454,13 +476,14 @@ const Drivers = () => {
       return; // Keep dialog open so user can select a different driver
     }
     
-    updateDriverStatus(punchOutDriver.id, "punched-out");
+    updateDriverStatus(punchOutDriver.id, "punched-out", undefined, undefined, punchOutTime);
     toast({
       title: "Punched Out",
       description: `${punchOutDriver.name} has punched out`,
     });
     setShowPunchOutDialog(false);
     setPunchOutDriver(null);
+    setPunchOutTime("");
   };
 
   const executeOff = useCallback((driverId: string) => {
@@ -1526,6 +1549,14 @@ const Drivers = () => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="grid gap-2">
+              <Label htmlFor="punch-in-time">Time</Label>
+              <TimeInput
+                id="punch-in-time"
+                value={punchInTime}
+                onChange={setPunchInTime}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPunchInDialog(false)} tabIndex={-1}>
@@ -1586,6 +1617,14 @@ const Drivers = () => {
                     ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="punch-out-time">Time</Label>
+              <TimeInput
+                id="punch-out-time"
+                value={punchOutTime}
+                onChange={setPunchOutTime}
+              />
             </div>
           </div>
           <DialogFooter>
