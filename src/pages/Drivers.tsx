@@ -460,7 +460,7 @@ const Drivers = () => {
     setPunchInTime("");
   };
 
-  const handleConfirmPunchOut = () => {
+  const handleConfirmPunchOut = async () => {
     if (!punchOutDriver) return;
     
     const driver = drivers.find(d => d.id === punchOutDriver.id);
@@ -474,6 +474,41 @@ const Drivers = () => {
         variant: "destructive",
       });
       return; // Keep dialog open so user can select a different driver
+    }
+    
+    // Validate punch-out time is after punch-in time
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    
+    const { data: todayPunches } = await supabase
+      .from("time_punches")
+      .select("punch_type, punch_time")
+      .eq("driver_id", punchOutDriver.id)
+      .gte("punch_time", todayStart.toISOString())
+      .lte("punch_time", todayEnd.toISOString())
+      .order("punch_time", { ascending: false });
+    
+    // Find the most recent punch-in for today
+    const lastPunchIn = todayPunches?.find(p => p.punch_type === "in");
+    
+    if (lastPunchIn && punchOutTime) {
+      const punchInDate = new Date(lastPunchIn.punch_time);
+      const punchInMinutes = punchInDate.getHours() * 60 + punchInDate.getMinutes();
+      
+      const [outHours, outMinutes] = punchOutTime.split(":").map(Number);
+      const punchOutMinutes = outHours * 60 + outMinutes;
+      
+      if (punchOutMinutes < punchInMinutes) {
+        const punchInTimeStr = `${punchInDate.getHours().toString().padStart(2, "0")}:${punchInDate.getMinutes().toString().padStart(2, "0")}`;
+        toast({
+          title: "Invalid punch-out time",
+          description: `Punch-out time (${punchOutTime}) cannot be before punch-in time (${punchInTimeStr})`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
     
     updateDriverStatus(punchOutDriver.id, "punched-out", undefined, undefined, punchOutTime);
