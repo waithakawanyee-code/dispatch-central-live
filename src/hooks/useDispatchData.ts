@@ -147,7 +147,7 @@ export function useDispatchData() {
     };
   }, []);
 
-  const updateDriverStatus = async (driverId: string, newStatus: DriverStatus, reportTime?: string, vehicle?: string) => {
+  const updateDriverStatus = async (driverId: string, newStatus: DriverStatus, reportTime?: string, vehicle?: string, punchTime?: string) => {
     const driver = allDrivers.find((d) => d.id === driverId);
     if (!driver) return;
 
@@ -191,10 +191,10 @@ export function useDispatchData() {
       
       // Record punch in when status changes to working
       if (newStatus === "working" && oldStatus !== "working") {
-        await recordTimePunch(driverId, driver.name, "in");
+        await recordTimePunch(driverId, driver.name, "in", punchTime);
       } else if (newStatus === "punched-out" && oldStatus !== "punched-out" && oldStatus !== "unassigned") {
         // Record punch out when status changes to punched-out (not from unassigned)
-        await recordTimePunch(driverId, driver.name, "out");
+        await recordTimePunch(driverId, driver.name, "out", punchTime);
       }
     }
   };
@@ -238,8 +238,17 @@ export function useDispatchData() {
     }
   };
 
-  const recordTimePunch = async (driverId: string, driverName: string, punchType: "in" | "out") => {
+  const recordTimePunch = async (driverId: string, driverName: string, punchType: "in" | "out", punchTime?: string) => {
     const { data: { user } } = await supabase.auth.getUser();
+    
+    // Build punch time: if provided as HH:MM, create today's date with that time
+    let punchTimestamp: string | undefined;
+    if (punchTime && /^\d{2}:\d{2}$/.test(punchTime)) {
+      const today = new Date();
+      const [hours, minutes] = punchTime.split(":").map(Number);
+      today.setHours(hours, minutes, 0, 0);
+      punchTimestamp = today.toISOString();
+    }
     
     const { error } = await supabase
       .from("time_punches")
@@ -248,6 +257,7 @@ export function useDispatchData() {
         driver_name: driverName,
         punch_type: punchType,
         punched_by: user?.id,
+        ...(punchTimestamp && { punch_time: punchTimestamp }),
       });
 
     if (error) {
