@@ -84,6 +84,7 @@ const Drivers = () => {
   const [showPunchInDialog, setShowPunchInDialog] = useState(false);
   const [punchInDriver, setPunchInDriver] = useState<{ id: string; name: string } | null>(null);
   const [punchInTime, setPunchInTime] = useState("");
+  const [punchInVehicle, setPunchInVehicle] = useState<string>("__none__");
   const punchInSelectRef = useRef<HTMLButtonElement>(null);
   
   // Punch Out dialog state
@@ -390,6 +391,32 @@ const Drivers = () => {
     }
   }, [drivers, toast]);
 
+  // Helper to get auto-populated vehicle for a driver
+  const getDriverDefaultVehicle = useCallback((driverId: string): string => {
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver) return "__none__";
+    
+    // First check if driver has an assigned vehicle already
+    if (driver.vehicle) {
+      return driver.vehicle;
+    }
+    
+    // Check if driver is a take-home driver (has a vehicle assigned to them)
+    const takeHomeVehicle = vehicles.find(
+      v => v.assigned_driver_id === driverId && v.classification === "take_home"
+    );
+    if (takeHomeVehicle) {
+      return takeHomeVehicle.unit;
+    }
+    
+    // Check default_vehicle field
+    if (driver.default_vehicle) {
+      return driver.default_vehicle;
+    }
+    
+    return "__none__";
+  }, [drivers, vehicles]);
+
   // Always open the modal - validation happens on submit
   const executePunchIn = useCallback((driverId?: string) => {
     const currentTime = (() => {
@@ -401,11 +428,14 @@ const Drivers = () => {
       const driver = drivers.find(d => d.id === driverId);
       if (driver) {
         setPunchInDriver({ id: driver.id, name: driver.name });
+        setPunchInVehicle(getDriverDefaultVehicle(driver.id));
       }
+    } else {
+      setPunchInVehicle("__none__");
     }
     setPunchInTime(currentTime);
     setShowPunchInDialog(true);
-  }, [drivers]);
+  }, [drivers, getDriverDefaultVehicle]);
 
   // Always open the modal - validation happens on submit
   const executePunchOut = useCallback((driverId?: string) => {
@@ -450,7 +480,8 @@ const Drivers = () => {
       return; // Keep dialog open so user can select a different driver
     }
     
-    updateDriverStatus(punchInDriver.id, "working", undefined, undefined, punchInTime);
+    const vehicleToAssign = punchInVehicle === "__none__" ? undefined : punchInVehicle;
+    updateDriverStatus(punchInDriver.id, "working", undefined, vehicleToAssign, punchInTime);
     toast({
       title: "Punched In",
       description: `${punchInDriver.name} is now working`,
@@ -458,6 +489,7 @@ const Drivers = () => {
     setShowPunchInDialog(false);
     setPunchInDriver(null);
     setPunchInTime("");
+    setPunchInVehicle("__none__");
   };
 
   const handleConfirmPunchOut = async () => {
@@ -1562,6 +1594,7 @@ const Drivers = () => {
                   const driver = drivers.find(d => d.id === val);
                   if (driver) {
                     setPunchInDriver({ id: driver.id, name: driver.name });
+                    setPunchInVehicle(getDriverDefaultVehicle(driver.id));
                   }
                 }}
               >
@@ -1579,6 +1612,27 @@ const Drivers = () => {
                             ({driver.status})
                           </span>
                         )}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="punch-in-vehicle">Vehicle</Label>
+              <Select 
+                value={punchInVehicle} 
+                onValueChange={setPunchInVehicle}
+              >
+                <SelectTrigger id="punch-in-vehicle">
+                  <SelectValue placeholder="Select vehicle" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No vehicle</SelectItem>
+                  {vehicles
+                    .filter((v) => v.status === "active")
+                    .map((vehicle) => (
+                      <SelectItem key={vehicle.id} value={vehicle.unit}>
+                        {vehicle.unit}
                       </SelectItem>
                     ))}
                 </SelectContent>
