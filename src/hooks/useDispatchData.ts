@@ -162,6 +162,9 @@ export function useDispatchData() {
     if (newStatus === "assigned") {
       updateData.report_time = reportTime || null;
       updateData.vehicle = vehicle || null;
+    } else if (newStatus === "working" && vehicle) {
+      // When punching in with a vehicle, set the vehicle
+      updateData.vehicle = vehicle;
     } else if (newStatus === "unassigned" || newStatus === "punched-out") {
       updateData.report_time = null;
       updateData.vehicle = null;
@@ -178,7 +181,7 @@ export function useDispatchData() {
       await logStatusChange("driver", driverId, driver.name, "status", oldStatus, newStatus);
       
       // Record vehicle assignment history
-      if (newStatus === "assigned" && vehicle) {
+      if ((newStatus === "assigned" || newStatus === "working") && vehicle) {
         // Find the vehicle to get its ID and unit
         const assignedVehicle = vehicles.find(v => v.unit === vehicle);
         if (assignedVehicle) {
