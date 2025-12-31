@@ -248,6 +248,108 @@ export function TimePunchReport() {
     return result.sort((a, b) => b.weekTotal - a.weekTotal);
   }, [weeklyPunches]);
 
+  // Build payroll data with detailed punch in/out times per day per driver
+  const buildPayrollData = () => {
+    interface DailyRecord {
+      date: string;
+      punchIn: string | null;
+      punchOut: string | null;
+      dailyTotalMinutes: number;
+      dailyTotal: string;
+    }
+    
+    interface DriverPayroll {
+      driverId: string;
+      driverName: string;
+      dailyRecords: DailyRecord[];
+      weekTotalMinutes: number;
+      weeklyTotal: string;
+      overtime: string;
+    }
+
+    // Group punches by driver
+    const driverPunches = new Map<string, { name: string; punches: TimePunch[] }>();
+    weeklyPunches.forEach((punch) => {
+      if (!driverPunches.has(punch.driver_id)) {
+        driverPunches.set(punch.driver_id, { name: punch.driver_name, punches: [] });
+      }
+      driverPunches.get(punch.driver_id)!.punches.push(punch);
+    });
+
+    const result: DriverPayroll[] = [];
+
+    driverPunches.forEach((data, driverId) => {
+      // Sort punches by time
+      const sortedPunches = [...data.punches].sort(
+        (a, b) => new Date(a.punch_time).getTime() - new Date(b.punch_time).getTime()
+      );
+
+      // Group by date and pair punches
+      const dateGroups = new Map<string, { ins: Date[]; outs: Date[] }>();
+      
+      sortedPunches.forEach((punch) => {
+        const dateStr = format(new Date(punch.punch_time), "MM/dd/yyyy");
+        if (!dateGroups.has(dateStr)) {
+          dateGroups.set(dateStr, { ins: [], outs: [] });
+        }
+        if (punch.punch_type === "in") {
+          dateGroups.get(dateStr)!.ins.push(new Date(punch.punch_time));
+        } else {
+          dateGroups.get(dateStr)!.outs.push(new Date(punch.punch_time));
+        }
+      });
+
+      const dailyRecords: DailyRecord[] = [];
+      let weekTotalMinutes = 0;
+
+      // Process each day in the week that has punches
+      weekDays.forEach((day) => {
+        const dateStr = format(day, "MM/dd/yyyy");
+        const group = dateGroups.get(dateStr);
+        
+        if (group && (group.ins.length > 0 || group.outs.length > 0)) {
+          // Pair up ins and outs
+          const maxPairs = Math.max(group.ins.length, group.outs.length);
+          let dailyMinutes = 0;
+          
+          for (let i = 0; i < maxPairs; i++) {
+            const punchIn = group.ins[i] || null;
+            const punchOut = group.outs[i] || null;
+            
+            if (punchIn && punchOut) {
+              dailyMinutes += (punchOut.getTime() - punchIn.getTime()) / (1000 * 60);
+            }
+            
+            dailyRecords.push({
+              date: i === 0 ? dateStr : "",
+              punchIn: punchIn ? format(punchIn, "h:mm a") : null,
+              punchOut: punchOut ? format(punchOut, "h:mm a") : null,
+              dailyTotalMinutes: i === maxPairs - 1 ? dailyMinutes : 0,
+              dailyTotal: i === maxPairs - 1 ? formatHoursMinutes(dailyMinutes) : "",
+            });
+          }
+          
+          weekTotalMinutes += dailyMinutes;
+        }
+      });
+
+      if (dailyRecords.length > 0) {
+        const overtimeMinutes = Math.max(0, weekTotalMinutes - OVERTIME_THRESHOLD_MINUTES);
+        result.push({
+          driverId,
+          driverName: data.name,
+          dailyRecords,
+          weekTotalMinutes,
+          weeklyTotal: formatHoursMinutes(weekTotalMinutes),
+          overtime: overtimeMinutes > 0 ? formatHoursMinutes(overtimeMinutes) : "",
+        });
+      }
+    });
+
+    // Sort by name
+    return result.sort((a, b) => a.driverName.localeCompare(b.driverName));
+  };
+
   // Calculate total hours per driver
   const driverHours: DriverHours[] = (() => {
     const driverMap = new Map<string, { name: string; punches: TimePunch[] }>();
@@ -606,13 +708,177 @@ export function TimePunchReport() {
         </div>
       </div>
 
-      <Tabs defaultValue="weekly" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="weekly">Weekly Report</TabsTrigger>
+      <Tabs defaultValue="payroll" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsTrigger value="payroll">Payroll Report</TabsTrigger>
+          <TabsTrigger value="weekly">Weekly Summary</TabsTrigger>
           <TabsTrigger value="daterange">Date Range</TabsTrigger>
         </TabsList>
 
-        {/* Weekly Report Tab */}
+        {/* Payroll Report Tab */}
+        <TabsContent value="payroll" className="space-y-4">
+          {/* Week Navigation */}
+          <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setWeekOffset((prev) => prev - 1)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">
+                {format(currentWeekStart, "MMM d")} - {format(currentWeekEnd, "MMM d, yyyy")}
+              </span>
+              {weekOffset === 0 && (
+                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">Current Week</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Export payroll to CSV
+                  const headers = ["Driver", "Date", "Punch In", "Punch Out", "Daily Total", "Weekly Total", "Overtime"];
+                  const rows: string[][] = [];
+                  
+                  // Build payroll data for export
+                  const payrollData = buildPayrollData();
+                  payrollData.forEach((driver) => {
+                    driver.dailyRecords.forEach((record, idx) => {
+                      rows.push([
+                        idx === 0 ? driver.driverName : "",
+                        record.date,
+                        record.punchIn || "-",
+                        record.punchOut || "-",
+                        record.dailyTotal,
+                        idx === 0 ? driver.weeklyTotal : "",
+                        idx === 0 ? driver.overtime : "",
+                      ]);
+                    });
+                    // Add empty row between drivers
+                    rows.push(["", "", "", "", "", "", ""]);
+                  });
+                  
+                  const csvContent = [
+                    headers.join(","),
+                    ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+                  ].join("\n");
+
+                  const blob = new Blob([csvContent], { type: "text/csv" });
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `payroll-report-${format(currentWeekStart, "yyyy-MM-dd")}.csv`;
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                }}
+                disabled={weeklyDriverHours.length === 0}
+              >
+                <Download className="h-4 w-4 mr-1" />
+                CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setWeekOffset((prev) => prev + 1)}
+                disabled={weekOffset >= 0}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {weeklyLoading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading...</div>
+          ) : weeklyDriverHours.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No time punches found for this week.
+            </div>
+          ) : (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Payroll Report (Mon-Sun)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[150px]">Driver</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Date</TableHead>
+                        <TableHead className="text-center min-w-[90px]">Punch In</TableHead>
+                        <TableHead className="text-center min-w-[90px]">Punch Out</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Daily Total</TableHead>
+                        <TableHead className="text-center min-w-[100px] font-bold">Weekly Total</TableHead>
+                        <TableHead className="text-center min-w-[90px] font-bold">Overtime</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(() => {
+                        const payrollData = buildPayrollData();
+                        return payrollData.map((driver, driverIdx) => {
+                          const isOvertime = driver.weekTotalMinutes > OVERTIME_THRESHOLD_MINUTES;
+                          return driver.dailyRecords.map((record, recordIdx) => (
+                            <TableRow 
+                              key={`${driver.driverId}-${record.date}-${recordIdx}`}
+                              className={`${isOvertime ? "bg-amber-500/10" : ""} ${recordIdx === driver.dailyRecords.length - 1 ? "border-b-2 border-border" : ""}`}
+                            >
+                              <TableCell className={`font-medium ${recordIdx === 0 ? "" : "text-muted-foreground/0"}`}>
+                                {recordIdx === 0 && (
+                                  <div className="flex items-center gap-2">
+                                    {driver.driverName}
+                                    {isOvertime && (
+                                      <Badge variant="outline" className="bg-amber-500/20 text-amber-700 border-amber-500/30 text-xs">
+                                        OT
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center font-mono text-sm">
+                                {record.date}
+                              </TableCell>
+                              <TableCell className="text-center font-mono text-sm">
+                                {record.punchIn ? (
+                                  <span className="text-green-600">{record.punchIn}</span>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center font-mono text-sm">
+                                {record.punchOut ? (
+                                  <span className="text-red-600">{record.punchOut}</span>
+                                ) : record.punchIn ? (
+                                  <span className="text-amber-600 text-xs">Open</span>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center font-mono text-sm font-medium">
+                                {record.dailyTotal !== "0h 0m" ? record.dailyTotal : "-"}
+                              </TableCell>
+                              <TableCell className={`text-center font-mono font-bold ${isOvertime ? "text-amber-700" : ""}`}>
+                                {recordIdx === 0 ? driver.weeklyTotal : ""}
+                              </TableCell>
+                              <TableCell className={`text-center font-mono font-bold ${isOvertime ? "text-amber-700 bg-amber-500/20" : ""}`}>
+                                {recordIdx === 0 ? (isOvertime ? driver.overtime : "-") : ""}
+                              </TableCell>
+                            </TableRow>
+                          ));
+                        });
+                      })()}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Weekly Summary Tab */}
         <TabsContent value="weekly" className="space-y-4">
           {/* Week Navigation */}
           <div className="flex items-center justify-between">
