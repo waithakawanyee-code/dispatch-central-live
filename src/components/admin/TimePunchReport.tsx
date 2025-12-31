@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfWeek, endOfWeek, addWeeks, eachDayOfInterval } from "date-fns";
 import { useDateFormat } from "@/hooks/useDateFormat";
-import { Clock, Download, ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, Calendar, FileText } from "lucide-react";
+import { Clock, Download, ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, Calendar, FileText, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -124,6 +124,9 @@ export function TimePunchReport() {
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingPunch, setDeletingPunch] = useState<TimePunch | null>(null);
+
+  // Payroll filter state
+  const [payrollDriverFilter, setPayrollDriverFilter] = useState("");
 
   const fetchPunches = async () => {
     setLoading(true);
@@ -249,7 +252,7 @@ export function TimePunchReport() {
   }, [weeklyPunches]);
 
   // Build payroll data with detailed punch in/out times per day per driver
-  const buildPayrollData = () => {
+  const buildPayrollData = (filterName: string = "") => {
     interface DailyRecord {
       date: string;
       punchIn: string | null;
@@ -346,8 +349,11 @@ export function TimePunchReport() {
       }
     });
 
-    // Sort by name
-    return result.sort((a, b) => a.driverName.localeCompare(b.driverName));
+    // Filter by name and sort
+    const filtered = filterName.trim()
+      ? result.filter(d => d.driverName.toLowerCase().includes(filterName.toLowerCase().trim()))
+      : result;
+    return filtered.sort((a, b) => a.driverName.localeCompare(b.driverName));
   };
 
   // Calculate total hours per driver
@@ -745,7 +751,7 @@ export function TimePunchReport() {
                   const rows: string[][] = [];
                   
                   // Build payroll data for export
-                  const payrollData = buildPayrollData();
+                  const payrollData = buildPayrollData(payrollDriverFilter);
                   payrollData.forEach((driver) => {
                     driver.dailyRecords.forEach((record, idx) => {
                       rows.push([
@@ -790,7 +796,7 @@ export function TimePunchReport() {
                     return;
                   }
 
-                  const payrollData = buildPayrollData();
+                  const payrollData = buildPayrollData(payrollDriverFilter);
                   const totalWeekHours = payrollData.reduce((sum, d) => sum + d.weekTotalMinutes, 0);
                   const totalOvertimeHours = payrollData.reduce((sum, d) => sum + Math.max(0, d.weekTotalMinutes - OVERTIME_THRESHOLD_MINUTES), 0);
 
@@ -896,6 +902,17 @@ export function TimePunchReport() {
             </div>
           </div>
 
+          {/* Driver Filter */}
+          <div className="relative max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Filter by driver name..."
+              value={payrollDriverFilter}
+              onChange={(e) => setPayrollDriverFilter(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
           {weeklyLoading ? (
             <div className="text-center py-8 text-muted-foreground">Loading...</div>
           ) : weeklyDriverHours.length === 0 ? (
@@ -923,7 +940,7 @@ export function TimePunchReport() {
                     </TableHeader>
                     <TableBody>
                       {(() => {
-                        const payrollData = buildPayrollData();
+                        const payrollData = buildPayrollData(payrollDriverFilter);
                         return payrollData.map((driver, driverIdx) => {
                           const isOvertime = driver.weekTotalMinutes > OVERTIME_THRESHOLD_MINUTES;
                           return driver.dailyRecords.map((record, recordIdx) => (
