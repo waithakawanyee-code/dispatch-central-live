@@ -46,12 +46,20 @@ export function validateImportRow(row: Record<string, string>, rowNumber: number
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // Required field validation
+  // Required field validation - only Name, Code, and Phone are required
   if (!row.Name?.trim()) {
     errors.push("Name is required");
   }
 
-  // Email format validation
+  if (!row.Code?.trim()) {
+    errors.push("Code is required");
+  }
+
+  if (!row.Phone?.trim()) {
+    errors.push("Phone is required");
+  }
+
+  // Email format validation (optional field)
   if (row.Email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.Email.trim())) {
     warnings.push("Invalid email format");
   }
@@ -64,16 +72,6 @@ export function validateImportRow(row: Record<string, string>, rowNumber: number
   // Code length validation
   if (row.Code?.trim() && row.Code.trim().length > 4) {
     warnings.push("Code will be truncated to 4 characters");
-  }
-
-  // Time format validation (accepts ANY, OFF, or HH:MM)
-  const timeFields = ["Mon_In", "Mon_Out", "Tue_In", "Tue_Out", "Wed_In", "Wed_Out", "Thu_In", "Thu_Out", "Fri_In", "Fri_Out", "Sat_In", "Sat_Out", "Sun_In", "Sun_Out"];
-  for (const field of timeFields) {
-    const value = row[field]?.trim();
-    if (value && value.toUpperCase() !== "OFF" && value.toUpperCase() !== "ANY" && !/^\d{1,2}:\d{2}$/.test(value)) {
-      warnings.push(`${field} should be HH:MM, ANY, or OFF`);
-      break; // Only show one time warning
-    }
   }
 
   // Active/CDL validation
