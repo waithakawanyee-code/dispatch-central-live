@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Clock, UserCheck, UserX, Train, Stethoscope, Users, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Clock, UserCheck, UserX, Train, Stethoscope, Users, Eye, EyeOff, UserPlus, X, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { format, addDays, startOfDay, isSameDay } from "date-fns";
@@ -82,6 +85,11 @@ const Scheduler = () => {
   const [statusFilter, setStatusFilter] = useState<DriverStatus | "all">("all");
   const [scheduleTab, setScheduleTab] = useState<"all" | "black-car" | "amtrak" | "bph">("all");
   const [showTrainedCoverage, setShowTrainedCoverage] = useState(false);
+  
+  // BPH time editing state
+  const [editingBphTimes, setEditingBphTimes] = useState(false);
+  const [bphTempStartTime, setBphTempStartTime] = useState("08:00");
+  const [bphTempEndTime, setBphTempEndTime] = useState("16:00");
 
   useEffect(() => {
     fetchAllSchedules();
@@ -104,6 +112,91 @@ const Scheduler = () => {
     }
     
     setLoading(false);
+  };
+
+  // Assign driver to Amtrak shift
+  const assignAmtrakShift = async (driverId: string | null, shiftNumber: number) => {
+    const dayOfWeek = getDayOfWeek(selectedDate);
+    
+    // First, remove any existing assignment for this shift on this day
+    await supabase
+      .from("shuttle_schedules")
+      .delete()
+      .eq("program", "amtrak")
+      .eq("day_of_week", dayOfWeek)
+      .eq("shift_number", shiftNumber);
+
+    // If we're assigning a driver (not unassigning)
+    if (driverId) {
+      const shift = AMTRAK_SHIFTS.find(s => s.number === shiftNumber);
+      const { error } = await supabase.from("shuttle_schedules").insert({
+        driver_id: driverId,
+        program: "amtrak",
+        day_of_week: dayOfWeek,
+        shift_number: shiftNumber,
+        start_time: shift?.start || null,
+        end_time: shift?.end || null,
+      });
+
+      if (error) {
+        toast.error("Failed to assign driver");
+        return;
+      }
+    }
+
+    toast.success(driverId ? "Driver assigned to shift" : "Shift unassigned");
+    fetchAllSchedules();
+  };
+
+  // Assign driver to BPH shift
+  const assignBphShift = async (driverId: string | null, startTime: string, endTime: string) => {
+    const dayOfWeek = getDayOfWeek(selectedDate);
+    
+    // First, remove any existing BPH assignment for this day
+    await supabase
+      .from("shuttle_schedules")
+      .delete()
+      .eq("program", "bph")
+      .eq("day_of_week", dayOfWeek);
+
+    // If we're assigning a driver (not unassigning)
+    if (driverId) {
+      const { error } = await supabase.from("shuttle_schedules").insert({
+        driver_id: driverId,
+        program: "bph",
+        day_of_week: dayOfWeek,
+        shift_number: 1,
+        start_time: startTime || null,
+        end_time: endTime || null,
+      });
+
+      if (error) {
+        toast.error("Failed to assign driver");
+        return;
+      }
+    }
+
+    toast.success(driverId ? "Driver assigned to BPH" : "BPH shift unassigned");
+    fetchAllSchedules();
+  };
+
+  // Update BPH shift times
+  const updateBphShiftTimes = async (startTime: string, endTime: string) => {
+    const dayOfWeek = getDayOfWeek(selectedDate);
+    
+    const { error } = await supabase
+      .from("shuttle_schedules")
+      .update({ start_time: startTime, end_time: endTime })
+      .eq("program", "bph")
+      .eq("day_of_week", dayOfWeek);
+
+    if (error) {
+      toast.error("Failed to update times");
+      return;
+    }
+
+    toast.success("Shift times updated");
+    fetchAllSchedules();
   };
 
   const handleStatusChange = async (driverId: string, newStatus: DriverStatus) => {
@@ -308,12 +401,25 @@ const Scheduler = () => {
   const renderAmtrakShifts = () => {
     const dayOfWeek = getDayOfWeek(selectedDate);
     
+    // Get all primary and trained Amtrak drivers for selection
+    const amtrakEligibleDrivers = drivers.filter(d => 
+      (d as any).amtrak_primary || (d as any).amtrak_trained
+    );
+    
     return (
       <div className="space-y-4">
         {AMTRAK_SHIFTS.map((shift) => {
-          const assignedDriver = amtrakDrivers.find(d => 
-            d.shuttleSchedules.some(s => s.shift_number === shift.number)
+          const shiftSchedule = shuttleSchedules.find(s => 
+            s.program === "amtrak" && s.day_of_week === dayOfWeek && s.shift_number === shift.number
           );
+          const assignedDriver = shiftSchedule 
+            ? drivers.find(d => d.id === shiftSchedule.driver_id) 
+            : null;
+          
+          // Check which drivers are already assigned to other shifts this day
+          const assignedDriverIds = shuttleSchedules
+            .filter(s => s.program === "amtrak" && s.day_of_week === dayOfWeek && s.shift_number !== shift.number)
+            .map(s => s.driver_id);
           
           return (
             <div key={shift.number} className="rounded-lg border border-blue-200 bg-blue-50/50">
@@ -327,16 +433,55 @@ const Scheduler = () => {
                 </span>
               </div>
               <div className="p-4">
-                {assignedDriver ? (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-blue-200 flex items-center justify-center">
-                        <span className="text-sm font-medium text-blue-700">
-                          {assignedDriver.name.charAt(0)}
-                        </span>
-                      </div>
-                      <span className="font-medium">{assignedDriver.name}</span>
-                    </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <Select
+                      value={assignedDriver?.id || "__none__"}
+                      onValueChange={(value) => assignAmtrakShift(value === "__none__" ? null : value, shift.number)}
+                    >
+                      <SelectTrigger className={cn(
+                        "w-full",
+                        assignedDriver ? "border-blue-300 bg-white" : "border-dashed border-blue-300"
+                      )}>
+                        <SelectValue placeholder="Select driver..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover">
+                        <SelectItem value="__none__">
+                          <span className="text-muted-foreground italic">Unassigned</span>
+                        </SelectItem>
+                        {amtrakEligibleDrivers.map((driver) => {
+                          const isAssignedElsewhere = assignedDriverIds.includes(driver.id);
+                          const isPrimary = (driver as any).amtrak_primary;
+                          return (
+                            <SelectItem 
+                              key={driver.id} 
+                              value={driver.id}
+                              disabled={isAssignedElsewhere}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className={isAssignedElsewhere ? "text-muted-foreground" : ""}>
+                                  {driver.name}
+                                </span>
+                                {isPrimary ? (
+                                  <Badge variant="outline" className="h-4 px-1 text-[9px] bg-blue-500/10 text-blue-600 border-blue-500/30">
+                                    Primary
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="h-4 px-1 text-[9px] bg-blue-100 text-blue-500 border-blue-300">
+                                    Trained
+                                  </Badge>
+                                )}
+                                {isAssignedElsewhere && (
+                                  <span className="text-xs text-muted-foreground">(assigned)</span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {assignedDriver && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button className={cn(
@@ -358,10 +503,8 @@ const Scheduler = () => {
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">No driver assigned</p>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -372,8 +515,17 @@ const Scheduler = () => {
 
   const renderBphShift = () => {
     const dayOfWeek = getDayOfWeek(selectedDate);
-    const assignedDrivers = bphDrivers.filter(d => d.shuttleSchedules.length > 0);
-    const scheduleInfo = assignedDrivers[0]?.shuttleSchedules[0];
+    const bphSchedule = shuttleSchedules.find(s => 
+      s.program === "bph" && s.day_of_week === dayOfWeek
+    );
+    const assignedDriver = bphSchedule 
+      ? drivers.find(d => d.id === bphSchedule.driver_id) 
+      : null;
+    
+    // Get all primary and trained BPH drivers for selection
+    const bphEligibleDrivers = drivers.filter(d => 
+      (d as any).bph_primary || (d as any).bph_trained
+    );
     
     return (
       <div className="rounded-lg border border-green-200 bg-green-50/50">
@@ -382,51 +534,131 @@ const Scheduler = () => {
             <Stethoscope className="h-4 w-4 text-green-600" />
             <span className="font-medium text-green-800">BPH Shuttle</span>
           </div>
-          {scheduleInfo && (
-            <span className="text-sm text-green-600 font-mono">
-              {formatTime(scheduleInfo.start_time)} – {formatTime(scheduleInfo.end_time)}
-            </span>
+          {bphSchedule && !editingBphTimes && (
+            <button 
+              onClick={() => {
+                setBphTempStartTime(bphSchedule.start_time || "08:00");
+                setBphTempEndTime(bphSchedule.end_time || "16:00");
+                setEditingBphTimes(true);
+              }}
+              className="text-sm text-green-600 font-mono hover:underline"
+            >
+              {formatTime(bphSchedule.start_time)} – {formatTime(bphSchedule.end_time)}
+            </button>
+          )}
+          {!bphSchedule && (
+            <span className="text-sm text-muted-foreground italic">Set times after assigning</span>
           )}
         </div>
-        <div className="p-4">
-          {assignedDrivers.length > 0 ? (
-            <div className="space-y-2">
-              {assignedDrivers.map(driver => (
-                <div key={driver.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-green-200 flex items-center justify-center">
-                      <span className="text-sm font-medium text-green-700">
-                        {driver.name.charAt(0)}
-                      </span>
-                    </div>
-                    <span className="font-medium">{driver.name}</span>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className={cn(
-                        "px-3 py-1 rounded-md text-xs font-medium border cursor-pointer",
-                        getStatusBadge(driver.status).color,
-                        "bg-secondary/50 border-border hover:bg-secondary"
-                      )}>
-                        {getStatusBadge(driver.status).label}
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-popover">
-                      {schedulerStatusOptions.map((option) => (
-                        <DropdownMenuItem
-                          key={option.value}
-                          onClick={() => handleStatusChange(driver.id, option.value)}
-                        >
-                          <span className={option.color}>{option.label}</span>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))}
+        <div className="p-4 space-y-4">
+          {/* Driver Selection */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <Select
+                value={assignedDriver?.id || "__none__"}
+                onValueChange={(value) => {
+                  const startTime = bphSchedule?.start_time || "08:00";
+                  const endTime = bphSchedule?.end_time || "16:00";
+                  assignBphShift(value === "__none__" ? null : value, startTime, endTime);
+                }}
+              >
+                <SelectTrigger className={cn(
+                  "w-full",
+                  assignedDriver ? "border-green-300 bg-white" : "border-dashed border-green-300"
+                )}>
+                  <SelectValue placeholder="Select driver..." />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="__none__">
+                    <span className="text-muted-foreground italic">Unassigned</span>
+                  </SelectItem>
+                  {bphEligibleDrivers.map((driver) => {
+                    const isPrimary = (driver as any).bph_primary;
+                    return (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{driver.name}</span>
+                          {isPrimary ? (
+                            <Badge variant="outline" className="h-4 px-1 text-[9px] bg-green-500/10 text-green-600 border-green-500/30">
+                              Primary
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="h-4 px-1 text-[9px] bg-green-100 text-green-500 border-green-300">
+                              Trained
+                            </Badge>
+                          )}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground italic">No driver assigned</p>
+            {assignedDriver && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className={cn(
+                    "px-3 py-1 rounded-md text-xs font-medium border cursor-pointer",
+                    getStatusBadge(assignedDriver.status).color,
+                    "bg-secondary/50 border-border hover:bg-secondary"
+                  )}>
+                    {getStatusBadge(assignedDriver.status).label}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-popover">
+                  {schedulerStatusOptions.map((option) => (
+                    <DropdownMenuItem
+                      key={option.value}
+                      onClick={() => handleStatusChange(assignedDriver.id, option.value)}
+                    >
+                      <span className={option.color}>{option.label}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+
+          {/* Time Editing (only when assigned) */}
+          {bphSchedule && editingBphTimes && (
+            <div className="flex items-end gap-3 p-3 rounded-lg bg-white border border-green-200">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Start Time</Label>
+                <Input
+                  type="time"
+                  value={bphTempStartTime}
+                  onChange={(e) => setBphTempStartTime(e.target.value)}
+                  className="h-9 w-32"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">End Time</Label>
+                <Input
+                  type="time"
+                  value={bphTempEndTime}
+                  onChange={(e) => setBphTempEndTime(e.target.value)}
+                  className="h-9 w-32"
+                />
+              </div>
+              <Button
+                size="sm"
+                onClick={() => {
+                  updateBphShiftTimes(bphTempStartTime, bphTempEndTime);
+                  setEditingBphTimes(false);
+                }}
+                className="gap-1"
+              >
+                <Save className="h-3 w-3" />
+                Save
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEditingBphTimes(false)}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
           )}
         </div>
       </div>
