@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, Pencil, Trash2, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, Home, Phone, User, Circle, UserCheck, UserX, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, Home, Phone, User, Circle, UserCheck, UserX, CheckCircle, XCircle, Train, Stethoscope } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -99,6 +99,7 @@ export function DriverManagement() {
   const [parsedImportRows, setParsedImportRows] = useState<ReturnType<typeof validateImportRow>[]>([]);
   const [cdlTab, setCdlTab] = useState<"cdl" | "non-cdl">("non-cdl");
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("active");
+  const [shuttleFilter, setShuttleFilter] = useState<"all" | "amtrak-primary" | "amtrak-trained" | "bph-primary" | "bph-trained">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "status">("name");
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -228,7 +229,15 @@ export function DriverManagement() {
       const matchesCdl = cdlTab === "cdl" ? (driver as any).has_cdl === true : (driver as any).has_cdl !== true;
       const matchesActive = activeFilter === "all" || 
         (activeFilter === "active" ? (driver as any).is_active !== false : (driver as any).is_active === false);
-      return matchesSearch && matchesCdl && matchesActive;
+      
+      // Shuttle filter
+      let matchesShuttle = true;
+      if (shuttleFilter === "amtrak-primary") matchesShuttle = (driver as any).amtrak_primary === true;
+      else if (shuttleFilter === "amtrak-trained") matchesShuttle = (driver as any).amtrak_trained === true;
+      else if (shuttleFilter === "bph-primary") matchesShuttle = (driver as any).bph_primary === true;
+      else if (shuttleFilter === "bph-trained") matchesShuttle = (driver as any).bph_trained === true;
+      
+      return matchesSearch && matchesCdl && matchesActive && matchesShuttle;
     })
     .sort((a, b) => {
       if (sortBy === "name") return a.name.localeCompare(b.name);
@@ -504,6 +513,54 @@ export function DriverManagement() {
                     className="w-full px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 rounded-sm transition-colors text-left"
                   >
                     Reset all filters
+                  </button>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          {/* Shuttle Filter */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 gap-2">
+                <Train className="h-4 w-4" />
+                Shuttle
+                {shuttleFilter !== "all" && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">1</Badge>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48 bg-popover">
+              <DropdownMenuLabel>Filter by Shuttle</DropdownMenuLabel>
+              <DropdownMenuRadioGroup value={shuttleFilter} onValueChange={(v) => { setShuttleFilter(v as typeof shuttleFilter); setCurrentPage(1); }}>
+                <DropdownMenuRadioItem value="all">All Drivers</DropdownMenuRadioItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioItem value="amtrak-primary">
+                  <Train className="h-3 w-3 mr-1.5 text-blue-500" />
+                  Amtrak – Primary
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="amtrak-trained">
+                  <Train className="h-3 w-3 mr-1.5 text-blue-400" />
+                  Amtrak – Trained
+                </DropdownMenuRadioItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioItem value="bph-primary">
+                  <Stethoscope className="h-3 w-3 mr-1.5 text-green-500" />
+                  BPH – Primary
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="bph-trained">
+                  <Stethoscope className="h-3 w-3 mr-1.5 text-green-400" />
+                  BPH – Trained
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+              {shuttleFilter !== "all" && (
+                <>
+                  <DropdownMenuSeparator />
+                  <button
+                    onClick={() => setShuttleFilter("all")}
+                    className="w-full px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 rounded-sm transition-colors text-left"
+                  >
+                    Clear filter
                   </button>
                 </>
               )}
@@ -801,6 +858,28 @@ export function DriverManagement() {
                             )}
                           </button>
                           {driver.name}
+                          {(driver as any).amtrak_primary && (
+                            <Badge variant="outline" className="h-4 px-1 text-[9px] bg-blue-500/10 text-blue-600 border-blue-500/30">
+                              <Train className="h-2.5 w-2.5 mr-0.5" />
+                              AMTRAK
+                            </Badge>
+                          )}
+                          {(driver as any).amtrak_trained && !(driver as any).amtrak_primary && (
+                            <Badge variant="outline" className="h-4 px-1 text-[9px] bg-blue-100 text-blue-500 border-blue-300">
+                              <Train className="h-2.5 w-2.5" />
+                            </Badge>
+                          )}
+                          {(driver as any).bph_primary && (
+                            <Badge variant="outline" className="h-4 px-1 text-[9px] bg-green-500/10 text-green-600 border-green-500/30">
+                              <Stethoscope className="h-2.5 w-2.5 mr-0.5" />
+                              BPH
+                            </Badge>
+                          )}
+                          {(driver as any).bph_trained && !(driver as any).bph_primary && (
+                            <Badge variant="outline" className="h-4 px-1 text-[9px] bg-green-100 text-green-500 border-green-300">
+                              <Stethoscope className="h-2.5 w-2.5" />
+                            </Badge>
+                          )}
                           {(driver as any).default_vehicle && (
                             <span title={`Take-home: ${(driver as any).default_vehicle}`}>
                               <Home className="h-3.5 w-3.5 text-primary" />

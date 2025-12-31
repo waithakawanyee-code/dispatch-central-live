@@ -13,6 +13,8 @@ import {
   Copy,
   Plus,
   X,
+  Train,
+  Stethoscope,
   MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -46,7 +48,30 @@ interface DriverProfileFormData {
   emergency_contact_name_2: string;
   emergency_contact_phone_2: string;
   emergency_contact_relationship_2: string;
+  // Shuttle Programs
+  amtrak_trained: boolean;
+  amtrak_primary: boolean;
+  bph_trained: boolean;
+  bph_primary: boolean;
+  amtrak_notes: string;
+  bph_notes: string;
 }
+
+// Amtrak fixed shifts
+const AMTRAK_SHIFTS = [
+  { number: 1, label: "Shift 1", start: "03:00", end: "11:00" },
+  { number: 2, label: "Shift 2", start: "11:00", end: "19:00" },
+  { number: 3, label: "Shift 3", start: "19:00", end: "03:00" },
+];
+
+interface ShuttleScheduleEntry {
+  day_of_week: number;
+  shift_number: number;
+  start_time: string | null;
+  end_time: string | null;
+}
+
+type ShuttleScheduleMap = Record<number, ShuttleScheduleEntry[]>; // day -> shifts
 
 interface DaySchedule {
   is_off: boolean;
@@ -93,7 +118,16 @@ const initialFormData: DriverProfileFormData = {
   emergency_contact_name_2: "",
   emergency_contact_phone_2: "",
   emergency_contact_relationship_2: "",
+  // Shuttle Programs
+  amtrak_trained: false,
+  amtrak_primary: false,
+  bph_trained: false,
+  bph_primary: false,
+  amtrak_notes: "",
+  bph_notes: "",
 };
+
+const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 interface DriverProfileDialogProps {
   driver: DriverRow | null;
@@ -166,6 +200,13 @@ export function DriverProfileDialog({
           emergency_contact_name_2: (driver as any).emergency_contact_name_2 || "",
           emergency_contact_phone_2: (driver as any).emergency_contact_phone_2 || "",
           emergency_contact_relationship_2: (driver as any).emergency_contact_relationship_2 || "",
+          // Shuttle Programs
+          amtrak_trained: (driver as any).amtrak_trained || false,
+          amtrak_primary: (driver as any).amtrak_primary || false,
+          bph_trained: (driver as any).bph_trained || false,
+          bph_primary: (driver as any).bph_primary || false,
+          amtrak_notes: (driver as any).amtrak_notes || "",
+          bph_notes: (driver as any).bph_notes || "",
         });
       } else {
         setFormData(initialFormData);
@@ -244,6 +285,13 @@ export function DriverProfileDialog({
           emergency_contact_name_2: formData.emergency_contact_name_2.trim() || null,
           emergency_contact_phone_2: formData.emergency_contact_phone_2.trim() || null,
           emergency_contact_relationship_2: formData.emergency_contact_relationship_2.trim() || null,
+          // Shuttle Programs
+          amtrak_trained: formData.amtrak_trained,
+          amtrak_primary: formData.amtrak_primary,
+          bph_trained: formData.bph_trained,
+          bph_primary: formData.bph_primary,
+          amtrak_notes: formData.amtrak_notes.trim() || null,
+          bph_notes: formData.bph_notes.trim() || null,
         } as any)
         .select("id")
         .single();
@@ -284,6 +332,13 @@ export function DriverProfileDialog({
           emergency_contact_name_2: formData.emergency_contact_name_2.trim() || null,
           emergency_contact_phone_2: formData.emergency_contact_phone_2.trim() || null,
           emergency_contact_relationship_2: formData.emergency_contact_relationship_2.trim() || null,
+          // Shuttle Programs
+          amtrak_trained: formData.amtrak_trained,
+          amtrak_primary: formData.amtrak_primary,
+          bph_trained: formData.bph_trained,
+          bph_primary: formData.bph_primary,
+          amtrak_notes: formData.amtrak_notes.trim() || null,
+          bph_notes: formData.bph_notes.trim() || null,
           updated_at: new Date().toISOString(),
         } as any)
         .eq("id", driver.id);
@@ -518,6 +573,123 @@ export function DriverProfileDialog({
                     placeholder="e.g., Sibling, Friend"
                   />
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Shuttle Programs */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Train className="h-4 w-4" />
+              Shuttle Programs
+            </h3>
+
+            {/* Amtrak */}
+            <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
+              <div className="flex items-center gap-2">
+                <Train className="h-4 w-4 text-blue-500" />
+                <span className="text-sm font-medium">Amtrak Shuttle</span>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="amtrak-trained" className="text-sm">Trained (Backup Eligible)</Label>
+                  <Switch
+                    id="amtrak-trained"
+                    checked={formData.amtrak_trained}
+                    onCheckedChange={(checked) => setFormData({ ...formData, amtrak_trained: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="amtrak-primary" className="text-sm">Primary Scheduled Driver</Label>
+                  <Switch
+                    id="amtrak-primary"
+                    checked={formData.amtrak_primary}
+                    onCheckedChange={(checked) => setFormData({ ...formData, amtrak_primary: checked, amtrak_trained: checked ? true : formData.amtrak_trained })}
+                  />
+                </div>
+
+                {formData.amtrak_primary && (
+                  <div className="p-2 rounded bg-blue-500/10 border border-blue-500/20">
+                    <p className="text-xs text-blue-600 mb-2">Fixed Amtrak Shifts:</p>
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      {AMTRAK_SHIFTS.map((shift) => (
+                        <div key={shift.number} className="flex items-center gap-2">
+                          <span className="font-mono">{shift.label}:</span>
+                          <span>{shift.start} – {shift.end}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2 italic">
+                      Shift assignments are managed in the Scheduler.
+                    </p>
+                  </div>
+                )}
+
+                {(formData.amtrak_trained || formData.amtrak_primary) && (
+                  <div className="space-y-2">
+                    <Label htmlFor="amtrak-notes" className="text-xs">Program Notes</Label>
+                    <Textarea
+                      id="amtrak-notes"
+                      value={formData.amtrak_notes}
+                      onChange={(e) => setFormData({ ...formData, amtrak_notes: e.target.value })}
+                      placeholder="Route info, station rules, special instructions..."
+                      rows={2}
+                      className="text-sm"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* BPH */}
+            <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
+              <div className="flex items-center gap-2">
+                <Stethoscope className="h-4 w-4 text-green-500" />
+                <span className="text-sm font-medium">Boston Public Health (BPH)</span>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="bph-trained" className="text-sm">Trained (Backup Eligible)</Label>
+                  <Switch
+                    id="bph-trained"
+                    checked={formData.bph_trained}
+                    onCheckedChange={(checked) => setFormData({ ...formData, bph_trained: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="bph-primary" className="text-sm">Primary Scheduled Driver</Label>
+                  <Switch
+                    id="bph-primary"
+                    checked={formData.bph_primary}
+                    onCheckedChange={(checked) => setFormData({ ...formData, bph_primary: checked, bph_trained: checked ? true : formData.bph_trained })}
+                  />
+                </div>
+
+                {formData.bph_primary && (
+                  <p className="text-xs text-muted-foreground italic p-2 rounded bg-green-500/10 border border-green-500/20">
+                    BPH uses custom shift times per day. Configure in the Scheduler.
+                  </p>
+                )}
+
+                {(formData.bph_trained || formData.bph_primary) && (
+                  <div className="space-y-2">
+                    <Label htmlFor="bph-notes" className="text-xs">Program Notes</Label>
+                    <Textarea
+                      id="bph-notes"
+                      value={formData.bph_notes}
+                      onChange={(e) => setFormData({ ...formData, bph_notes: e.target.value })}
+                      placeholder="Route info, pickup locations, special instructions..."
+                      rows={2}
+                      className="text-sm"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
