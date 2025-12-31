@@ -10,6 +10,7 @@ import { ScheduleManagement } from "@/components/admin/ScheduleManagement";
 import { TimePunchReport } from "@/components/admin/TimePunchReport";
 import { SettingsManagement } from "@/components/admin/SettingsManagement";
 import { IssueCatalogManagement } from "@/components/admin/IssueCatalogManagement";
+import { ShuttleSummaryWidget } from "@/components/admin/ShuttleSummaryWidget";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 
@@ -60,6 +61,11 @@ const Admin = () => {
       </header>
 
       <main className="p-4 max-w-5xl mx-auto">
+        {/* Shuttle Summary Widget at top of Admin */}
+        <div className="mb-6">
+          <ShuttleSummaryWidget />
+        </div>
+
         <Tabs defaultValue="drivers" className="w-full">
           <TabsList className="mb-6">
             <TabsTrigger value="drivers" className="flex items-center gap-2">
