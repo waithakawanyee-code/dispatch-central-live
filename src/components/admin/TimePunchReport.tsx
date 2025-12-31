@@ -588,7 +588,7 @@ export function TimePunchReport() {
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-lg font-semibold">
           <Clock className="h-5 w-5" />
-          Time Punch Report
+          Time Clock
         </h3>
         <div className="flex gap-2">
           <Button onClick={openAddDialog} variant="default" size="sm">
