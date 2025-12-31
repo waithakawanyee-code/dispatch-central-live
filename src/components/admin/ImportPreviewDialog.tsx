@@ -87,6 +87,16 @@ export function validateImportRow(row: Record<string, string>, rowNumber: number
     warnings.push("CDL should be 'yes' or 'no'");
   }
 
+  // Shuttle program validation
+  const shuttleFields = ["Amtrak_Primary", "Amtrak_Trained", "BPH_Primary", "BPH_Trained"];
+  for (const field of shuttleFields) {
+    const val = row[field]?.toLowerCase();
+    if (val && !["yes", "no", ""].includes(val)) {
+      warnings.push(`${field} should be 'yes' or 'no'`);
+      break;
+    }
+  }
+
   return {
     rowNumber,
     data: row,
@@ -151,9 +161,9 @@ export function ImportPreviewDialog({
                 <TableHead className="w-12">Status</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Code</TableHead>
-                <TableHead>Phone</TableHead>
+                <TableHead>Shuttle</TableHead>
                 <TableHead>CDL</TableHead>
-                <TableHead>Emergency 1</TableHead>
+                <TableHead>Phone</TableHead>
                 <TableHead>Issues</TableHead>
               </TableRow>
             </TableHeader>
@@ -187,7 +197,25 @@ export function ImportPreviewDialog({
                   <TableCell className="font-mono text-xs">
                     {row.data.Code?.slice(0, 4).toUpperCase() || "-"}
                   </TableCell>
-                  <TableCell>{row.data.Phone || "-"}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {row.data.Amtrak_Primary?.toLowerCase() === "yes" && (
+                        <Badge variant="default" className="text-xs bg-blue-600">AMT-P</Badge>
+                      )}
+                      {row.data.Amtrak_Trained?.toLowerCase() === "yes" && (
+                        <Badge variant="outline" className="text-xs border-blue-500 text-blue-600">AMT-T</Badge>
+                      )}
+                      {row.data.BPH_Primary?.toLowerCase() === "yes" && (
+                        <Badge variant="default" className="text-xs bg-green-600">BPH-P</Badge>
+                      )}
+                      {row.data.BPH_Trained?.toLowerCase() === "yes" && (
+                        <Badge variant="outline" className="text-xs border-green-500 text-green-600">BPH-T</Badge>
+                      )}
+                      {!row.data.Amtrak_Primary && !row.data.Amtrak_Trained && !row.data.BPH_Primary && !row.data.BPH_Trained && (
+                        <span className="text-muted-foreground text-xs">-</span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     {row.data.CDL?.toLowerCase() === "yes" || row.data.CDL?.toLowerCase() === "cdl" ? (
                       <Badge variant="secondary" className="text-xs">CDL</Badge>
@@ -196,7 +224,7 @@ export function ImportPreviewDialog({
                     )}
                   </TableCell>
                   <TableCell className="text-xs">
-                    {row.data.Emergency1_Name || "-"}
+                    {row.data.Phone || "-"}
                   </TableCell>
                   <TableCell>
                     {(row.errors.length > 0 || row.warnings.length > 0) && (
