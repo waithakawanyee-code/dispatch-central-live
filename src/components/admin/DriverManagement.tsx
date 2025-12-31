@@ -275,9 +275,9 @@ export function DriverManagement() {
   };
 
   const handleDownloadTemplate = () => {
-    const template = "Name,Code,Phone,Email,Address,Active,CDL,Emergency1_Name,Emergency1_Phone,Emergency1_Relationship,Emergency2_Name,Emergency2_Phone,Emergency2_Relationship,Mon_In,Mon_Out,Tue_In,Tue_Out,Wed_In,Wed_Out,Thu_In,Thu_Out,Fri_In,Fri_Out,Sat_In,Sat_Out,Sun_In,Sun_Out\nJohn Doe,JDOE,555-0123,john@example.com,123 Main St,yes,yes,Jane Doe,555-0199,Spouse,Bob Smith,555-0188,Brother,08:00,17:00,ANY,,08:00,17:00,08:00,17:00,08:00,17:00,OFF,,OFF,";
+    const template = "Name,Code,Phone,Email,Address,Active,CDL,Amtrak_Primary,Amtrak_Trained,BPH_Primary,BPH_Trained,Emergency1_Name,Emergency1_Phone,Emergency1_Relationship,Emergency2_Name,Emergency2_Phone,Emergency2_Relationship,Mon_In,Mon_Out,Tue_In,Tue_Out,Wed_In,Wed_Out,Thu_In,Thu_Out,Fri_In,Fri_Out,Sat_In,Sat_Out,Sun_In,Sun_Out\nJohn Doe,JDOE,555-0123,john@example.com,123 Main St,yes,yes,no,no,no,no,Jane Doe,555-0199,Spouse,Bob Smith,555-0188,Brother,08:00,17:00,ANY,,08:00,17:00,08:00,17:00,08:00,17:00,OFF,,OFF,";
     downloadCSV(template, "drivers-template.csv");
-    toast({ title: "Template Downloaded", description: "Use ANY for open availability, OFF for days off, or HH:MM times" });
+    toast({ title: "Template Downloaded", description: "Use ANY for open availability, OFF for days off, HH:MM times. Shuttle columns: yes/no" });
   };
 
   const dayMapping: Record<string, number> = {
@@ -327,6 +327,10 @@ export function DriverManagement() {
             address: row.Address?.trim() || null,
             is_active: row.Active?.toLowerCase() !== "no" && row.Active?.toLowerCase() !== "inactive",
             has_cdl: row.CDL?.toLowerCase() === "yes" || row.CDL?.toLowerCase() === "cdl",
+            amtrak_primary: row.Amtrak_Primary?.toLowerCase() === "yes",
+            amtrak_trained: row.Amtrak_Trained?.toLowerCase() === "yes",
+            bph_primary: row.BPH_Primary?.toLowerCase() === "yes",
+            bph_trained: row.BPH_Trained?.toLowerCase() === "yes",
             emergency_contact_name: row.Emergency1_Name?.trim() || null,
             emergency_contact_phone: row.Emergency1_Phone?.trim() || null,
             emergency_contact_relationship: row.Emergency1_Relationship?.trim() || null,
