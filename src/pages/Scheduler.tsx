@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Clock, UserCheck, UserX } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Clock, UserCheck, UserX, Train, Stethoscope, Users, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -27,12 +28,43 @@ interface Schedule {
   is_off: boolean;
 }
 
+interface ShuttleSchedule {
+  id: string;
+  driver_id: string;
+  program: "amtrak" | "bph";
+  day_of_week: number;
+  shift_number: number;
+  start_time: string | null;
+  end_time: string | null;
+}
+
 interface DriverWithSchedule {
   id: string;
   name: string;
   status: DriverStatus;
   schedule: Schedule | null;
+  amtrak_trained?: boolean;
+  amtrak_primary?: boolean;
+  bph_trained?: boolean;
+  bph_primary?: boolean;
 }
+
+interface DriverWithShuttleSchedule {
+  id: string;
+  name: string;
+  status: DriverStatus;
+  shuttleSchedules: ShuttleSchedule[];
+  amtrak_trained?: boolean;
+  amtrak_primary?: boolean;
+  bph_trained?: boolean;
+  bph_primary?: boolean;
+}
+
+const AMTRAK_SHIFTS = [
+  { number: 1, label: "Shift 1", start: "03:00", end: "11:00" },
+  { number: 2, label: "Shift 2", start: "11:00", end: "19:00" },
+  { number: 3, label: "Shift 3", start: "19:00", end: "03:00" },
+];
 
 const schedulerStatusOptions: { value: DriverStatus; label: string; color: string }[] = [
   { value: "off", label: "Off", color: "text-muted-foreground" },
@@ -44,9 +76,12 @@ const schedulerStatusOptions: { value: DriverStatus; label: string; color: strin
 const Scheduler = () => {
   const { drivers, updateDriverStatus } = useDispatchData();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [shuttleSchedules, setShuttleSchedules] = useState<ShuttleSchedule[]>([]);
   const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<DriverStatus | "all">("all");
+  const [scheduleTab, setScheduleTab] = useState<"all" | "black-car" | "amtrak" | "bph">("all");
+  const [showTrainedCoverage, setShowTrainedCoverage] = useState(false);
 
   useEffect(() => {
     fetchAllSchedules();
@@ -54,13 +89,20 @@ const Scheduler = () => {
 
   const fetchAllSchedules = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("driver_schedules")
-      .select("*");
+    
+    const [driverSchedulesRes, shuttleSchedulesRes] = await Promise.all([
+      supabase.from("driver_schedules").select("*"),
+      supabase.from("shuttle_schedules").select("*"),
+    ]);
 
-    if (!error && data) {
-      setSchedules(data);
+    if (!driverSchedulesRes.error && driverSchedulesRes.data) {
+      setSchedules(driverSchedulesRes.data);
     }
+    
+    if (!shuttleSchedulesRes.error && shuttleSchedulesRes.data) {
+      setShuttleSchedules(shuttleSchedulesRes.data as ShuttleSchedule[]);
+    }
+    
     setLoading(false);
   };
 
@@ -87,6 +129,34 @@ const Scheduler = () => {
         name: driver.name,
         status: driver.status,
         schedule: schedule || null,
+        amtrak_trained: (driver as any).amtrak_trained,
+        amtrak_primary: (driver as any).amtrak_primary,
+        bph_trained: (driver as any).bph_trained,
+        bph_primary: (driver as any).bph_primary,
+      };
+    });
+  };
+
+  const getDriversWithShuttleSchedules = (date: Date, program: "amtrak" | "bph"): DriverWithShuttleSchedule[] => {
+    const dayOfWeek = getDayOfWeek(date);
+    const relevantDrivers = drivers.filter(d => {
+      if (program === "amtrak") return (d as any).amtrak_primary || (d as any).amtrak_trained;
+      return (d as any).bph_primary || (d as any).bph_trained;
+    });
+    
+    return relevantDrivers.map(driver => {
+      const driverShuttleSchedules = shuttleSchedules.filter(
+        s => s.driver_id === driver.id && s.program === program && s.day_of_week === dayOfWeek
+      );
+      return {
+        id: driver.id,
+        name: driver.name,
+        status: driver.status,
+        shuttleSchedules: driverShuttleSchedules,
+        amtrak_trained: (driver as any).amtrak_trained,
+        amtrak_primary: (driver as any).amtrak_primary,
+        bph_trained: (driver as any).bph_trained,
+        bph_primary: (driver as any).bph_primary,
       };
     });
   };
@@ -116,11 +186,41 @@ const Scheduler = () => {
   const canGoForward = selectedDate < addDays(startOfDay(new Date()), 6);
 
   const driversWithSchedules = getDriversWithSchedules(selectedDate);
-  
-  // Apply status filter
-  const filteredDrivers = statusFilter === "all" 
-    ? driversWithSchedules 
-    : driversWithSchedules.filter(d => d.status === statusFilter);
+  const amtrakDrivers = getDriversWithShuttleSchedules(selectedDate, "amtrak");
+  const bphDrivers = getDriversWithShuttleSchedules(selectedDate, "bph");
+
+  // Filter based on tab
+  const filteredDrivers = useMemo(() => {
+    let result = driversWithSchedules;
+    
+    if (scheduleTab === "black-car") {
+      // Black car only: exclude primary shuttle drivers
+      result = result.filter(d => !d.amtrak_primary && !d.bph_primary);
+    } else if (scheduleTab === "amtrak") {
+      // Amtrak primary drivers
+      result = result.filter(d => d.amtrak_primary);
+    } else if (scheduleTab === "bph") {
+      // BPH primary drivers  
+      result = result.filter(d => d.bph_primary);
+    }
+    
+    // Apply status filter
+    if (statusFilter !== "all") {
+      result = result.filter(d => d.status === statusFilter);
+    }
+    
+    return result;
+  }, [driversWithSchedules, scheduleTab, statusFilter]);
+
+  // Trained coverage drivers (for Amtrak/BPH tabs)
+  const trainedCoverageDrivers = useMemo(() => {
+    if (scheduleTab === "amtrak") {
+      return driversWithSchedules.filter(d => d.amtrak_trained && !d.amtrak_primary);
+    } else if (scheduleTab === "bph") {
+      return driversWithSchedules.filter(d => d.bph_trained && !d.bph_primary);
+    }
+    return [];
+  }, [driversWithSchedules, scheduleTab]);
   
   const availableDrivers = filteredDrivers.filter(d => d.schedule && !d.schedule.is_off);
   const offDrivers = filteredDrivers.filter(d => d.schedule?.is_off);
@@ -128,6 +228,210 @@ const Scheduler = () => {
 
   // Generate week days for quick navigation
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfDay(new Date()), i));
+
+  // Shuttle counts for tab badges
+  const amtrakPrimaryCount = drivers.filter(d => (d as any).amtrak_primary).length;
+  const bphPrimaryCount = drivers.filter(d => (d as any).bph_primary).length;
+
+  const renderDriverRow = (driver: DriverWithSchedule, showScheduleTime = true) => (
+    <div key={driver.id} className="flex items-center justify-between px-4 py-3">
+      <div className="flex items-center gap-3">
+        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+          <span className="text-sm font-medium text-primary">
+            {driver.name.charAt(0)}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{driver.name}</span>
+          {driver.amtrak_primary && (
+            <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-blue-500/10 text-blue-600 border-blue-500/30">
+              <Train className="h-3 w-3 mr-0.5" />
+              AMTRAK
+            </Badge>
+          )}
+          {driver.amtrak_trained && !driver.amtrak_primary && (
+            <Badge variant="outline" className="h-5 px-1 text-[10px] bg-blue-100 text-blue-500 border-blue-300" title="Amtrak Trained">
+              <Train className="h-3 w-3" />
+            </Badge>
+          )}
+          {driver.bph_primary && (
+            <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-green-500/10 text-green-600 border-green-500/30">
+              <Stethoscope className="h-3 w-3 mr-0.5" />
+              BPH
+            </Badge>
+          )}
+          {driver.bph_trained && !driver.bph_primary && (
+            <Badge variant="outline" className="h-5 px-1 text-[10px] bg-green-100 text-green-500 border-green-300" title="BPH Trained">
+              <Stethoscope className="h-3 w-3" />
+            </Badge>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-4">
+        {showScheduleTime && driver.schedule && !driver.schedule.is_off && (
+          <div className="flex items-center gap-2 text-sm">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span>
+              {formatTime(driver.schedule?.start_time)} - {formatTime(driver.schedule?.end_time)}
+            </span>
+          </div>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className={cn(
+              "px-3 py-1 rounded-md text-xs font-medium border cursor-pointer",
+              getStatusBadge(driver.status).color,
+              "bg-secondary/50 border-border hover:bg-secondary"
+            )}>
+              {getStatusBadge(driver.status).label}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-popover">
+            {schedulerStatusOptions.map((option) => (
+              <DropdownMenuItem
+                key={option.value}
+                onClick={() => handleStatusChange(driver.id, option.value)}
+                className={cn(
+                  "cursor-pointer",
+                  driver.status === option.value && "bg-secondary"
+                )}
+              >
+                <span className={option.color}>{option.label}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+
+  const renderAmtrakShifts = () => {
+    const dayOfWeek = getDayOfWeek(selectedDate);
+    
+    return (
+      <div className="space-y-4">
+        {AMTRAK_SHIFTS.map((shift) => {
+          const assignedDriver = amtrakDrivers.find(d => 
+            d.shuttleSchedules.some(s => s.shift_number === shift.number)
+          );
+          
+          return (
+            <div key={shift.number} className="rounded-lg border border-blue-200 bg-blue-50/50">
+              <div className="border-b border-blue-200 px-4 py-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Train className="h-4 w-4 text-blue-600" />
+                  <span className="font-medium text-blue-800">Amtrak – {shift.label}</span>
+                </div>
+                <span className="text-sm text-blue-600 font-mono">
+                  {shift.start} – {shift.end}
+                </span>
+              </div>
+              <div className="p-4">
+                {assignedDriver ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-blue-200 flex items-center justify-center">
+                        <span className="text-sm font-medium text-blue-700">
+                          {assignedDriver.name.charAt(0)}
+                        </span>
+                      </div>
+                      <span className="font-medium">{assignedDriver.name}</span>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className={cn(
+                          "px-3 py-1 rounded-md text-xs font-medium border cursor-pointer",
+                          getStatusBadge(assignedDriver.status).color,
+                          "bg-secondary/50 border-border hover:bg-secondary"
+                        )}>
+                          {getStatusBadge(assignedDriver.status).label}
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-popover">
+                        {schedulerStatusOptions.map((option) => (
+                          <DropdownMenuItem
+                            key={option.value}
+                            onClick={() => handleStatusChange(assignedDriver.id, option.value)}
+                          >
+                            <span className={option.color}>{option.label}</span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No driver assigned</p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderBphShift = () => {
+    const dayOfWeek = getDayOfWeek(selectedDate);
+    const assignedDrivers = bphDrivers.filter(d => d.shuttleSchedules.length > 0);
+    const scheduleInfo = assignedDrivers[0]?.shuttleSchedules[0];
+    
+    return (
+      <div className="rounded-lg border border-green-200 bg-green-50/50">
+        <div className="border-b border-green-200 px-4 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Stethoscope className="h-4 w-4 text-green-600" />
+            <span className="font-medium text-green-800">BPH Shuttle</span>
+          </div>
+          {scheduleInfo && (
+            <span className="text-sm text-green-600 font-mono">
+              {formatTime(scheduleInfo.start_time)} – {formatTime(scheduleInfo.end_time)}
+            </span>
+          )}
+        </div>
+        <div className="p-4">
+          {assignedDrivers.length > 0 ? (
+            <div className="space-y-2">
+              {assignedDrivers.map(driver => (
+                <div key={driver.id} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-green-200 flex items-center justify-center">
+                      <span className="text-sm font-medium text-green-700">
+                        {driver.name.charAt(0)}
+                      </span>
+                    </div>
+                    <span className="font-medium">{driver.name}</span>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className={cn(
+                        "px-3 py-1 rounded-md text-xs font-medium border cursor-pointer",
+                        getStatusBadge(driver.status).color,
+                        "bg-secondary/50 border-border hover:bg-secondary"
+                      )}>
+                        {getStatusBadge(driver.status).label}
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-popover">
+                      {schedulerStatusOptions.map((option) => (
+                        <DropdownMenuItem
+                          key={option.value}
+                          onClick={() => handleStatusChange(driver.id, option.value)}
+                        >
+                          <span className={option.color}>{option.label}</span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">No driver assigned</p>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -202,8 +506,48 @@ const Scheduler = () => {
             ))}
           </div>
 
+          {/* Schedule Type Tabs */}
+          <Tabs value={scheduleTab} onValueChange={(v) => setScheduleTab(v as typeof scheduleTab)} className="mt-4">
+            <TabsList className="w-full justify-start">
+              <TabsTrigger value="all" className="gap-2">
+                All
+              </TabsTrigger>
+              <TabsTrigger value="black-car" className="gap-2">
+                Black Car
+              </TabsTrigger>
+              <TabsTrigger value="amtrak" className="gap-2">
+                <Train className="h-4 w-4" />
+                Amtrak
+                {amtrakPrimaryCount > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{amtrakPrimaryCount}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="bph" className="gap-2">
+                <Stethoscope className="h-4 w-4" />
+                BPH
+                {bphPrimaryCount > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{bphPrimaryCount}</Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {/* Show Trained Coverage Toggle (for shuttle tabs) */}
+          {(scheduleTab === "amtrak" || scheduleTab === "bph") && trainedCoverageDrivers.length > 0 && (
+            <Button
+              variant={showTrainedCoverage ? "default" : "outline"}
+              size="sm"
+              className="mt-3 gap-2"
+              onClick={() => setShowTrainedCoverage(!showTrainedCoverage)}
+            >
+              {showTrainedCoverage ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              <Users className="h-4 w-4" />
+              {showTrainedCoverage ? "Hide" : "Show"} Trained Coverage ({trainedCoverageDrivers.length})
+            </Button>
+          )}
+
           {/* Status Legend & Filter - Sticky */}
-          <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
+          <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 shadow-sm mt-4">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mr-2">Filter:</span>
             <button
               onClick={() => setStatusFilter("all")}
@@ -247,205 +591,205 @@ const Scheduler = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Summary Stats */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="flex items-center gap-2 text-status-available">
-                  <UserCheck className="h-5 w-5" />
-                  <span className="font-semibold">{availableDrivers.length}</span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">Scheduled</p>
-              </div>
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="flex items-center gap-2 text-status-offline">
-                  <UserX className="h-5 w-5" />
-                  <span className="font-semibold">{offDrivers.length}</span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">Day Off</p>
-              </div>
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Calendar className="h-5 w-5" />
-                  <span className="font-semibold">{unscheduledDrivers.length}</span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">Not Set</p>
-              </div>
-            </div>
-
-            {/* Available Drivers */}
-            {availableDrivers.length > 0 && (
-              <div className="rounded-lg border border-border bg-card">
-                <div className="border-b border-border bg-status-available/10 px-4 py-3">
-                  <h3 className="font-semibold flex items-center gap-2 text-status-available">
-                    <UserCheck className="h-4 w-4" />
-                    Scheduled Drivers ({availableDrivers.length})
-                  </h3>
-                </div>
-                <div className="divide-y divide-border">
-                  {availableDrivers.map(driver => (
-                    <div key={driver.id} className="flex items-center justify-between px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-                          <span className="text-sm font-medium text-primary">
-                            {driver.name.charAt(0)}
-                          </span>
-                        </div>
-                        <span className="font-medium">{driver.name}</span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span>
-                            {formatTime(driver.schedule?.start_time)} - {formatTime(driver.schedule?.end_time)}
-                          </span>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className={cn(
-                              "px-3 py-1 rounded-md text-xs font-medium border cursor-pointer",
-                              getStatusBadge(driver.status).color,
-                              "bg-secondary/50 border-border hover:bg-secondary"
-                            )}>
-                              {getStatusBadge(driver.status).label}
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {schedulerStatusOptions.map((option) => (
-                              <DropdownMenuItem
-                                key={option.value}
-                                onClick={() => handleStatusChange(driver.id, option.value)}
-                                className={cn(
-                                  "cursor-pointer",
-                                  driver.status === option.value && "bg-secondary"
-                                )}
-                              >
-                                <span className={option.color}>{option.label}</span>
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+            {/* Shuttle-specific views */}
+            {scheduleTab === "amtrak" && (
+              <>
+                {renderAmtrakShifts()}
+                
+                {/* Trained Coverage Drivers */}
+                {showTrainedCoverage && trainedCoverageDrivers.length > 0 && (
+                  <div className="rounded-lg border border-blue-100 bg-blue-50/30">
+                    <div className="border-b border-blue-100 bg-blue-100/50 px-4 py-3">
+                      <h3 className="font-semibold flex items-center gap-2 text-blue-700">
+                        <Users className="h-4 w-4" />
+                        Trained Backup Drivers ({trainedCoverageDrivers.length})
+                      </h3>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div className="divide-y divide-blue-100">
+                      {trainedCoverageDrivers.map(driver => renderDriverRow(driver, false))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
-            {/* Off Drivers */}
-            {offDrivers.length > 0 && (
-              <div className="rounded-lg border border-border bg-card">
-                <div className="border-b border-border bg-status-offline/10 px-4 py-3">
-                  <h3 className="font-semibold flex items-center gap-2 text-status-offline">
-                    <UserX className="h-4 w-4" />
-                    Day Off ({offDrivers.length})
-                  </h3>
-                </div>
-                <div className="divide-y divide-border">
-                  {offDrivers.map(driver => (
-                    <div key={driver.id} className="flex items-center justify-between px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                          <span className="text-sm font-medium text-muted-foreground">
-                            {driver.name.charAt(0)}
-                          </span>
-                        </div>
-                        <span className="font-medium text-muted-foreground">{driver.name}</span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <Badge variant="secondary">Day Off</Badge>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className={cn(
-                              "px-3 py-1 rounded-md text-xs font-medium border cursor-pointer",
-                              getStatusBadge(driver.status).color,
-                              "bg-secondary/50 border-border hover:bg-secondary"
-                            )}>
-                              {getStatusBadge(driver.status).label}
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {schedulerStatusOptions.map((option) => (
-                              <DropdownMenuItem
-                                key={option.value}
-                                onClick={() => handleStatusChange(driver.id, option.value)}
-                                className={cn(
-                                  "cursor-pointer",
-                                  driver.status === option.value && "bg-secondary"
-                                )}
-                              >
-                                <span className={option.color}>{option.label}</span>
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+            {scheduleTab === "bph" && (
+              <>
+                {renderBphShift()}
+                
+                {/* Trained Coverage Drivers */}
+                {showTrainedCoverage && trainedCoverageDrivers.length > 0 && (
+                  <div className="rounded-lg border border-green-100 bg-green-50/30">
+                    <div className="border-b border-green-100 bg-green-100/50 px-4 py-3">
+                      <h3 className="font-semibold flex items-center gap-2 text-green-700">
+                        <Users className="h-4 w-4" />
+                        Trained Backup Drivers ({trainedCoverageDrivers.length})
+                      </h3>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div className="divide-y divide-green-100">
+                      {trainedCoverageDrivers.map(driver => renderDriverRow(driver, false))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
-            {/* Unscheduled Drivers */}
-            {unscheduledDrivers.length > 0 && (
-              <div className="rounded-lg border border-border bg-card">
-                <div className="border-b border-border bg-secondary/50 px-4 py-3">
-                  <h3 className="font-semibold flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    No Schedule Set ({unscheduledDrivers.length})
-                  </h3>
-                </div>
-                <div className="divide-y divide-border">
-                  {unscheduledDrivers.map(driver => (
-                    <div key={driver.id} className="flex items-center justify-between px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                          <span className="text-sm font-medium text-muted-foreground">
-                            {driver.name.charAt(0)}
-                          </span>
-                        </div>
-                        <span className="font-medium text-muted-foreground">{driver.name}</span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm text-muted-foreground italic">Not scheduled</span>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className={cn(
-                              "px-3 py-1 rounded-md text-xs font-medium border cursor-pointer",
-                              getStatusBadge(driver.status).color,
-                              "bg-secondary/50 border-border hover:bg-secondary"
-                            )}>
-                              {getStatusBadge(driver.status).label}
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {schedulerStatusOptions.map((option) => (
-                              <DropdownMenuItem
-                                key={option.value}
-                                onClick={() => handleStatusChange(driver.id, option.value)}
-                                className={cn(
-                                  "cursor-pointer",
-                                  driver.status === option.value && "bg-secondary"
-                                )}
-                              >
-                                <span className={option.color}>{option.label}</span>
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+            {/* Regular schedule views (All & Black Car tabs) */}
+            {(scheduleTab === "all" || scheduleTab === "black-car") && (
+              <>
+                {/* Summary Stats */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <div className="flex items-center gap-2 text-status-available">
+                      <UserCheck className="h-5 w-5" />
+                      <span className="font-semibold">{availableDrivers.length}</span>
                     </div>
-                  ))}
+                    <p className="text-sm text-muted-foreground mt-1">Scheduled</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <div className="flex items-center gap-2 text-status-offline">
+                      <UserX className="h-5 w-5" />
+                      <span className="font-semibold">{offDrivers.length}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">Day Off</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-5 w-5" />
+                      <span className="font-semibold">{unscheduledDrivers.length}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">Not Set</p>
+                  </div>
                 </div>
-              </div>
+
+                {/* Available Drivers */}
+                {availableDrivers.length > 0 && (
+                  <div className="rounded-lg border border-border bg-card">
+                    <div className="border-b border-border bg-status-available/10 px-4 py-3">
+                      <h3 className="font-semibold flex items-center gap-2 text-status-available">
+                        <UserCheck className="h-4 w-4" />
+                        Scheduled Drivers ({availableDrivers.length})
+                      </h3>
+                    </div>
+                    <div className="divide-y divide-border">
+                      {availableDrivers.map(driver => renderDriverRow(driver))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Off Drivers */}
+                {offDrivers.length > 0 && (
+                  <div className="rounded-lg border border-border bg-card">
+                    <div className="border-b border-border bg-status-offline/10 px-4 py-3">
+                      <h3 className="font-semibold flex items-center gap-2 text-status-offline">
+                        <UserX className="h-4 w-4" />
+                        Day Off ({offDrivers.length})
+                      </h3>
+                    </div>
+                    <div className="divide-y divide-border">
+                      {offDrivers.map(driver => (
+                        <div key={driver.id} className="flex items-center justify-between px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                              <span className="text-sm font-medium text-muted-foreground">
+                                {driver.name.charAt(0)}
+                              </span>
+                            </div>
+                            <span className="font-medium text-muted-foreground">{driver.name}</span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <Badge variant="secondary">Day Off</Badge>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button className={cn(
+                                  "px-3 py-1 rounded-md text-xs font-medium border cursor-pointer",
+                                  getStatusBadge(driver.status).color,
+                                  "bg-secondary/50 border-border hover:bg-secondary"
+                                )}>
+                                  {getStatusBadge(driver.status).label}
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="bg-popover">
+                                {schedulerStatusOptions.map((option) => (
+                                  <DropdownMenuItem
+                                    key={option.value}
+                                    onClick={() => handleStatusChange(driver.id, option.value)}
+                                    className={cn(
+                                      "cursor-pointer",
+                                      driver.status === option.value && "bg-secondary"
+                                    )}
+                                  >
+                                    <span className={option.color}>{option.label}</span>
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Unscheduled Drivers */}
+                {unscheduledDrivers.length > 0 && (
+                  <div className="rounded-lg border border-border bg-card">
+                    <div className="border-b border-border bg-secondary/50 px-4 py-3">
+                      <h3 className="font-semibold flex items-center gap-2 text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        No Schedule Set ({unscheduledDrivers.length})
+                      </h3>
+                    </div>
+                    <div className="divide-y divide-border">
+                      {unscheduledDrivers.map(driver => (
+                        <div key={driver.id} className="flex items-center justify-between px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                              <span className="text-sm font-medium text-muted-foreground">
+                                {driver.name.charAt(0)}
+                              </span>
+                            </div>
+                            <span className="font-medium text-muted-foreground">{driver.name}</span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-sm text-muted-foreground italic">Not scheduled</span>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button className={cn(
+                                  "px-3 py-1 rounded-md text-xs font-medium border cursor-pointer",
+                                  getStatusBadge(driver.status).color,
+                                  "bg-secondary/50 border-border hover:bg-secondary"
+                                )}>
+                                  {getStatusBadge(driver.status).label}
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="bg-popover">
+                                {schedulerStatusOptions.map((option) => (
+                                  <DropdownMenuItem
+                                    key={option.value}
+                                    onClick={() => handleStatusChange(driver.id, option.value)}
+                                    className={cn(
+                                      "cursor-pointer",
+                                      driver.status === option.value && "bg-secondary"
+                                    )}
+                                  >
+                                    <span className={option.color}>{option.label}</span>
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
-            {drivers.length === 0 && (
-              <div className="rounded-lg border border-border bg-card p-8 text-center">
-                <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="font-semibold mb-2">No Drivers</h3>
-                <p className="text-sm text-muted-foreground">
-                  Add drivers in the admin panel to see their schedules here.
-                </p>
+            {filteredDrivers.length === 0 && scheduleTab !== "amtrak" && scheduleTab !== "bph" && (
+              <div className="text-center py-12 text-muted-foreground">
+                No drivers found for this view.
               </div>
             )}
           </div>

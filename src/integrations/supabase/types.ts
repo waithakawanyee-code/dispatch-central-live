@@ -91,6 +91,12 @@ export type Database = {
       drivers: {
         Row: {
           address: string | null
+          amtrak_notes: string | null
+          amtrak_primary: boolean
+          amtrak_trained: boolean
+          bph_notes: string | null
+          bph_primary: boolean
+          bph_trained: boolean
           code: string | null
           created_at: string
           default_vehicle: string | null
@@ -114,6 +120,12 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          amtrak_notes?: string | null
+          amtrak_primary?: boolean
+          amtrak_trained?: boolean
+          bph_notes?: string | null
+          bph_primary?: boolean
+          bph_trained?: boolean
           code?: string | null
           created_at?: string
           default_vehicle?: string | null
@@ -137,6 +149,12 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          amtrak_notes?: string | null
+          amtrak_primary?: boolean
+          amtrak_trained?: boolean
+          bph_notes?: string | null
+          bph_primary?: boolean
+          bph_trained?: boolean
           code?: string | null
           created_at?: string
           default_vehicle?: string | null
@@ -295,6 +313,50 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      shuttle_schedules: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          driver_id: string
+          end_time: string | null
+          id: string
+          program: string
+          shift_number: number
+          start_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          driver_id: string
+          end_time?: string | null
+          id?: string
+          program: string
+          shift_number?: number
+          start_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          driver_id?: string
+          end_time?: string | null
+          id?: string
+          program?: string
+          shift_number?: number
+          start_time?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shuttle_schedules_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       status_history: {
         Row: {
