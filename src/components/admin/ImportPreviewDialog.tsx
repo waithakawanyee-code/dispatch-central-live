@@ -85,12 +85,12 @@ export function validateImportRow(row: Record<string, string>, rowNumber: number
     warnings.push("CDL should be 'yes' or 'no'");
   }
 
-  // Shuttle program validation
+  // Shuttle program validation - blank defaults to "no"
   const shuttleFields = ["Amtrak_Primary", "Amtrak_Trained", "BPH_Primary", "BPH_Trained"];
   for (const field of shuttleFields) {
-    const val = row[field]?.toLowerCase();
-    if (val && !["yes", "no", ""].includes(val)) {
-      warnings.push(`${field} should be 'yes' or 'no'`);
+    const val = row[field]?.trim()?.toLowerCase();
+    if (val && val !== "yes" && val !== "no") {
+      warnings.push(`${field} should be 'yes' or 'no' (blank = no)`);
       break;
     }
   }
