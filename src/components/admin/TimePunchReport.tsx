@@ -782,6 +782,111 @@ export function TimePunchReport() {
               </Button>
               <Button
                 variant="outline"
+                size="sm"
+                onClick={() => {
+                  const printWindow = window.open("", "_blank");
+                  if (!printWindow) {
+                    toast({ title: "Error", description: "Please allow popups to export PDF", variant: "destructive" });
+                    return;
+                  }
+
+                  const payrollData = buildPayrollData();
+                  const totalWeekHours = payrollData.reduce((sum, d) => sum + d.weekTotalMinutes, 0);
+                  const totalOvertimeHours = payrollData.reduce((sum, d) => sum + Math.max(0, d.weekTotalMinutes - OVERTIME_THRESHOLD_MINUTES), 0);
+
+                  const tableRows = payrollData.map((driver) => {
+                    const isOvertime = driver.weekTotalMinutes > OVERTIME_THRESHOLD_MINUTES;
+                    return driver.dailyRecords.map((record, idx) => `
+                      <tr style="${isOvertime ? 'background:#fff8e6;' : ''}${idx === driver.dailyRecords.length - 1 ? 'border-bottom:2px solid #ccc;' : ''}">
+                        <td style="padding:6px 10px;border:1px solid #ddd;font-weight:${idx === 0 ? '600' : '400'};">
+                          ${idx === 0 ? driver.driverName + (isOvertime ? ' <span style="background:#fef3c7;color:#b45309;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:6px;">OT</span>' : '') : ''}
+                        </td>
+                        <td style="text-align:center;padding:6px 10px;border:1px solid #ddd;font-family:monospace;">${record.date}</td>
+                        <td style="text-align:center;padding:6px 10px;border:1px solid #ddd;font-family:monospace;color:#16a34a;">${record.punchIn || '-'}</td>
+                        <td style="text-align:center;padding:6px 10px;border:1px solid #ddd;font-family:monospace;color:#dc2626;">${record.punchOut || (record.punchIn ? '<span style="color:#d97706;font-size:11px;">Open</span>' : '-')}</td>
+                        <td style="text-align:center;padding:6px 10px;border:1px solid #ddd;font-family:monospace;font-weight:500;">${record.dailyTotal !== "0h 0m" ? record.dailyTotal : '-'}</td>
+                        <td style="text-align:center;padding:6px 10px;border:1px solid #ddd;font-family:monospace;font-weight:700;${isOvertime ? 'color:#b45309;' : ''}">${idx === 0 ? driver.weeklyTotal : ''}</td>
+                        <td style="text-align:center;padding:6px 10px;border:1px solid #ddd;font-family:monospace;font-weight:700;${isOvertime ? 'background:#fef3c7;color:#b45309;' : ''}">${idx === 0 ? (driver.overtime || '-') : ''}</td>
+                      </tr>
+                    `).join("");
+                  }).join("");
+
+                  const html = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                      <title>Payroll Report - ${format(currentWeekStart, "MMM d")} - ${format(currentWeekEnd, "MMM d, yyyy")}</title>
+                      <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto; }
+                        h1 { font-size: 20px; margin-bottom: 5px; }
+                        h2 { font-size: 14px; color: #666; margin-bottom: 20px; }
+                        .summary { display: flex; gap: 30px; margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; }
+                        .summary-item { text-align: center; }
+                        .summary-label { font-size: 11px; color: #666; text-transform: uppercase; }
+                        .summary-value { font-size: 18px; font-weight: bold; margin-top: 4px; }
+                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                        th { background: #f0f0f0; padding: 10px; border: 1px solid #ddd; text-align: center; font-weight: 600; }
+                        th:first-child { text-align: left; }
+                        @media print { 
+                          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                          .summary { break-inside: avoid; }
+                        }
+                      </style>
+                    </head>
+                    <body>
+                      <h1>Payroll Report</h1>
+                      <h2>${format(currentWeekStart, "MMMM d")} - ${format(currentWeekEnd, "MMMM d, yyyy")} (Monday - Sunday)</h2>
+                      
+                      <div class="summary">
+                        <div class="summary-item">
+                          <div class="summary-label">Total Drivers</div>
+                          <div class="summary-value">${payrollData.length}</div>
+                        </div>
+                        <div class="summary-item">
+                          <div class="summary-label">Total Hours</div>
+                          <div class="summary-value">${formatHoursMinutes(totalWeekHours)}</div>
+                        </div>
+                        <div class="summary-item">
+                          <div class="summary-label">Total Overtime</div>
+                          <div class="summary-value" style="color:#b45309;">${totalOvertimeHours > 0 ? formatHoursMinutes(totalOvertimeHours) : '-'}</div>
+                        </div>
+                        <div class="summary-item">
+                          <div class="summary-label">Drivers with OT</div>
+                          <div class="summary-value" style="color:#b45309;">${payrollData.filter(d => d.weekTotalMinutes > OVERTIME_THRESHOLD_MINUTES).length}</div>
+                        </div>
+                      </div>
+
+                      <table>
+                        <thead>
+                          <tr>
+                            <th style="text-align:left;min-width:140px;">Driver</th>
+                            <th style="min-width:90px;">Date</th>
+                            <th style="min-width:80px;">Punch In</th>
+                            <th style="min-width:80px;">Punch Out</th>
+                            <th style="min-width:90px;">Daily Total</th>
+                            <th style="min-width:90px;">Weekly Total</th>
+                            <th style="min-width:80px;">Overtime</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${tableRows}
+                        </tbody>
+                      </table>
+                      <script>window.onload = function() { window.print(); }</script>
+                    </body>
+                    </html>
+                  `;
+
+                  printWindow.document.write(html);
+                  printWindow.document.close();
+                }}
+                disabled={weeklyDriverHours.length === 0}
+              >
+                <FileText className="h-4 w-4 mr-1" />
+                PDF
+              </Button>
+              <Button
+                variant="outline"
                 size="icon"
                 onClick={() => setWeekOffset((prev) => prev + 1)}
                 disabled={weekOffset >= 0}
