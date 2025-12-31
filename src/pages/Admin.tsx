@@ -80,7 +80,7 @@ const Admin = () => {
             </TabsTrigger>
             <TabsTrigger value="timepunch" className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
-              Time Punches
+              Time Clock
             </TabsTrigger>
             <TabsTrigger value="assignments" className="flex items-center gap-2">
               <Car className="h-4 w-4" />
