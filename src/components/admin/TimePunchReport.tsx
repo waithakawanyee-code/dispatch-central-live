@@ -42,6 +42,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+
+// 40 hours = 2400 minutes
+const OVERTIME_THRESHOLD_MINUTES = 40 * 60;
 
 interface TimePunch {
   id: string;
@@ -687,10 +691,22 @@ export function TimePunchReport() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {weeklyDriverHours.map((driver) => (
-                        <TableRow key={driver.driverId}>
-                          <TableCell className="sticky left-0 bg-background font-mono font-medium">
-                            {driver.driverName}
+                      {weeklyDriverHours.map((driver) => {
+                        const isOvertime = driver.weekTotal > OVERTIME_THRESHOLD_MINUTES;
+                        return (
+                        <TableRow 
+                          key={driver.driverId}
+                          className={isOvertime ? "bg-amber-500/10" : ""}
+                        >
+                          <TableCell className={`sticky left-0 font-mono font-medium ${isOvertime ? "bg-amber-500/10" : "bg-background"}`}>
+                            <div className="flex items-center gap-2">
+                              {driver.driverName}
+                              {isOvertime && (
+                                <Badge variant="outline" className="bg-amber-500/20 text-amber-700 border-amber-500/30 text-xs">
+                                  OT
+                                </Badge>
+                              )}
+                            </div>
                           </TableCell>
                           {weekDays.map((day) => {
                             const dateStr = format(day, "yyyy-MM-dd");
@@ -707,11 +723,17 @@ export function TimePunchReport() {
                               </TableCell>
                             );
                           })}
-                          <TableCell className="text-center font-bold font-mono bg-muted/30">
+                          <TableCell className={`text-center font-bold font-mono ${isOvertime ? "bg-amber-500/20 text-amber-700" : "bg-muted/30"}`}>
                             {formatHoursMinutes(driver.weekTotal)}
+                            {isOvertime && (
+                              <span className="block text-xs text-amber-600">
+                                +{formatHoursMinutes(driver.weekTotal - OVERTIME_THRESHOLD_MINUTES)} OT
+                              </span>
+                            )}
                           </TableCell>
                         </TableRow>
-                      ))}
+                        );
+                      })}
                       {/* Total Row */}
                       <TableRow className="bg-muted/50 font-bold">
                         <TableCell className="sticky left-0 bg-muted/50">Total</TableCell>
