@@ -1,4 +1,4 @@
-import { X, Phone, Mail, MapPin, Truck, Clock, Award, Home, AlertCircle, User } from "lucide-react";
+import { X, Phone, Truck, Clock, Award, Home, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
@@ -67,45 +67,23 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
           )}
         </div>
 
-        {/* Contact Info */}
+        {/* Contact Phone */}
         <div className="space-y-2">
           <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Contact</h4>
-          <div className="space-y-1.5">
-            {driver.phone ? (
-              <a 
-                href={`tel:${driver.phone}`}
-                className="flex items-center gap-2 text-sm text-foreground hover:text-primary transition-colors"
-              >
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span className="font-mono">{driver.phone}</span>
-              </a>
-            ) : (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Phone className="h-4 w-4" />
-                <span>No phone</span>
-              </div>
-            )}
-            {driver.email ? (
-              <a 
-                href={`mailto:${driver.email}`}
-                className="flex items-center gap-2 text-sm text-foreground hover:text-primary transition-colors"
-              >
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <span className="truncate">{driver.email}</span>
-              </a>
-            ) : (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Mail className="h-4 w-4" />
-                <span>No email</span>
-              </div>
-            )}
-            {driver.address && (
-              <div className="flex items-start gap-2 text-sm text-foreground">
-                <MapPin className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                <span className="text-muted-foreground">{driver.address}</span>
-              </div>
-            )}
-          </div>
+          {driver.phone ? (
+            <a 
+              href={`tel:${driver.phone}`}
+              className="flex items-center gap-2 text-sm text-foreground hover:text-primary transition-colors"
+            >
+              <Phone className="h-4 w-4 text-muted-foreground" />
+              <span className="font-mono">{driver.phone}</span>
+            </a>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Phone className="h-4 w-4" />
+              <span>No phone</span>
+            </div>
+          )}
         </div>
 
         {/* Current Assignment */}
@@ -126,51 +104,6 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
             </div>
           </div>
         </div>
-
-        {/* Emergency Contacts */}
-        {(driver.emergency_contact_name || driver.emergency_contact_name_2) && (
-          <div className="space-y-2">
-            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Emergency Contacts</h4>
-            <div className="space-y-2">
-              {driver.emergency_contact_name && (
-                <div className="rounded border border-border bg-muted/30 p-2 text-xs">
-                  <div className="font-medium text-foreground">{driver.emergency_contact_name}</div>
-                  {driver.emergency_contact_relationship && (
-                    <div className="text-muted-foreground">{driver.emergency_contact_relationship}</div>
-                  )}
-                  {driver.emergency_contact_phone && (
-                    <a href={`tel:${driver.emergency_contact_phone}`} className="text-primary hover:underline font-mono">
-                      {driver.emergency_contact_phone}
-                    </a>
-                  )}
-                </div>
-              )}
-              {driver.emergency_contact_name_2 && (
-                <div className="rounded border border-border bg-muted/30 p-2 text-xs">
-                  <div className="font-medium text-foreground">{driver.emergency_contact_name_2}</div>
-                  {driver.emergency_contact_relationship_2 && (
-                    <div className="text-muted-foreground">{driver.emergency_contact_relationship_2}</div>
-                  )}
-                  {driver.emergency_contact_phone_2 && (
-                    <a href={`tel:${driver.emergency_contact_phone_2}`} className="text-primary hover:underline font-mono">
-                      {driver.emergency_contact_phone_2}
-                    </a>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Notes */}
-        {driver.notes && (
-          <div className="space-y-2">
-            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Notes</h4>
-            <div className="rounded border border-border bg-muted/30 p-2 text-xs text-muted-foreground">
-              {driver.notes}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Footer hint */}
