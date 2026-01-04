@@ -61,7 +61,9 @@ const Drivers = () => {
   const [todayCallOuts, setTodayCallOuts] = useState<CallOut[]>([]);
   const [offDriversOpen, setOffDriversOpen] = useState(false);
   const [futureAssignments, setFutureAssignments] = useState<FutureAssignment[]>([]);
-  const [cdlFilterMode, setCdlFilterMode] = useState<"all" | "cdl" | "non-cdl">("all");
+  const [assignedCdlFilter, setAssignedCdlFilter] = useState<"all" | "cdl" | "non-cdl">("all");
+  const [unassignedCdlFilter, setUnassignedCdlFilter] = useState<"all" | "cdl" | "non-cdl">("all");
+  const [workingCdlFilter, setWorkingCdlFilter] = useState<"all" | "cdl" | "non-cdl">("all");
   
   // Selected driver state
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
@@ -1192,15 +1194,55 @@ const Drivers = () => {
               <div className="flex flex-col gap-5">
                 {/* Assigned */}
                 <div className="space-y-2">
-                  <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                    <span>Assigned</span>
-                    <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                      {assignedDrivers}
+                  <div className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
+                    <span className="flex items-center gap-2">
+                      Assigned
+                      <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
+                        {assignedDrivers}
+                      </span>
                     </span>
-                  </h3>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant={assignedCdlFilter === "all" ? "secondary" : "ghost"}
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => setAssignedCdlFilter("all")}
+                      >
+                        All
+                      </Button>
+                      <Button
+                        variant={assignedCdlFilter === "non-cdl" ? "secondary" : "ghost"}
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => setAssignedCdlFilter("non-cdl")}
+                      >
+                        Non-CDL
+                      </Button>
+                      <Button
+                        variant={assignedCdlFilter === "cdl" ? "secondary" : "ghost"}
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => setAssignedCdlFilter("cdl")}
+                      >
+                        CDL
+                      </Button>
+                    </div>
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
                     {displayDrivers
                       .filter((d) => d.status === "assigned")
+                      .filter((d) => {
+                        if (assignedCdlFilter === "cdl") return d.has_cdl;
+                        if (assignedCdlFilter === "non-cdl") return !d.has_cdl;
+                        return true;
+                      })
+                      .sort((a, b) => {
+                        if (assignedCdlFilter === "all") {
+                          if (a.has_cdl === b.has_cdl) return a.name.localeCompare(b.name);
+                          return a.has_cdl ? 1 : -1;
+                        }
+                        return a.name.localeCompare(b.name);
+                      })
                       .map((driver) => (
                         <DriverRow
                           key={driver.id}
@@ -1231,26 +1273,26 @@ const Drivers = () => {
                     </span>
                     <div className="flex items-center gap-1">
                       <Button
-                        variant={cdlFilterMode === "all" ? "secondary" : "ghost"}
+                        variant={unassignedCdlFilter === "all" ? "secondary" : "ghost"}
                         size="sm"
                         className="h-6 px-2 text-xs"
-                        onClick={() => setCdlFilterMode("all")}
+                        onClick={() => setUnassignedCdlFilter("all")}
                       >
                         All
                       </Button>
                       <Button
-                        variant={cdlFilterMode === "non-cdl" ? "secondary" : "ghost"}
+                        variant={unassignedCdlFilter === "non-cdl" ? "secondary" : "ghost"}
                         size="sm"
                         className="h-6 px-2 text-xs"
-                        onClick={() => setCdlFilterMode("non-cdl")}
+                        onClick={() => setUnassignedCdlFilter("non-cdl")}
                       >
                         Non-CDL
                       </Button>
                       <Button
-                        variant={cdlFilterMode === "cdl" ? "secondary" : "ghost"}
+                        variant={unassignedCdlFilter === "cdl" ? "secondary" : "ghost"}
                         size="sm"
                         className="h-6 px-2 text-xs"
-                        onClick={() => setCdlFilterMode("cdl")}
+                        onClick={() => setUnassignedCdlFilter("cdl")}
                       >
                         CDL
                       </Button>
@@ -1260,13 +1302,13 @@ const Drivers = () => {
                     {displayDrivers
                       .filter((d) => d.status === "unassigned" || d.status === "scheduled")
                       .filter((d) => {
-                        if (cdlFilterMode === "cdl") return d.has_cdl;
-                        if (cdlFilterMode === "non-cdl") return !d.has_cdl;
+                        if (unassignedCdlFilter === "cdl") return d.has_cdl;
+                        if (unassignedCdlFilter === "non-cdl") return !d.has_cdl;
                         return true;
                       })
                       .sort((a, b) => {
                         // Non-CDL first when showing all
-                        if (cdlFilterMode === "all") {
+                        if (unassignedCdlFilter === "all") {
                           if (a.has_cdl === b.has_cdl) return a.name.localeCompare(b.name);
                           return a.has_cdl ? 1 : -1;
                         }
@@ -1346,15 +1388,55 @@ const Drivers = () => {
               <div className="flex flex-col gap-5">
                 {/* Working */}
                 <div className="space-y-2">
-                  <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                    <span>Working</span>
-                    <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                      {workingDrivers}
+                  <div className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
+                    <span className="flex items-center gap-2">
+                      Working
+                      <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
+                        {workingDrivers}
+                      </span>
                     </span>
-                  </h3>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant={workingCdlFilter === "all" ? "secondary" : "ghost"}
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => setWorkingCdlFilter("all")}
+                      >
+                        All
+                      </Button>
+                      <Button
+                        variant={workingCdlFilter === "non-cdl" ? "secondary" : "ghost"}
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => setWorkingCdlFilter("non-cdl")}
+                      >
+                        Non-CDL
+                      </Button>
+                      <Button
+                        variant={workingCdlFilter === "cdl" ? "secondary" : "ghost"}
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => setWorkingCdlFilter("cdl")}
+                      >
+                        CDL
+                      </Button>
+                    </div>
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
                     {displayDrivers
                       .filter((d) => ["on-route", "working"].includes(d.status))
+                      .filter((d) => {
+                        if (workingCdlFilter === "cdl") return d.has_cdl;
+                        if (workingCdlFilter === "non-cdl") return !d.has_cdl;
+                        return true;
+                      })
+                      .sort((a, b) => {
+                        if (workingCdlFilter === "all") {
+                          if (a.has_cdl === b.has_cdl) return a.name.localeCompare(b.name);
+                          return a.has_cdl ? 1 : -1;
+                        }
+                        return a.name.localeCompare(b.name);
+                      })
                       .map((driver) => (
                         <DriverRow
                           key={driver.id}
