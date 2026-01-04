@@ -1540,19 +1540,9 @@ const Drivers = () => {
               <Label htmlFor="future-vehicle">Vehicle (optional)</Label>
               <Select 
                 value={assignVehicle} 
-                onValueChange={(val) => {
-                  setAssignVehicle(val);
-                  setTimeout(() => assignButtonRef.current?.focus(), 0);
-                }}
+                onValueChange={setAssignVehicle}
               >
-                <SelectTrigger 
-                  onKeyDown={(e) => {
-                    if (e.key === "Tab" && !e.shiftKey) {
-                      e.preventDefault();
-                      assignButtonRef.current?.focus();
-                    }
-                  }}
-                >
+                <SelectTrigger>
                   <SelectValue placeholder="Select vehicle" />
                 </SelectTrigger>
                 <SelectContent>
