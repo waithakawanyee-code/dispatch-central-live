@@ -187,7 +187,20 @@ const Drivers = () => {
   // For future dates, incorporate future assignments
   const displayDrivers = useMemo(() => {
     if (isToday) {
-      return drivers.map((d) => ({ ...d, schedule: null as { start_time: string | null; end_time: string | null } | null }));
+      // Get the day of week for today to filter by schedule
+      const dayOfWeek = getDay(today);
+      
+      // Get driver IDs that ARE scheduled for today (not marked as off)
+      const scheduledDriverIds = new Set(
+        schedules
+          .filter((s) => s.day_of_week === dayOfWeek && !s.is_off)
+          .map((s) => s.driver_id)
+      );
+      
+      // Only return drivers who are scheduled for today AND not marked as "off" status
+      return drivers
+        .filter((d) => scheduledDriverIds.has(d.id) && d.status !== "off")
+        .map((d) => ({ ...d, schedule: null as { start_time: string | null; end_time: string | null } | null }));
     }
     
     // Create a map of assigned driver IDs
@@ -211,7 +224,7 @@ const Drivers = () => {
         report_time: null,
       };
     });
-  }, [isToday, getAvailableDriversWithSchedule, drivers, futureAssignments]);
+  }, [isToday, getAvailableDriversWithSchedule, drivers, futureAssignments, schedules]);
 
   // Handler for assigning a driver
   const handleAssignDriver = async () => {
