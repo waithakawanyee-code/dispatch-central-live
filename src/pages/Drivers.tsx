@@ -1723,12 +1723,14 @@ const Drivers = () => {
                 <SelectTrigger id="assign-driver">
                   <SelectValue placeholder="Select driver" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover">
                   {drivers
-                    .filter((d) => d.is_active && ["unassigned", "scheduled", "assigned"].includes(d.status))
+                    .filter((d) => d.is_active)
+                    .sort((a, b) => a.name.localeCompare(b.name))
                     .map((driver) => (
                       <SelectItem key={driver.id} value={driver.id}>
                         {driver.name}
+                        {driver.status === "off" && <span className="ml-2 text-muted-foreground">(OFF)</span>}
                       </SelectItem>
                     ))}
                 </SelectContent>
