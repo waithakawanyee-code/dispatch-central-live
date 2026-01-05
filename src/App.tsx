@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import Scheduler from "./pages/Scheduler";
+import ShuttleSchedules from "./pages/ShuttleSchedules";
 import Drivers from "./pages/Drivers";
 import Vehicles from "./pages/Vehicles";
 import ServiceTickets from "./pages/ServiceTickets";
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/service-tickets" element={<ProtectedRoute><ServiceTickets /></ProtectedRoute>} />
             <Route path="/display" element={<ProtectedRoute><Display /></ProtectedRoute>} />
             <Route path="/scheduler" element={<ProtectedRoute><Scheduler /></ProtectedRoute>} />
+            <Route path="/shuttle-schedules" element={<ProtectedRoute><ShuttleSchedules /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

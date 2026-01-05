@@ -680,6 +680,12 @@ const Scheduler = () => {
               Driver Schedule
             </h1>
           </div>
+          <Link to="/shuttle-schedules">
+            <Button variant="outline" size="sm" className="gap-2">
+              <Train className="h-4 w-4" />
+              Manage Shuttle Schedules
+            </Button>
+          </Link>
         </div>
       </header>
 
