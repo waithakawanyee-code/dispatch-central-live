@@ -1,9 +1,17 @@
-import { X, Phone, Truck, Clock, Award, Home, User } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, Phone, Truck, Clock, Award, Home, User, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriverRowType = Database["public"]["Tables"]["drivers"]["Row"];
+
+interface TimePunch {
+  id: string;
+  punch_type: string;
+  punch_time: string;
+}
 
 interface DriverDetailsPanelProps {
   driver: DriverRowType | null;
@@ -11,6 +19,33 @@ interface DriverDetailsPanelProps {
 }
 
 export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps) {
+  const [todayPunches, setTodayPunches] = useState<TimePunch[]>([]);
+
+  useEffect(() => {
+    if (!driver) return;
+
+    const fetchTodayPunches = async () => {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      const { data } = await supabase
+        .from("time_punches")
+        .select("id, punch_type, punch_time")
+        .eq("driver_id", driver.id)
+        .gte("punch_time", todayStart.toISOString())
+        .lte("punch_time", todayEnd.toISOString())
+        .order("punch_time", { ascending: true });
+
+      if (data) {
+        setTodayPunches(data);
+      }
+    };
+
+    fetchTodayPunches();
+  }, [driver?.id]);
+
   if (!driver) return null;
 
   const formatTime = (time: string | null) => {
@@ -22,6 +57,55 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
     return `${h12}:${minutes} ${ampm}`;
   };
 
+  const formatPunchTime = (isoTime: string) => {
+    const date = new Date(isoTime);
+    const h = date.getHours();
+    const m = date.getMinutes().toString().padStart(2, "0");
+    const ampm = h >= 12 ? "PM" : "AM";
+    const h12 = h % 12 || 12;
+    return `${h12}:${m} ${ampm}`;
+  };
+
+  // Calculate total hours worked from punches
+  const calculateTotalHours = () => {
+    let totalMs = 0;
+    let punchInTime: Date | null = null;
+
+    for (const punch of todayPunches) {
+      if (punch.punch_type === "in") {
+        punchInTime = new Date(punch.punch_time);
+      } else if (punch.punch_type === "out" && punchInTime) {
+        totalMs += new Date(punch.punch_time).getTime() - punchInTime.getTime();
+        punchInTime = null;
+      }
+    }
+
+    // If still punched in, calculate time up to now
+    if (punchInTime && ["working", "on-route"].includes(driver.status)) {
+      totalMs += Date.now() - punchInTime.getTime();
+    }
+
+    const hours = Math.floor(totalMs / (1000 * 60 * 60));
+    const minutes = Math.floor((totalMs % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
+  // Get latest punch-in and punch-out times
+  const getLatestPunchIn = () => {
+    const punchIns = todayPunches.filter(p => p.punch_type === "in");
+    return punchIns.length > 0 ? punchIns[punchIns.length - 1] : null;
+  };
+
+  const getLatestPunchOut = () => {
+    const punchOuts = todayPunches.filter(p => p.punch_type === "out");
+    return punchOuts.length > 0 ? punchOuts[punchOuts.length - 1] : null;
+  };
+
+  const latestPunchIn = getLatestPunchIn();
+  const latestPunchOut = getLatestPunchOut();
+  const isWorking = ["working", "on-route"].includes(driver.status);
+  const isPunchedOut = ["offline", "punched-out"].includes(driver.status);
+
   return (
     <div className="fixed right-4 top-20 z-50 w-80 rounded-lg border border-border bg-card shadow-xl animate-in slide-in-from-right-5 duration-200">
       {/* Header */}
@@ -32,8 +116,8 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
             driver.status === "scheduled" && "bg-amber-500",
             driver.status === "unassigned" && "bg-slate-500",
             driver.status === "assigned" && "bg-emerald-500",
-            ["working", "on-route"].includes(driver.status) && "bg-status-available",
-            ["offline", "punched-out"].includes(driver.status) && "bg-status-offline",
+            isWorking && "bg-status-available",
+            isPunchedOut && "bg-status-offline",
             driver.status === "off" && "bg-red-500"
           )} />
           <h3 className="font-semibold text-foreground">{driver.name}</h3>
@@ -86,22 +170,90 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
           )}
         </div>
 
-        {/* Current Assignment */}
+        {/* Current Assignment / Status Info */}
         <div className="space-y-2">
-          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Assignment</h4>
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            {isWorking ? "Currently Working" : isPunchedOut ? "Today's Shift" : "Assignment"}
+          </h4>
           <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-sm">
-              <Truck className="h-4 w-4 text-muted-foreground" />
-              <span className="text-foreground">
-                {driver.vehicle || <span className="text-muted-foreground">No vehicle</span>}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-foreground font-mono">
-                {driver.report_time ? formatTime(driver.report_time) : <span className="text-muted-foreground">No report time</span>}
-              </span>
-            </div>
+            {/* Vehicle - show for working, punched-out, and assigned */}
+            {(isWorking || isPunchedOut || driver.status === "assigned") && (
+              <div className="flex items-center gap-2 text-sm">
+                <Truck className="h-4 w-4 text-muted-foreground" />
+                <span className="text-foreground">
+                  {driver.vehicle || <span className="text-muted-foreground">No vehicle</span>}
+                </span>
+              </div>
+            )}
+
+            {/* Working drivers: Show start time (punch in) */}
+            {isWorking && latestPunchIn && (
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-foreground font-mono">
+                  Started: {formatPunchTime(latestPunchIn.punch_time)}
+                </span>
+              </div>
+            )}
+
+            {/* Working drivers: Show current hours */}
+            {isWorking && todayPunches.length > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <Timer className="h-4 w-4 text-muted-foreground" />
+                <span className="text-foreground font-mono">
+                  Elapsed: {calculateTotalHours()}
+                </span>
+              </div>
+            )}
+
+            {/* Punched-out drivers: Show start and end times */}
+            {isPunchedOut && latestPunchIn && (
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-foreground font-mono">
+                  Start: {formatPunchTime(latestPunchIn.punch_time)}
+                </span>
+              </div>
+            )}
+
+            {isPunchedOut && latestPunchOut && (
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-foreground font-mono">
+                  End: {formatPunchTime(latestPunchOut.punch_time)}
+                </span>
+              </div>
+            )}
+
+            {/* Punched-out drivers: Show total hours */}
+            {isPunchedOut && todayPunches.length > 0 && (
+              <div className="flex items-center gap-2 text-sm bg-muted/50 rounded px-2 py-1 -mx-2">
+                <Timer className="h-4 w-4 text-primary" />
+                <span className="text-foreground font-semibold">
+                  Total: {calculateTotalHours()}
+                </span>
+              </div>
+            )}
+
+            {/* Assigned/unassigned drivers: Show report time */}
+            {!isWorking && !isPunchedOut && (
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-foreground font-mono">
+                  {driver.report_time ? formatTime(driver.report_time) : <span className="text-muted-foreground">No report time</span>}
+                </span>
+              </div>
+            )}
+
+            {/* Assigned/unassigned drivers: Show vehicle */}
+            {!isWorking && !isPunchedOut && driver.status !== "off" && (
+              <div className="flex items-center gap-2 text-sm">
+                <Truck className="h-4 w-4 text-muted-foreground" />
+                <span className="text-foreground">
+                  {driver.vehicle || <span className="text-muted-foreground">No vehicle</span>}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
