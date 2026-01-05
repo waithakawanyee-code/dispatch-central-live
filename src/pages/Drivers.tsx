@@ -215,9 +215,11 @@ const Drivers = () => {
           .map((s) => s.driver_id)
       );
       
-      // Only return drivers who are scheduled for today AND not marked as "off" status
+      // Include drivers who are scheduled for today OR who have been manually assigned/working/punched-out
+      // This allows off-drivers who were added to today's schedule to appear
+      const activeStatuses = ["assigned", "working", "punched-out"];
       return drivers
-        .filter((d) => scheduledDriverIds.has(d.id) && d.status !== "off")
+        .filter((d) => (scheduledDriverIds.has(d.id) || activeStatuses.includes(d.status)) && d.status !== "off")
         .map((d) => ({ ...d, schedule: null as { start_time: string | null; end_time: string | null } | null }));
     }
     
