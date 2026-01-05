@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Clock, UserCheck, UserX, Train, Stethoscope, Users, Eye, EyeOff, UserPlus, X, Save } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Clock, UserCheck, UserX, Train, Stethoscope, Users, Eye, EyeOff, UserPlus, X, Save, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -798,6 +798,7 @@ const Scheduler = () => {
                 All
               </TabsTrigger>
               <TabsTrigger value="black-car" className="gap-2">
+                <Car className="h-4 w-4" />
                 Above All
               </TabsTrigger>
               <TabsTrigger value="amtrak" className="gap-2">
