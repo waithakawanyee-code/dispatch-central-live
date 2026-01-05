@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock, PhoneOff, Truck, X, Undo2 } from "lucide-react";
+import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock, PhoneOff, Truck, X, Undo2, Search, UserPlus } from "lucide-react";
 import { format, addDays, isSameDay, startOfDay, getDay } from "date-fns";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { VehicleCombobox } from "@/components/VehicleCombobox";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -61,6 +62,7 @@ const Drivers = () => {
   const [weekOffset, setWeekOffset] = useState(0);
   const [todayCallOuts, setTodayCallOuts] = useState<CallOut[]>([]);
   const [offDriversOpen, setOffDriversOpen] = useState(false);
+  const [offDriverSearch, setOffDriverSearch] = useState("");
   const [futureAssignments, setFutureAssignments] = useState<FutureAssignment[]>([]);
   const [globalCdlFilter, setGlobalCdlFilter] = useState<"all" | "cdl" | "non-cdl">("all");
   
@@ -794,6 +796,15 @@ const Drivers = () => {
       (driver) => !scheduledDriverIds.has(driver.id) || driver.status === "off"
     );
   }, [drivers, schedules, isToday]);
+  
+  // Filtered off drivers based on search
+  const filteredOffDrivers = useMemo(() => {
+    if (!offDriverSearch.trim()) return offDrivers;
+    const search = offDriverSearch.toLowerCase().trim();
+    return offDrivers.filter(driver => 
+      driver.name.toLowerCase().includes(search)
+    );
+  }, [offDrivers, offDriverSearch]);
 
   // Check if a driver called out today
   const isCallOut = (driverId: string) => {
@@ -803,6 +814,18 @@ const Drivers = () => {
   const getCallOutNote = (driverId: string) => {
     const callOut = todayCallOuts.find((co) => co.driver_id === driverId);
     return callOut?.note || null;
+  };
+  
+  // Add off driver to today's schedule
+  const addOffDriverToSchedule = (driverId: string, driverName: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    const defaultVehicle = (driver as any)?.default_vehicle;
+    
+    setAssigningDriver({ id: driverId, name: driverName });
+    setAssignReportTime("");
+    setAssignVehicle(defaultVehicle || "__none__");
+    setShowAssignDialog(true);
+    setOffDriverSearch("");
   };
 
   // Calculate stats based on displayed drivers
@@ -1481,15 +1504,35 @@ const Drivers = () => {
                     </span>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="pt-2">
-                    <div className="flex flex-col gap-2">
-                      {offDrivers.map((driver) => {
+                    {/* Search box for off drivers */}
+                    <div className="relative mb-3">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                      <Input
+                        type="text"
+                        placeholder="Search off drivers..."
+                        value={offDriverSearch}
+                        onChange={(e) => setOffDriverSearch(e.target.value)}
+                        className="h-8 pl-8 pr-8 text-sm bg-background/50"
+                      />
+                      {offDriverSearch && (
+                        <button
+                          onClick={() => setOffDriverSearch("")}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
+                      {filteredOffDrivers.map((driver) => {
                         const calledOut = isCallOut(driver.id);
                         const note = getCallOutNote(driver.id);
                         return (
                           <div
                             key={driver.id}
                             className={cn(
-                              "flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm",
+                              "flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm group",
                               calledOut && "border-l-2 border-l-destructive bg-destructive/5"
                             )}
                           >
@@ -1504,10 +1547,24 @@ const Drivers = () => {
                                 <span className="text-xs">Called Out</span>
                               </span>
                             )}
+                            {/* Add to schedule button */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => addOffDriverToSchedule(driver.id, driver.name)}
+                              className="h-7 px-2 gap-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 hover:text-primary"
+                              title="Add to today's schedule"
+                            >
+                              <UserPlus className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Add to Today</span>
+                            </Button>
                           </div>
                         );
                       })}
-                      {offDriverCount === 0 && (
+                      {filteredOffDrivers.length === 0 && offDriverSearch && (
+                        <p className="text-sm text-muted-foreground italic py-3">No matching drivers</p>
+                      )}
+                      {offDriverCount === 0 && !offDriverSearch && (
                         <p className="text-sm text-muted-foreground italic py-3">No OFF drivers</p>
                       )}
                     </div>
