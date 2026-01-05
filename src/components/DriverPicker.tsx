@@ -26,14 +26,33 @@ export function DriverPicker({ open, onOpenChange, drivers, onSelect, title = "S
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Filter drivers by search term
+  // Get initials from a name (e.g., "John Smith" -> "js")
+  const getInitials = (name: string): string => {
+    return name
+      .split(/\s+/)
+      .map(word => word.charAt(0).toLowerCase())
+      .join('');
+  };
+
+  // Filter drivers by search term (supports initials like "js" for "John Smith")
   const filteredDrivers = useMemo(() => {
     if (!search.trim()) return drivers;
     const term = search.toLowerCase();
-    return drivers.filter(driver => 
-      driver.name.toLowerCase().includes(term) ||
-      driver.code?.toLowerCase().includes(term)
-    );
+    
+    return drivers.filter(driver => {
+      // Standard search: name or code
+      if (driver.name.toLowerCase().includes(term) || driver.code?.toLowerCase().includes(term)) {
+        return true;
+      }
+      
+      // Initials search: "js" matches "John Smith"
+      const initials = getInitials(driver.name);
+      if (initials.startsWith(term)) {
+        return true;
+      }
+      
+      return false;
+    });
   }, [drivers, search]);
 
   // Reset state when opened
