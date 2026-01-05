@@ -62,6 +62,7 @@ export function DriverActionToolbar({
         ];
       case "off":
         return [
+          { label: "Assign", shortcut: "A", icon: UserPlus, onClick: onAssign, variant: "default" },
           { label: "Reset", shortcut: "", icon: Undo2, onClick: onReset, variant: "outline" },
         ];
       default:
