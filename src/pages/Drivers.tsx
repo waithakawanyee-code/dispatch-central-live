@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from "@/components/ui/label";
 import { TimeInput } from "@/components/ui/time-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { VehicleCombobox } from "@/components/VehicleCombobox";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -1538,24 +1539,12 @@ const Drivers = () => {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="future-vehicle">Vehicle (optional)</Label>
-              <Select 
-                value={assignVehicle} 
+              <VehicleCombobox
+                vehicles={vehicles.filter((v) => v.status === "active")}
+                value={assignVehicle}
                 onValueChange={setAssignVehicle}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select vehicle" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">No vehicle</SelectItem>
-                  {vehicles
-                    .filter((v) => v.status === "active")
-                    .map((vehicle) => (
-                      <SelectItem key={vehicle.id} value={vehicle.unit}>
-                        {vehicle.unit}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select vehicle"
+              />
             </div>
           </div>
           <DialogFooter>
