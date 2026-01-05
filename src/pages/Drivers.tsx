@@ -98,6 +98,10 @@ const Drivers = () => {
   // Driver picker state (for keyboard shortcuts when no driver selected)
   const [showDriverPicker, setShowDriverPicker] = useState(false);
   const [pendingAction, setPendingAction] = useState<"assign" | "off" | null>(null);
+  
+  // Off driver assignment confirmation state
+  const [showOffDriverConfirm, setShowOffDriverConfirm] = useState(false);
+  const [pendingOffDriver, setPendingOffDriver] = useState<{ id: string; name: string } | null>(null);
 
   const today = startOfDay(new Date());
   const isToday = isSameDay(selectedDate, today);
@@ -310,10 +314,30 @@ const Drivers = () => {
     const driver = drivers.find(d => d.id === driverId);
     const defaultVehicle = (driver as any)?.default_vehicle;
     
+    // Check if driver is marked off - show confirmation first
+    if (driver?.status === "off") {
+      setPendingOffDriver({ id: driverId, name: driverName });
+      setShowOffDriverConfirm(true);
+      return;
+    }
+    
     setAssigningDriver({ id: driverId, name: driverName });
     setAssignReportTime("");
     // Pre-fill with driver's default/take-home vehicle if set
     setAssignVehicle(defaultVehicle || "__none__");
+    setShowAssignDialog(true);
+  };
+  
+  const confirmOffDriverAssign = () => {
+    if (!pendingOffDriver) return;
+    const driver = drivers.find(d => d.id === pendingOffDriver.id);
+    const defaultVehicle = (driver as any)?.default_vehicle;
+    
+    setAssigningDriver({ id: pendingOffDriver.id, name: pendingOffDriver.name });
+    setAssignReportTime("");
+    setAssignVehicle(defaultVehicle || "__none__");
+    setShowOffDriverConfirm(false);
+    setPendingOffDriver(null);
     setShowAssignDialog(true);
   };
 
@@ -1790,6 +1814,29 @@ const Drivers = () => {
             </Button>
             <Button onClick={handleConfirmPunchOut} disabled={!punchOutDriver}>
               Punch Out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Off Driver Assignment Confirmation */}
+      <Dialog open={showOffDriverConfirm} onOpenChange={setShowOffDriverConfirm}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Assign OFF Driver?</DialogTitle>
+            <DialogDescription>
+              <strong>{pendingOffDriver?.name}</strong> is currently marked as OFF for today. Are you sure you want to bring them in and assign them?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowOffDriverConfirm(false);
+              setPendingOffDriver(null);
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={confirmOffDriverAssign}>
+              Yes, Assign Driver
             </Button>
           </DialogFooter>
         </DialogContent>
