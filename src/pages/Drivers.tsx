@@ -937,8 +937,10 @@ const Drivers = () => {
     // Don't process other shortcuts if dialog is open or input is focused
     if (dialogOpen || isInputFocused) return;
     
-    // Arrow keys navigate within current section
-    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+    // Arrow keys navigate in 4 directions within current section
+    // Left/Right: move horizontally (prev/next in list)
+    // Up/Down: move vertically (estimate row based on ~4 items per row)
+    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
       e.preventDefault();
       
       const currentSection = getCurrentSection(selectedDriverId);
@@ -948,12 +950,38 @@ const Drivers = () => {
       if (sectionDrivers.length === 0) return;
       
       const currentIndex = sectionDrivers.findIndex(d => d.id === selectedDriverId);
-      let newIndex: number;
+      if (currentIndex === -1) return;
       
-      if (e.key === "ArrowUp") {
-        newIndex = currentIndex <= 0 ? sectionDrivers.length - 1 : currentIndex - 1;
-      } else {
-        newIndex = currentIndex >= sectionDrivers.length - 1 ? 0 : currentIndex + 1;
+      let newIndex: number = currentIndex;
+      const itemsPerRow = 4; // Approximate number of items per row
+      
+      switch (e.key) {
+        case "ArrowLeft":
+          newIndex = currentIndex <= 0 ? sectionDrivers.length - 1 : currentIndex - 1;
+          break;
+        case "ArrowRight":
+          newIndex = currentIndex >= sectionDrivers.length - 1 ? 0 : currentIndex + 1;
+          break;
+        case "ArrowUp":
+          // Move up by one row (itemsPerRow items back)
+          newIndex = currentIndex - itemsPerRow;
+          if (newIndex < 0) {
+            // Wrap to last row, try to maintain column position
+            const totalRows = Math.ceil(sectionDrivers.length / itemsPerRow);
+            const currentCol = currentIndex % itemsPerRow;
+            const lastRowStart = (totalRows - 1) * itemsPerRow;
+            newIndex = Math.min(lastRowStart + currentCol, sectionDrivers.length - 1);
+          }
+          break;
+        case "ArrowDown":
+          // Move down by one row (itemsPerRow items forward)
+          newIndex = currentIndex + itemsPerRow;
+          if (newIndex >= sectionDrivers.length) {
+            // Wrap to first row, try to maintain column position
+            const currentCol = currentIndex % itemsPerRow;
+            newIndex = Math.min(currentCol, sectionDrivers.length - 1);
+          }
+          break;
       }
       
       if (sectionDrivers[newIndex]) {
