@@ -124,6 +124,14 @@ export function VehicleCombobox({
     return vehicles.filter(v => matchesQuickKeySearch(v, search));
   }, [vehicles, search]);
 
+  // When searching, auto-select the first matching vehicle
+  const commandValue = React.useMemo(() => {
+    if (search && filteredVehicles.length > 0) {
+      return filteredVehicles[0].unit;
+    }
+    return undefined;
+  }, [search, filteredVehicles]);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -138,8 +146,8 @@ export function VehicleCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-        <Command shouldFilter={false}>
-          <CommandInput 
+        <Command shouldFilter={false} value={commandValue}>
+          <CommandInput
             placeholder="Search... (v49, b37, s12)" 
             value={search}
             onValueChange={setSearch}
