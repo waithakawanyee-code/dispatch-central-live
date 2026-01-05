@@ -744,6 +744,53 @@ const Scheduler = () => {
             ))}
           </div>
 
+          {/* Shuttle Coverage Summary */}
+          {(() => {
+            const dayOfWeek = getDayOfWeek(selectedDate);
+            const dayShuttles = shuttleSchedules.filter(s => s.day_of_week === dayOfWeek);
+            const amtrakShifts = dayShuttles.filter(s => s.program === "amtrak");
+            const bphShift = dayShuttles.find(s => s.program === "bph");
+            
+            // Only show on weekdays for BPH (Mon-Fri) or any day for Amtrak
+            const isBphDay = dayOfWeek >= 1 && dayOfWeek <= 5;
+            
+            if (amtrakShifts.length === 0 && !bphShift && !isBphDay) return null;
+            
+            return (
+              <div className="rounded-lg border border-border/50 bg-muted/30 px-4 py-3 mt-2">
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                  {/* Amtrak Shifts */}
+                  {AMTRAK_SHIFTS.map((shift) => {
+                    const schedule = amtrakShifts.find(s => s.shift_number === shift.number);
+                    const driver = schedule ? drivers.find(d => d.id === schedule.driver_id) : null;
+                    return (
+                      <div key={shift.number} className="flex items-center gap-2">
+                        <Train className="h-3.5 w-3.5 text-blue-500" />
+                        <span className="text-muted-foreground font-mono text-xs">{shift.start}-{shift.end}</span>
+                        <span className={driver ? "font-medium" : "text-muted-foreground/60 italic"}>
+                          {driver ? driver.name.split(' ')[0] : "—"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  
+                  {/* BPH Shift (only Mon-Fri) */}
+                  {isBphDay && (
+                    <div className="flex items-center gap-2">
+                      <Stethoscope className="h-3.5 w-3.5 text-green-500" />
+                      <span className="text-muted-foreground font-mono text-xs">
+                        {bphShift ? `${formatTime(bphShift.start_time)}-${formatTime(bphShift.end_time)}` : "BPH"}
+                      </span>
+                      <span className={bphShift ? "font-medium" : "text-muted-foreground/60 italic"}>
+                        {bphShift ? drivers.find(d => d.id === bphShift.driver_id)?.name.split(' ')[0] || "—" : "—"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Schedule Type Tabs */}
           <Tabs value={scheduleTab} onValueChange={(v) => setScheduleTab(v as typeof scheduleTab)} className="mt-4">
             <TabsList className="w-full justify-start">
