@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock, PhoneOff, Truck, X } from "lucide-react";
+import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock, PhoneOff, Truck, X, Undo2 } from "lucide-react";
 import { format, addDays, isSameDay, startOfDay, getDay } from "date-fns";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
@@ -102,6 +102,16 @@ const Drivers = () => {
   // Off driver assignment confirmation state
   const [showOffDriverConfirm, setShowOffDriverConfirm] = useState(false);
   const [pendingOffDriver, setPendingOffDriver] = useState<{ id: string; name: string } | null>(null);
+  
+  // Undo last action state
+  const [lastAction, setLastAction] = useState<{
+    driverId: string;
+    driverName: string;
+    previousStatus: string;
+    previousVehicle: string | null;
+    previousReportTime: string | null;
+    actionType: string;
+  } | null>(null);
 
   const today = startOfDay(new Date());
   const isToday = isSameDay(selectedDate, today);
@@ -236,6 +246,19 @@ const Drivers = () => {
   const handleAssignDriver = async () => {
     if (!assigningDriver) return;
     
+    // Store previous state for undo
+    const driver = drivers.find(d => d.id === assigningDriver.id);
+    if (driver) {
+      setLastAction({
+        driverId: driver.id,
+        driverName: driver.name,
+        previousStatus: driver.status,
+        previousVehicle: driver.vehicle,
+        previousReportTime: driver.report_time,
+        actionType: "assign",
+      });
+    }
+    
     if (isFutureDate) {
       // Future date: insert into future_assignments table
       const dateStr = format(selectedDate, "yyyy-MM-dd");
@@ -260,6 +283,7 @@ const Drivers = () => {
           description: error.message,
           variant: "destructive",
         });
+        setLastAction(null); // Clear on error
       } else if (data) {
         toast({
           title: "Driver assigned",
@@ -367,6 +391,19 @@ const Drivers = () => {
 
   const handleConfirmOff = async () => {
     if (!offDriver) return;
+    
+    // Store previous state for undo
+    const driver = drivers.find(d => d.id === offDriver.id);
+    if (driver) {
+      setLastAction({
+        driverId: driver.id,
+        driverName: driver.name,
+        previousStatus: driver.status,
+        previousVehicle: driver.vehicle,
+        previousReportTime: driver.report_time,
+        actionType: "off",
+      });
+    }
     
     // If it's a call out, record it
     if (isCallOutChecked) {
@@ -519,6 +556,16 @@ const Drivers = () => {
       return; // Keep dialog open so user can select a different driver
     }
     
+    // Store previous state for undo
+    setLastAction({
+      driverId: driver.id,
+      driverName: driver.name,
+      previousStatus: driver.status,
+      previousVehicle: driver.vehicle,
+      previousReportTime: driver.report_time,
+      actionType: "punch-in",
+    });
+    
     const vehicleToAssign = punchInVehicle === "__none__" ? undefined : punchInVehicle;
     updateDriverStatus(punchInDriver.id, "working", undefined, vehicleToAssign, punchInTime);
     toast({
@@ -582,6 +629,16 @@ const Drivers = () => {
       }
     }
     
+    // Store previous state for undo
+    setLastAction({
+      driverId: driver.id,
+      driverName: driver.name,
+      previousStatus: driver.status,
+      previousVehicle: driver.vehicle,
+      previousReportTime: driver.report_time,
+      actionType: "punch-out",
+    });
+    
     updateDriverStatus(punchOutDriver.id, "punched-out", undefined, undefined, punchOutTime);
     toast({
       title: "Punched Out",
@@ -630,6 +687,16 @@ const Drivers = () => {
       return;
     }
     
+    // Store previous state for undo
+    setLastAction({
+      driverId: driver.id,
+      driverName: driver.name,
+      previousStatus: driver.status,
+      previousVehicle: driver.vehicle,
+      previousReportTime: driver.report_time,
+      actionType: "unassign",
+    });
+    
     updateDriverStatus(driverId, "unassigned");
     toast({
       title: "Driver unassigned",
@@ -642,12 +709,50 @@ const Drivers = () => {
     const driver = drivers.find(d => d.id === driverId);
     if (!driver) return;
     
+    // Store previous state for undo
+    setLastAction({
+      driverId: driver.id,
+      driverName: driver.name,
+      previousStatus: driver.status,
+      previousVehicle: driver.vehicle,
+      previousReportTime: driver.report_time,
+      actionType: "reset",
+    });
+    
     updateDriverStatus(driverId, "unassigned");
     toast({
       title: "Driver reset",
       description: `${driver.name} reset to unassigned`,
     });
   }, [drivers, updateDriverStatus, toast]);
+  
+  // Undo last action
+  const executeUndo = useCallback(() => {
+    if (!lastAction) {
+      toast({
+        title: "Nothing to undo",
+        description: "No recent action to revert",
+      });
+      return;
+    }
+    
+    const { driverId, driverName, previousStatus, previousVehicle, previousReportTime, actionType } = lastAction;
+    
+    // Restore the previous state
+    updateDriverStatus(
+      driverId, 
+      previousStatus as any, 
+      previousReportTime || undefined, 
+      previousVehicle || undefined
+    );
+    
+    toast({
+      title: "Action undone",
+      description: `Reverted ${driverName} to ${previousStatus}`,
+    });
+    
+    setLastAction(null);
+  }, [lastAction, updateDriverStatus, toast]);
 
   // Handle driver picker selection (only used for assign and off actions now)
   const handleDriverPickerSelect = useCallback((driver: typeof drivers[0]) => {
@@ -872,6 +977,13 @@ const Drivers = () => {
     // Only work when not in future date mode (today only)
     if (!isToday) return;
     
+    // Ctrl+Z or Cmd+Z → Undo last action
+    if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) {
+      e.preventDefault();
+      executeUndo();
+      return;
+    }
+    
     // A → Assign
     if (e.key === "a" || e.key === "A") {
       e.preventDefault();
@@ -918,7 +1030,8 @@ const Drivers = () => {
     executeAssign, 
     executePunchIn, 
     executePunchOut, 
-    executeOff
+    executeOff,
+    executeUndo
   ]);
 
   // Handler for driver pill click - select and show details
@@ -959,22 +1072,38 @@ const Drivers = () => {
           </div>
           
           {/* Quick Action Toolbar - shows when driver is selected and on today */}
-          {isToday && selectedDriverId && (() => {
-            const selectedDriver = drivers.find(d => d.id === selectedDriverId);
-            if (!selectedDriver) return null;
-            return (
-              <DriverActionToolbar
-                driverName={selectedDriver.name}
-                status={selectedDriver.status}
-                onAssign={() => executeAssign(selectedDriverId)}
-                onPunchIn={() => executePunchIn(selectedDriverId)}
-                onPunchOut={() => executePunchOut(selectedDriverId)}
-                onMarkOff={() => executeOff(selectedDriverId)}
-                onUnassign={() => executeUnassign(selectedDriverId)}
-                onReset={() => executeReset(selectedDriverId)}
-              />
-            );
-          })()}
+          <div className="flex items-center gap-2">
+            {/* Undo Button */}
+            {isToday && lastAction && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={executeUndo}
+                className="gap-1.5"
+                title={`Undo: ${lastAction.driverName} → ${lastAction.previousStatus} (Ctrl+Z)`}
+              >
+                <Undo2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Undo</span>
+              </Button>
+            )}
+            
+            {isToday && selectedDriverId && (() => {
+              const selectedDriver = drivers.find(d => d.id === selectedDriverId);
+              if (!selectedDriver) return null;
+              return (
+                <DriverActionToolbar
+                  driverName={selectedDriver.name}
+                  status={selectedDriver.status}
+                  onAssign={() => executeAssign(selectedDriverId)}
+                  onPunchIn={() => executePunchIn(selectedDriverId)}
+                  onPunchOut={() => executePunchOut(selectedDriverId)}
+                  onMarkOff={() => executeOff(selectedDriverId)}
+                  onUnassign={() => executeUnassign(selectedDriverId)}
+                  onReset={() => executeReset(selectedDriverId)}
+                />
+              );
+            })()}
+          </div>
         </div>
 
         {/* Date Selector */}
