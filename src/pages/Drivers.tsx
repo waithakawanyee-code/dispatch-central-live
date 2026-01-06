@@ -231,7 +231,7 @@ const Drivers = () => {
     const assignedMap = new Map(futureAssignments.map(a => [a.driver_id, a]));
     
     // For future dates, return available drivers with their assignment status
-    return (getAvailableDriversWithSchedule || []).map((driver) => {
+    const futureDrivers = (getAvailableDriversWithSchedule || []).map((driver) => {
       const assignment = assignedMap.get(driver.id);
       if (assignment) {
         return {
@@ -249,6 +249,13 @@ const Drivers = () => {
         report_time: null,
         isAnyHours: driver.schedule?.is_any_hours || false,
       };
+    });
+
+    // Sort future drivers by earliest start time first
+    return futureDrivers.sort((a, b) => {
+      const aTime = a.schedule?.start_time || "99:99";
+      const bTime = b.schedule?.start_time || "99:99";
+      return aTime.localeCompare(bTime);
     });
   }, [isToday, getAvailableDriversWithSchedule, drivers, futureAssignments, schedules]);
 
