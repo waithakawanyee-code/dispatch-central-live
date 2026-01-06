@@ -206,6 +206,24 @@ export function VehicleManagement() {
     }
   };
 
+  const bulkToggleCarWash = async (hasSubscription: boolean) => {
+    if (selectedIds.size === 0) return;
+    const { error } = await supabase
+      .from("vehicles")
+      .update({ has_car_wash_subscription: hasSubscription, updated_at: new Date().toISOString() })
+      .in("id", Array.from(selectedIds));
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to update car wash subscriptions", variant: "destructive" });
+    } else {
+      toast({ 
+        title: "Success", 
+        description: `${selectedIds.size} vehicle(s) ${hasSubscription ? "now have" : "no longer have"} car wash subscription` 
+      });
+      setSelectedIds(new Set());
+    }
+  };
+
   const handleExport = () => {
     const csv = generateCSV(vehicles, [
       { key: "unit", header: "Unit" },
@@ -772,6 +790,14 @@ export function VehicleManagement() {
           <Button size="sm" variant="outline" onClick={() => bulkSetStatus("out-of-service")}>
             <XCircle className="h-4 w-4 mr-1" />
             Out of Service
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => bulkToggleCarWash(true)}>
+            <Droplets className="h-4 w-4 mr-1" />
+            Add Car Wash
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => bulkToggleCarWash(false)}>
+            <Droplets className="h-4 w-4 mr-1 opacity-50" />
+            Remove Car Wash
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
