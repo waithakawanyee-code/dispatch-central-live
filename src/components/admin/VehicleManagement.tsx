@@ -892,7 +892,7 @@ export function VehicleManagement() {
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-          <span>VEHICLE ID</span>
+          <span>ID</span>
           <span>Type</span>
           <span>Phone</span>
           <span>Status</span>
