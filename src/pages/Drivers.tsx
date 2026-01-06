@@ -1334,18 +1334,58 @@ const Drivers = () => {
 
           {isFutureDate ? (
             /* Future Date View - Two Column Layout */
-            <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-4">
+              {/* CDL Filter for Future Dates */}
+              <div className="flex items-center justify-end gap-2">
+                <span className="text-xs text-muted-foreground uppercase tracking-wide">CDL Filter:</span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant={globalCdlFilter === "all" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => setGlobalCdlFilter("all")}
+                  >
+                    All
+                  </Button>
+                  <Button
+                    variant={globalCdlFilter === "non-cdl" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => setGlobalCdlFilter("non-cdl")}
+                  >
+                    Non-CDL
+                  </Button>
+                  <Button
+                    variant={globalCdlFilter === "cdl" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => setGlobalCdlFilter("cdl")}
+                  >
+                    CDL
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-6">
               {/* Left Column - Scheduled/Unassigned */}
               <div className="space-y-2">
                 <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
                   <span>Scheduled</span>
                   <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                    {displayDrivers.filter(d => d.status === "unassigned").length}
+                    {displayDrivers.filter(d => d.status === "unassigned").filter(d => {
+                      if (globalCdlFilter === "cdl") return (d as any).has_cdl;
+                      if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
+                      return true;
+                    }).length}
                   </span>
                 </h3>
                 <div className="flex flex-col gap-1">
                   {displayDrivers
                     .filter(d => d.status === "unassigned")
+                    .filter(d => {
+                      if (globalCdlFilter === "cdl") return (d as any).has_cdl;
+                      if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
+                      return true;
+                    })
                     .map((driver) => (
                       <div
                         key={driver.id}
@@ -1385,12 +1425,21 @@ const Drivers = () => {
                 <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
                   <span>Assigned</span>
                   <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                    {displayDrivers.filter(d => d.status === "assigned").length}
+                    {displayDrivers.filter(d => d.status === "assigned").filter(d => {
+                      if (globalCdlFilter === "cdl") return (d as any).has_cdl;
+                      if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
+                      return true;
+                    }).length}
                   </span>
                 </h3>
                 <div className="flex flex-col gap-1">
                   {displayDrivers
                     .filter(d => d.status === "assigned")
+                    .filter(d => {
+                      if (globalCdlFilter === "cdl") return (d as any).has_cdl;
+                      if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
+                      return true;
+                    })
                     .map((driver) => (
                       <div
                         key={driver.id}
@@ -1436,6 +1485,7 @@ const Drivers = () => {
                     <p className="text-xs text-muted-foreground italic py-2">No drivers assigned yet</p>
                   )}
                 </div>
+              </div>
               </div>
             </div>
           ) : (
