@@ -1369,8 +1369,6 @@ const Drivers = () => {
                             <Clock className="h-3 w-3" />
                             <span>
                               {driver.schedule.start_time?.slice(0, 5) || "--:--"}
-                              {" - "}
-                              {driver.schedule.end_time?.slice(0, 5) || "--:--"}
                             </span>
                           </div>
                         )}
