@@ -64,6 +64,7 @@ type VehicleStatus = Database["public"]["Enums"]["vehicle_status"];
 type CleanStatus = Database["public"]["Enums"]["clean_status"];
 type VehicleType = Database["public"]["Enums"]["vehicle_type"];
 type VehicleClassification = "house" | "take_home";
+type VehiclePrimaryCategory = "above_all" | "specialty";
 
 // Vehicle types with CDL requirements
 export const VEHICLE_TYPES: { value: VehicleType; label: string; requiresCdl: boolean }[] = [
@@ -88,6 +89,7 @@ interface VehicleFormData {
   clean_status: CleanStatus;
   vehicle_type: VehicleType | "";
   notes: string;
+  primary_category: VehiclePrimaryCategory;
   classification: VehicleClassification;
   assigned_driver_id: string;
 }
@@ -99,6 +101,7 @@ const initialFormData: VehicleFormData = {
   clean_status: "clean",
   vehicle_type: "",
   notes: "",
+  primary_category: "above_all",
   classification: "house",
   assigned_driver_id: "",
 };
@@ -279,7 +282,8 @@ export function VehicleManagement() {
       status: formData.status,
       clean_status: formData.clean_status,
       notes: formData.notes.trim() || null,
-      classification: formData.classification,
+      primary_category: formData.primary_category,
+      classification: formData.primary_category === "above_all" ? formData.classification : "house",
       assigned_driver_id: formData.assigned_driver_id || null,
     });
 
@@ -311,7 +315,8 @@ export function VehicleManagement() {
         status: formData.status,
         clean_status: formData.clean_status,
         notes: formData.notes.trim() || null,
-        classification: formData.classification,
+        primary_category: formData.primary_category,
+        classification: formData.primary_category === "above_all" ? formData.classification : "house",
         assigned_driver_id: formData.assigned_driver_id || null,
         updated_at: new Date().toISOString(),
       })
@@ -346,6 +351,7 @@ export function VehicleManagement() {
       status: vehicle.status,
       clean_status: vehicle.clean_status,
       notes: (vehicle as any).notes || "",
+      primary_category: (vehicle as any).primary_category || "above_all",
       classification: (vehicle as any).classification || "house",
       assigned_driver_id: (vehicle as any).assigned_driver_id || "",
     });
@@ -495,14 +501,15 @@ export function VehicleManagement() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Classification</Label>
+                  <Label>Primary Category *</Label>
                   <Select
-                    value={formData.classification}
-                    onValueChange={(value: VehicleClassification) => {
+                    value={formData.primary_category}
+                    onValueChange={(value: VehiclePrimaryCategory) => {
                       setFormData({
                         ...formData,
-                        classification: value,
-                        assigned_driver_id: value === "house" ? "" : formData.assigned_driver_id,
+                        primary_category: value,
+                        classification: value === "specialty" ? "house" : formData.classification,
+                        assigned_driver_id: value === "specialty" ? "" : formData.assigned_driver_id,
                       });
                     }}
                   >
@@ -510,12 +517,35 @@ export function VehicleManagement() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="house">House (Fleet)</SelectItem>
-                      <SelectItem value="take_home">Take Home</SelectItem>
+                      <SelectItem value="above_all">Above All</SelectItem>
+                      <SelectItem value="specialty">Specialty</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                {formData.classification === "take_home" && (
+                {formData.primary_category === "above_all" && (
+                  <div className="space-y-2">
+                    <Label>Secondary Category</Label>
+                    <Select
+                      value={formData.classification}
+                      onValueChange={(value: VehicleClassification) => {
+                        setFormData({
+                          ...formData,
+                          classification: value,
+                          assigned_driver_id: value === "house" ? "" : formData.assigned_driver_id,
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="house">Fleet</SelectItem>
+                        <SelectItem value="take_home">Take Home</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {formData.primary_category === "above_all" && formData.classification === "take_home" && (
                   <div className="space-y-2">
                     <Label>Take-Home Driver</Label>
                     <Select
@@ -755,21 +785,37 @@ export function VehicleManagement() {
                 <>
                   <span className="font-mono font-medium flex items-center gap-1">
                     {vehicle.unit}
-                    {(vehicle as any).classification === "take_home" ? (
+                    {(vehicle as any).primary_category === "specialty" ? (
                       <span
-                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400"
-                        title="Take-Home Vehicle"
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400"
+                        title="Specialty Vehicle"
                       >
-                        <User className="h-3 w-3" />
-                        TH
+                        S
                       </span>
                     ) : (
-                      <span
-                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground"
-                        title="House Vehicle"
-                      >
-                        <Home className="h-3 w-3" />
-                      </span>
+                      <>
+                        <span
+                          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                          title="Above All"
+                        >
+                          AA
+                        </span>
+                        {(vehicle as any).classification === "take_home" ? (
+                          <span
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                            title="Take Home"
+                          >
+                            <User className="h-3 w-3" />
+                          </span>
+                        ) : (
+                          <span
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground"
+                            title="Fleet"
+                          >
+                            <Home className="h-3 w-3" />
+                          </span>
+                        )}
+                      </>
                     )}
                     {(vehicle as any).notes && <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />}
                   </span>
