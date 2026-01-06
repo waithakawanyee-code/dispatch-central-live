@@ -230,8 +230,21 @@ const Drivers = () => {
           scheduledStartTime: scheduledDriverMap.get(d.id)?.start_time || null,
         }));
       
-      // Sort today's drivers by their scheduled start times
+      // Define status priority order
+      const statusOrder: Record<string, number> = {
+        "assigned": 1,
+        "working": 2,
+        "punched-out": 3,
+        "unassigned": 4,
+      };
+      
+      // Sort by status first, then by start time within each status group
       return todayDrivers.sort((a, b) => {
+        const aStatusOrder = statusOrder[a.status] ?? 99;
+        const bStatusOrder = statusOrder[b.status] ?? 99;
+        if (aStatusOrder !== bStatusOrder) {
+          return aStatusOrder - bStatusOrder;
+        }
         const aTime = a.scheduledStartTime || "99:99";
         const bTime = b.scheduledStartTime || "99:99";
         return aTime.localeCompare(bTime);
@@ -262,8 +275,19 @@ const Drivers = () => {
       };
     });
 
-    // Sort future drivers by earliest start time first
+    // Define status priority order for future dates
+    const statusOrder: Record<string, number> = {
+      "assigned": 1,
+      "unassigned": 2,
+    };
+
+    // Sort by status first, then by start time within each status group
     return futureDrivers.sort((a, b) => {
+      const aStatusOrder = statusOrder[a.status] ?? 99;
+      const bStatusOrder = statusOrder[b.status] ?? 99;
+      if (aStatusOrder !== bStatusOrder) {
+        return aStatusOrder - bStatusOrder;
+      }
       const aTime = a.schedule?.start_time || "99:99";
       const bTime = b.schedule?.start_time || "99:99";
       return aTime.localeCompare(bTime);
