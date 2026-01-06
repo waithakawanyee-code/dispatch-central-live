@@ -20,6 +20,8 @@ import {
   Filter,
   Droplets,
   MoreHorizontal,
+  Search,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +63,7 @@ import { useDispatchData } from "@/hooks/useDispatchData";
 import { StatusBadge } from "@/components/StatusBadge";
 import { parseCSV, generateCSV, downloadCSV } from "@/lib/csv";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -723,63 +726,70 @@ export function VehicleManagement() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1 text-muted-foreground">
-          <Filter className="h-4 w-4" />
+      <div className="flex items-center gap-2">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search unit, driver, notes..."
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+            className="h-8 w-48 pl-8"
+          />
         </div>
-        <Input
-          placeholder="Search unit, driver, notes..."
-          value={searchQuery}
-          onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-          className="h-8 w-48"
-        />
-        <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v as VehicleStatus | "all"); setCurrentPage(1); }}>
-          <SelectTrigger className="h-8 w-32">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="out-of-service">Out of Service</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filterType} onValueChange={(v) => { setFilterType(v as VehicleType | "all"); setCurrentPage(1); }}>
-          <SelectTrigger className="h-8 w-40">
-            <SelectValue placeholder="Vehicle Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            {VEHICLE_TYPES.map((t) => (
-              <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterCategory} onValueChange={(v) => { setFilterCategory(v as VehiclePrimaryCategory | "all"); setCurrentPage(1); }}>
-          <SelectTrigger className="h-8 w-36">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            <SelectItem value="above_all">Above All</SelectItem>
-            <SelectItem value="specialty">Specialty</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filterClassification} onValueChange={(v) => { setFilterClassification(v as VehicleClassification | "all"); setCurrentPage(1); }}>
-          <SelectTrigger className="h-8 w-36">
-            <SelectValue placeholder="Classification" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Classifications</SelectItem>
-            <SelectItem value="house">House</SelectItem>
-            <SelectItem value="take_home">Take Home</SelectItem>
-          </SelectContent>
-        </Select>
-        {hasActiveFilters && (
-          <Button size="sm" variant="ghost" onClick={clearFilters} className="h-8 text-xs">
-            <X className="h-3 w-3 mr-1" />
-            Clear
-          </Button>
-        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8 gap-2">
+              <SlidersHorizontal className="h-4 w-4" />
+              Filters
+              {hasActiveFilters && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  {[filterStatus !== "all", filterType !== "all", filterCategory !== "all", filterClassification !== "all"].filter(Boolean).length}
+                </Badge>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56 bg-popover">
+            <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={filterStatus} onValueChange={(v) => { setFilterStatus(v as VehicleStatus | "all"); setCurrentPage(1); }}>
+              <DropdownMenuRadioItem value="all">All Status</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="active">Active</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="out-of-service">Out of Service</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={filterType} onValueChange={(v) => { setFilterType(v as VehicleType | "all"); setCurrentPage(1); }}>
+              <DropdownMenuRadioItem value="all">All Types</DropdownMenuRadioItem>
+              {VEHICLE_TYPES.map((t) => (
+                <DropdownMenuRadioItem key={t.value} value={t.value}>{t.label}</DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={filterCategory} onValueChange={(v) => { setFilterCategory(v as VehiclePrimaryCategory | "all"); setCurrentPage(1); }}>
+              <DropdownMenuRadioItem value="all">All Categories</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="above_all">Above All</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="specialty">Specialty</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Filter by Classification</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={filterClassification} onValueChange={(v) => { setFilterClassification(v as VehicleClassification | "all"); setCurrentPage(1); }}>
+              <DropdownMenuRadioItem value="all">All Classifications</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="house">Fleet</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="take_home">Take Home</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+            {hasActiveFilters && (
+              <>
+                <DropdownMenuSeparator />
+                <button
+                  onClick={clearFilters}
+                  className="w-full px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 rounded-sm transition-colors text-left"
+                >
+                  Reset all filters
+                </button>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <span className="ml-auto text-xs text-muted-foreground">
           {filteredVehicles.length} of {vehicles.length} vehicles
         </span>
