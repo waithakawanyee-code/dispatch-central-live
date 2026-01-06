@@ -650,6 +650,7 @@ export type Database = {
           created_at: string
           current_maintenance_event_id: string | null
           driver: string | null
+          has_car_wash_subscription: boolean
           id: string
           mileage: number | null
           notes: string | null
@@ -667,6 +668,7 @@ export type Database = {
           created_at?: string
           current_maintenance_event_id?: string | null
           driver?: string | null
+          has_car_wash_subscription?: boolean
           id?: string
           mileage?: number | null
           notes?: string | null
@@ -684,6 +686,7 @@ export type Database = {
           created_at?: string
           current_maintenance_event_id?: string | null
           driver?: string | null
+          has_car_wash_subscription?: boolean
           id?: string
           mileage?: number | null
           notes?: string | null
