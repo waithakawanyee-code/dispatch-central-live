@@ -50,7 +50,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 type DriverRow = Database["public"]["Tables"]["drivers"]["Row"];
 
-type ScheduleMap = Record<string, Record<number, { is_off: boolean; start_time: string | null }>>;
+type ScheduleMap = Record<string, Record<number, { is_off: boolean; start_time: string | null; is_any_hours: boolean }>>;
 
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mon-Sun
@@ -174,6 +174,7 @@ export function DriverManagement() {
           map[s.driver_id][s.day_of_week] = {
             is_off: s.is_off,
             start_time: s.start_time,
+            is_any_hours: (s as any).is_any_hours || false,
           };
         });
         setSchedules(map);
@@ -361,6 +362,7 @@ export function DriverManagement() {
               driver_id: driverData.id,
               day_of_week: dayNum,
               is_off: isOff,
+              is_any_hours: isAny,
               start_time: isOff ? null : (isAny ? "00:00" : inTime),
               end_time: isOff ? null : (isAny ? "23:59" : (outTime || null)),
             });
@@ -920,6 +922,7 @@ export function DriverManagement() {
                   {displayPrefs.showScheduleInTable && DAY_ORDER.map((dayNum, idx) => {
                     const dayData = driverSchedule[dayNum];
                     const isOff = dayData?.is_off || !dayData;
+                    const isAny = dayData?.is_any_hours && !isOff;
                     const time = isOff ? null : dayData?.start_time;
                     const color = getTimeColor(time, isOff);
                     
@@ -927,9 +930,16 @@ export function DriverManagement() {
                       <span 
                         key={idx} 
                         className="text-center text-[10px] font-mono"
-                        style={color ? { color } : undefined}
+                        style={color && !isAny ? { color } : undefined}
+                        title={isAny ? "Open to any shift" : undefined}
                       >
-                        {isOff ? <span className="text-muted-foreground/50">OFF</span> : formatTime(time)}
+                        {isOff ? (
+                          <span className="text-muted-foreground/50">OFF</span>
+                        ) : isAny ? (
+                          <span className="text-cyan-500">Any</span>
+                        ) : (
+                          formatTime(time)
+                        )}
                       </span>
                     );
                   })}
