@@ -1025,6 +1025,12 @@ export function DriverManagement() {
                               Take Home: {(driver as any).default_vehicle}
                             </Badge>
                           )}
+                          {driver.phone && (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground font-mono">
+                              <Phone className="h-3 w-3" />
+                              {driver.phone}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-start justify-between gap-4">
                           <p className="text-sm text-muted-foreground whitespace-pre-wrap flex-1 bg-secondary/30 rounded-md px-3 py-2">
