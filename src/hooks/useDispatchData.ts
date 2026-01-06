@@ -198,6 +198,11 @@ export function useDispatchData() {
       } else if (newStatus === "punched-out" && oldStatus !== "punched-out" && oldStatus !== "unassigned") {
         // Record punch out when status changes to punched-out (not from unassigned)
         await recordTimePunch(driverId, driver.name, "out", punchTime);
+        
+        // Rule B: Mark vehicle dirty on punch-out for non-take-home vehicles
+        if (oldVehicle) {
+          await markVehicleDirtyOnPunchOut(oldVehicle);
+        }
       }
     }
   };
@@ -266,6 +271,81 @@ export function useDispatchData() {
     if (error) {
       console.error(`Failed to record punch ${punchType}:`, error);
     }
+  };
+
+  // Rule B: Mark vehicle dirty on punch-out for non-take-home vehicles
+  const markVehicleDirtyOnPunchOut = async (vehicleUnit: string) => {
+    // Find the vehicle by unit
+    const vehicle = vehicles.find(v => v.unit === vehicleUnit);
+    if (!vehicle) {
+      console.log("[Rule B] Vehicle not found:", vehicleUnit);
+      return;
+    }
+
+    // Check conditions:
+    // - primary_category = 'above_all' (no automation for specialty)
+    // - always_clean_exempt = false
+    // - classification = 'house' (non-take-home)
+    const isAboveAll = vehicle.primary_category === "above_all";
+    const isNotExempt = !(vehicle as any).always_clean_exempt;
+    const isHouseVehicle = vehicle.classification === "house";
+
+    console.log(`[Rule B] Checking vehicle ${vehicle.unit}: above_all=${isAboveAll}, not_exempt=${isNotExempt}, house=${isHouseVehicle}`);
+
+    if (!isAboveAll || !isNotExempt || !isHouseVehicle) {
+      console.log(`[Rule B] Skipping ${vehicle.unit} - conditions not met`);
+      return;
+    }
+
+    // Skip if already dirty with this reason
+    if (vehicle.clean_status === "dirty" && (vehicle as any).dirty_reason === "PUNCH_OUT_NON_TAKE_HOME") {
+      console.log(`[Rule B] Skipping ${vehicle.unit} - already dirty with PUNCH_OUT_NON_TAKE_HOME`);
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const idempotencyKey = `punch_out_${vehicle.id}_${new Date().toISOString().replace(/[:.]/g, "_")}`;
+
+    // Update the vehicle
+    const { error: updateError } = await supabase
+      .from("vehicles")
+      .update({
+        clean_status: "dirty",
+        dirty_reason: "PUNCH_OUT_NON_TAKE_HOME",
+        last_marked_dirty_at: now,
+        clean_status_updated_at: now,
+        clean_status_source: "automation",
+      })
+      .eq("id", vehicle.id);
+
+    if (updateError) {
+      console.error(`[Rule B] Error updating ${vehicle.unit}:`, updateError);
+      return;
+    }
+
+    // Log the event
+    const { error: eventError } = await supabase
+      .from("vehicle_status_events")
+      .insert({
+        vehicle_id: vehicle.id,
+        event_type: "CLEAN_STATUS_PUNCH_OUT",
+        occurred_at: now,
+        source: "automation",
+        payload_json: {
+          previous_status: vehicle.clean_status,
+          new_status: "dirty",
+          reason: "PUNCH_OUT_NON_TAKE_HOME",
+          classification: vehicle.classification,
+        },
+        idempotency_key: idempotencyKey,
+      });
+
+    if (eventError) {
+      console.error(`[Rule B] Error logging event for ${vehicle.unit}:`, eventError);
+    }
+
+    console.log(`[Rule B] Marked ${vehicle.unit} as dirty (PUNCH_OUT_NON_TAKE_HOME)`);
+    await logStatusChange("vehicle", vehicle.id, vehicle.unit, "clean_status", vehicle.clean_status, "dirty");
   };
 
   const updateVehicleStatus = async (vehicleId: string, newStatus: VehicleStatus) => {
