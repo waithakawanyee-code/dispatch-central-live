@@ -83,7 +83,7 @@ const Drivers = () => {
   const [offDriver, setOffDriver] = useState<{ id: string; name: string } | null>(null);
   const [isCallOutChecked, setIsCallOutChecked] = useState(false);
   const [callOutNote, setCallOutNote] = useState("");
-  const [offForTomorrow, setOffForTomorrow] = useState(false);
+  const [offDates, setOffDates] = useState<Date[]>([]);
   
   // Punch In dialog state
   const [showPunchInDialog, setShowPunchInDialog] = useState(false);
@@ -445,10 +445,11 @@ const Drivers = () => {
   const handleConfirmOff = async () => {
     if (!offDriver) return;
     
-    const targetDate = offForTomorrow ? addDays(today, 1) : today;
+    const hasFutureDates = offDates.length > 0;
+    const includestoday = offDates.some(d => isSameDay(d, today));
     
-    // Store previous state for undo (only for today)
-    if (!offForTomorrow) {
+    // Store previous state for undo (only if marking off for today)
+    if (!hasFutureDates || includestoday) {
       const driver = drivers.find(d => d.id === offDriver.id);
       if (driver) {
         setLastAction({
@@ -462,16 +463,22 @@ const Drivers = () => {
       }
     }
     
-    // If it's a call out, record it
+    // Determine which dates to mark off
+    const datesToMarkOff = hasFutureDates ? offDates : [today];
+    
+    // If it's a call out, record it for all selected dates
     if (isCallOutChecked) {
       const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from("call_outs").insert({
+      
+      const insertData = datesToMarkOff.map(date => ({
         driver_id: offDriver.id,
         driver_name: offDriver.name,
         note: callOutNote.trim() || null,
         created_by: user?.id || null,
-        call_out_date: format(targetDate, "yyyy-MM-dd"),
-      });
+        call_out_date: format(date, "yyyy-MM-dd"),
+      }));
+      
+      const { error } = await supabase.from("call_outs").insert(insertData);
 
       if (error) {
         toast({
@@ -480,12 +487,13 @@ const Drivers = () => {
           variant: "destructive",
         });
       } else {
+        const dateCount = datesToMarkOff.length;
         toast({
           title: "Call out recorded",
-          description: `${offDriver.name} marked as called out for ${offForTomorrow ? "tomorrow" : "today"}`,
+          description: `${offDriver.name} marked as called out for ${dateCount} day${dateCount > 1 ? "s" : ""}`,
         });
-        // Refresh call outs for today
-        if (!offForTomorrow) {
+        // Refresh call outs for today if today is included
+        if (!hasFutureDates || includestoday) {
           const { data: callOutsRes } = await supabase
             .from("call_outs")
             .select("*")
@@ -498,12 +506,13 @@ const Drivers = () => {
     }
 
     // Only update driver status if marking off for today
-    if (!offForTomorrow) {
+    if (!hasFutureDates || includestoday) {
       updateDriverStatus(offDriver.id, "off");
     } else {
+      const futureDatesStr = offDates.map(d => format(d, "EEE, MMM d")).join(", ");
       toast({
         title: "Scheduled OFF",
-        description: `${offDriver.name} will be marked OFF tomorrow`,
+        description: `${offDriver.name} will be marked OFF on: ${futureDatesStr}`,
       });
     }
     
@@ -511,7 +520,7 @@ const Drivers = () => {
     setOffDriver(null);
     setIsCallOutChecked(false);
     setCallOutNote("");
-    setOffForTomorrow(false);
+    setOffDates([]);
   };
 
   // Shortcut action handlers with guardrails
@@ -1961,15 +1970,61 @@ const Drivers = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="off-for-tomorrow"
-                checked={offForTomorrow}
-                onCheckedChange={(checked) => setOffForTomorrow(checked === true)}
-              />
-              <Label htmlFor="off-for-tomorrow" className="text-sm font-normal">
-                Mark off for tomorrow ({format(addDays(today, 1), "EEE, MMM d")})
-              </Label>
+            <div className="grid gap-2">
+              <Label className="text-sm font-medium">Schedule OFF for future dates (optional)</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {offDates.length > 0 
+                      ? `${offDates.length} date${offDates.length > 1 ? "s" : ""} selected`
+                      : "Select future dates"
+                    }
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="multiple"
+                    selected={offDates}
+                    onSelect={(dates) => setOffDates(dates || [])}
+                    disabled={(date) => date < today}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              {offDates.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {offDates
+                    .sort((a, b) => a.getTime() - b.getTime())
+                    .map((date, idx) => (
+                      <span 
+                        key={idx} 
+                        className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs"
+                      >
+                        {format(date, "EEE, MMM d")}
+                        <button
+                          type="button"
+                          onClick={() => setOffDates(offDates.filter(d => !isSameDay(d, date)))}
+                          className="ml-0.5 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {offDates.length === 0 
+                  ? "Leave empty to mark OFF for today only"
+                  : offDates.some(d => isSameDay(d, today))
+                    ? "Today is included - driver status will change now"
+                    : "Future dates only - driver status won't change today"
+                }
+              </p>
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -1997,7 +2052,7 @@ const Drivers = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => {
               setShowOffDialog(false);
-              setOffForTomorrow(false);
+              setOffDates([]);
             }} tabIndex={-1}>
               Cancel
             </Button>
