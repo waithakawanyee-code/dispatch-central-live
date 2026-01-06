@@ -962,37 +962,20 @@ export function VehicleManagement() {
                 <>
                   <span className="font-mono font-medium flex items-center gap-1">
                     {vehicle.unit}
-                    {(vehicle as any).primary_category === "specialty" ? (
+                    {(vehicle as any).classification === "take_home" ? (
                       <span
-                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400"
-                        title="Specialty Vehicle"
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                        title="Take Home"
                       >
-                        S
+                        <User className="h-3 w-3" />
                       </span>
                     ) : (
-                      <>
-                        <span
-                          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                          title="Above All"
-                        >
-                          AA
-                        </span>
-                        {(vehicle as any).classification === "take_home" ? (
-                          <span
-                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400"
-                            title="Take Home"
-                          >
-                            <User className="h-3 w-3" />
-                          </span>
-                        ) : (
-                          <span
-                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground"
-                            title="Fleet"
-                          >
-                            <Home className="h-3 w-3" />
-                          </span>
-                        )}
-                      </>
+                      <span
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground"
+                        title="Fleet"
+                      >
+                        <Home className="h-3 w-3" />
+                      </span>
                     )}
                     {(vehicle as any).has_car_wash_subscription && (
                       <span title="Car Wash Subscription">
