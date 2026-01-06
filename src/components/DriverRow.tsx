@@ -46,6 +46,7 @@ interface DriverRowProps {
   availableVehicles?: VehicleRowType[];
   isSelected?: boolean;
   onSelect?: (driverId: string) => void;
+  isAnyHours?: boolean;
 }
 
 // Workflow: Unassigned → Assigned → Working → Punched Out
@@ -92,7 +93,7 @@ interface TimePunch {
   punch_time: string;
 }
 
-export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, mini = false, availableVehicles = [], isSelected = false, onSelect }: DriverRowProps) {
+export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, mini = false, availableVehicles = [], isSelected = false, onSelect, isAnyHours = false }: DriverRowProps) {
   const { toast } = useToast();
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showOffDialog, setShowOffDialog] = useState(false);
@@ -360,6 +361,9 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
         )}
         {driver.has_cdl && (
           <span className="text-[9px] font-semibold text-primary bg-primary/10 px-1 rounded">CDL</span>
+        )}
+        {isAnyHours && (
+          <span className="text-[8px] font-medium text-muted-foreground bg-muted px-1 rounded" title="Open to any shift">Any</span>
         )}
       </div>
     );
@@ -699,6 +703,9 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
             <span className="font-mono font-semibold text-foreground text-base">{driver.name}</span>
             {driver.has_cdl && (
               <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
+            )}
+            {isAnyHours && (
+              <span className="text-[9px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded" title="Open to any shift">Any</span>
             )}
           </span>
           {/* Show phone for unassigned/scheduled drivers */}
