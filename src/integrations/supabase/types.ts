@@ -642,6 +642,47 @@ export type Database = {
           },
         ]
       }
+      vehicle_status_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          idempotency_key: string | null
+          occurred_at: string
+          payload_json: Json | null
+          source: string
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          idempotency_key?: string | null
+          occurred_at?: string
+          payload_json?: Json | null
+          source: string
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          idempotency_key?: string | null
+          occurred_at?: string
+          payload_json?: Json | null
+          source?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_status_events_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
           always_clean: boolean
