@@ -645,14 +645,20 @@ export type Database = {
       vehicles: {
         Row: {
           always_clean: boolean
+          always_clean_exempt: boolean
           assigned_driver_id: string | null
           classification: Database["public"]["Enums"]["vehicle_classification"]
           clean_status: Database["public"]["Enums"]["clean_status"]
+          clean_status_source: string | null
+          clean_status_updated_at: string | null
           created_at: string
           current_maintenance_event_id: string | null
+          dirty_reason: string | null
           driver: string | null
           has_car_wash_subscription: boolean
           id: string
+          last_marked_dirty_at: string | null
+          last_wash_at: string | null
           mileage: number | null
           notes: string | null
           phone: string | null
@@ -664,14 +670,20 @@ export type Database = {
         }
         Insert: {
           always_clean?: boolean
+          always_clean_exempt?: boolean
           assigned_driver_id?: string | null
           classification?: Database["public"]["Enums"]["vehicle_classification"]
           clean_status?: Database["public"]["Enums"]["clean_status"]
+          clean_status_source?: string | null
+          clean_status_updated_at?: string | null
           created_at?: string
           current_maintenance_event_id?: string | null
+          dirty_reason?: string | null
           driver?: string | null
           has_car_wash_subscription?: boolean
           id?: string
+          last_marked_dirty_at?: string | null
+          last_wash_at?: string | null
           mileage?: number | null
           notes?: string | null
           phone?: string | null
@@ -683,14 +695,20 @@ export type Database = {
         }
         Update: {
           always_clean?: boolean
+          always_clean_exempt?: boolean
           assigned_driver_id?: string | null
           classification?: Database["public"]["Enums"]["vehicle_classification"]
           clean_status?: Database["public"]["Enums"]["clean_status"]
+          clean_status_source?: string | null
+          clean_status_updated_at?: string | null
           created_at?: string
           current_maintenance_event_id?: string | null
+          dirty_reason?: string | null
           driver?: string | null
           has_car_wash_subscription?: boolean
           id?: string
+          last_marked_dirty_at?: string | null
+          last_wash_at?: string | null
           mileage?: number | null
           notes?: string | null
           phone?: string | null
@@ -745,7 +763,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "dispatcher"
-      clean_status: "clean" | "dirty"
+      clean_status: "clean" | "dirty" | "unknown"
       driver_status:
         | "available"
         | "on-route"
@@ -910,7 +928,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "dispatcher"],
-      clean_status: ["clean", "dirty"],
+      clean_status: ["clean", "dirty", "unknown"],
       driver_status: [
         "available",
         "on-route",

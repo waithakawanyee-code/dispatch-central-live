@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 type DriverStatus = "available" | "on-route" | "break" | "offline" | "off" | "scheduled" | "assigned" | "working" | "unassigned" | "punched-out";
 type VehicleStatus = "active" | "out-of-service" | "maintenance" | "returned";
-type CleanStatus = "clean" | "dirty";
+type CleanStatus = "clean" | "dirty" | "unknown";
 interface StatusBadgeProps {
   status: DriverStatus | VehicleStatus | CleanStatus;
   label?: string;
@@ -109,6 +109,12 @@ const statusConfig: Record<string, {
     text: "text-status-dirty",
     border: "border-status-dirty/50",
     glow: "status-glow-break"
+  },
+  unknown: {
+    bg: "bg-muted/20",
+    text: "text-muted-foreground",
+    border: "border-muted-foreground/50",
+    glow: "status-glow-offline"
   }
 };
 const sizeConfig = {
