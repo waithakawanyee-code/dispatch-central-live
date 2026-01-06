@@ -824,20 +824,18 @@ export function VehicleManagement() {
                   </span>
                   <StatusBadge status={vehicle.status} size="sm" />
                   <div className="flex justify-end gap-1">
-                    {((vehicle as any).notes || editingId === vehicle.id) && (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={() => setExpandedId(expandedId === vehicle.id ? null : vehicle.id)}
-                      >
-                        {expandedId === vehicle.id ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={() => setExpandedId(expandedId === vehicle.id ? null : vehicle.id)}
+                    >
+                      {expandedId === vehicle.id ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </Button>
                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEdit(vehicle)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -863,17 +861,69 @@ export function VehicleManagement() {
                   </div>
                 </>
               )}
-              {/* Expandable Notes Row */}
+              {/* Expandable Edit Row */}
               {expandedId === vehicle.id && (
-                <div className="col-span-7 px-2 pb-3 pt-1">
+                <div className="col-span-5 px-2 pb-3 pt-1 space-y-3">
                   {editingId === vehicle.id ? (
-                    <Textarea
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      placeholder="Add notes..."
-                      rows={2}
-                      className="text-sm"
-                    />
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Primary Category</Label>
+                          <Select
+                            value={formData.primary_category}
+                            onValueChange={(value: VehiclePrimaryCategory) => {
+                              setFormData({
+                                ...formData,
+                                primary_category: value,
+                                classification: value === "specialty" ? "house" : formData.classification,
+                                assigned_driver_id: value === "specialty" ? "" : formData.assigned_driver_id,
+                              });
+                            }}
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="above_all">Above All</SelectItem>
+                              <SelectItem value="specialty">Specialty</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {formData.primary_category === "above_all" && (
+                          <div className="space-y-1">
+                            <Label className="text-xs">Secondary Category</Label>
+                            <Select
+                              value={formData.classification}
+                              onValueChange={(value: VehicleClassification) => {
+                                setFormData({
+                                  ...formData,
+                                  classification: value,
+                                  assigned_driver_id: value === "house" ? "" : formData.assigned_driver_id,
+                                });
+                              }}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="house">Fleet</SelectItem>
+                                <SelectItem value="take_home">Take Home</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Notes</Label>
+                        <Textarea
+                          value={formData.notes}
+                          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                          placeholder="Add notes..."
+                          rows={2}
+                          className="text-sm"
+                        />
+                      </div>
+                    </>
                   ) : (
                     <div className="text-sm text-muted-foreground bg-secondary/30 rounded-md px-3 py-2">
                       {(vehicle as any).notes || "No notes"}
