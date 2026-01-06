@@ -19,23 +19,68 @@ Deno.serve(async (req) => {
 
     console.log('Starting daily driver status reset...')
 
-    // Reset all drivers to 'unassigned' status
-    const { data, error } = await supabase
+    // Get all vehicles to identify take-home drivers
+    const { data: vehicles } = await supabase
+      .from('vehicles')
+      .select('unit, classification')
+
+    const takeHomeVehicles = new Set(
+      vehicles?.filter(v => v.classification === 'take_home').map(v => v.unit) || []
+    )
+
+    // Reset regular drivers (no default vehicle or not take-home) to 'unassigned'
+    const { data: regularDrivers, error: regularError } = await supabase
       .from('drivers')
       .update({ status: 'unassigned' })
-      .neq('status', 'off') // Don't reset drivers marked as 'off' (day off)
+      .neq('status', 'off')
+      .or('default_vehicle.is.null,default_vehicle.eq.')
       .select('id, name')
 
-    if (error) {
-      console.error('Error resetting driver statuses:', error)
-      throw error
+    if (regularError) {
+      console.error('Error resetting regular driver statuses:', regularError)
+      throw regularError
     }
 
-    console.log(`Reset ${data?.length || 0} drivers to unassigned status`)
+    // Get drivers with default vehicles
+    const { data: driversWithVehicles } = await supabase
+      .from('drivers')
+      .select('id, name, default_vehicle')
+      .neq('status', 'off')
+      .not('default_vehicle', 'is', null)
+      .neq('default_vehicle', '')
+
+    // Separate take-home drivers from others
+    const takeHomeDrivers = driversWithVehicles?.filter(d => 
+      d.default_vehicle && takeHomeVehicles.has(d.default_vehicle)
+    ) || []
+    const otherDriversWithVehicles = driversWithVehicles?.filter(d => 
+      !d.default_vehicle || !takeHomeVehicles.has(d.default_vehicle)
+    ) || []
+
+    // Reset non-take-home drivers with vehicles to unassigned
+    if (otherDriversWithVehicles.length > 0) {
+      const otherIds = otherDriversWithVehicles.map(d => d.id)
+      await supabase
+        .from('drivers')
+        .update({ status: 'unassigned' })
+        .in('id', otherIds)
+    }
+
+    // Set take-home drivers to 'assigned' with their vehicle
+    for (const driver of takeHomeDrivers) {
+      await supabase
+        .from('drivers')
+        .update({ status: 'assigned', vehicle: driver.default_vehicle })
+        .eq('id', driver.id)
+    }
+
+    const totalReset = (regularDrivers?.length || 0) + otherDriversWithVehicles.length
+    console.log(`Reset ${totalReset} drivers to unassigned, ${takeHomeDrivers.length} take-home drivers to assigned`)
 
     // Log the reset to status_history for auditing
-    if (data && data.length > 0) {
-      const historyEntries = data.map(driver => ({
+    const allResetDrivers = [...(regularDrivers || []), ...otherDriversWithVehicles]
+    if (allResetDrivers.length > 0) {
+      const historyEntries = allResetDrivers.map((driver: { id: string; name: string }) => ({
         entity_type: 'driver',
         entity_id: driver.id,
         entity_name: driver.name,
@@ -53,10 +98,26 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Log take-home drivers being set to assigned
+    if (takeHomeDrivers.length > 0) {
+      const takeHomeHistoryEntries = takeHomeDrivers.map((driver: { id: string; name: string }) => ({
+        entity_type: 'driver',
+        entity_id: driver.id,
+        entity_name: driver.name,
+        field_changed: 'status',
+        old_value: 'various',
+        new_value: 'assigned',
+      }))
+
+      await supabase
+        .from('status_history')
+        .insert(takeHomeHistoryEntries)
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Reset ${data?.length || 0} drivers to unassigned status` 
+        message: `Reset ${totalReset} drivers to unassigned, ${takeHomeDrivers.length} take-home drivers to assigned` 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
