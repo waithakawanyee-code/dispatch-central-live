@@ -48,6 +48,7 @@ export function DriverActionToolbar({
       case "assigned":
         return [
           { label: "Punch In", shortcut: "P", icon: Clock, onClick: onPunchIn, variant: "default" },
+          { label: "Mark OFF", shortcut: "O", icon: Power, onClick: onMarkOff, variant: "outline" },
           { label: "Unassign", shortcut: "", icon: Undo2, onClick: onUnassign, variant: "outline" },
         ];
       case "working":
