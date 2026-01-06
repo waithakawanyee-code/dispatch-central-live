@@ -51,6 +51,7 @@ export type Database = {
           driver_id: string
           end_time: string | null
           id: string
+          is_any_hours: boolean
           is_off: boolean
           note: string | null
           start_time: string | null
@@ -62,6 +63,7 @@ export type Database = {
           driver_id: string
           end_time?: string | null
           id?: string
+          is_any_hours?: boolean
           is_off?: boolean
           note?: string | null
           start_time?: string | null
@@ -73,6 +75,7 @@ export type Database = {
           driver_id?: string
           end_time?: string | null
           id?: string
+          is_any_hours?: boolean
           is_off?: boolean
           note?: string | null
           start_time?: string | null

@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -75,6 +76,7 @@ type ShuttleScheduleMap = Record<number, ShuttleScheduleEntry[]>; // day -> shif
 
 interface DaySchedule {
   is_off: boolean;
+  is_any_hours: boolean;
   start_time: string;
   end_time: string;
   note: string;
@@ -93,13 +95,13 @@ const DAYS_OF_WEEK = [
 ];
 
 const initialSchedule: WeeklySchedule = {
-  0: { is_off: false, start_time: "00:00", end_time: "", note: "" },
-  1: { is_off: false, start_time: "00:00", end_time: "", note: "" },
-  2: { is_off: false, start_time: "00:00", end_time: "", note: "" },
-  3: { is_off: false, start_time: "00:00", end_time: "", note: "" },
-  4: { is_off: false, start_time: "00:00", end_time: "", note: "" },
-  5: { is_off: false, start_time: "00:00", end_time: "", note: "" },
-  6: { is_off: true, start_time: "", end_time: "", note: "" },
+  0: { is_off: false, is_any_hours: false, start_time: "00:00", end_time: "", note: "" },
+  1: { is_off: false, is_any_hours: false, start_time: "00:00", end_time: "", note: "" },
+  2: { is_off: false, is_any_hours: false, start_time: "00:00", end_time: "", note: "" },
+  3: { is_off: false, is_any_hours: false, start_time: "00:00", end_time: "", note: "" },
+  4: { is_off: false, is_any_hours: false, start_time: "00:00", end_time: "", note: "" },
+  5: { is_off: false, is_any_hours: false, start_time: "00:00", end_time: "", note: "" },
+  6: { is_off: true, is_any_hours: false, start_time: "", end_time: "", note: "" },
 };
 
 const initialFormData: DriverProfileFormData = {
@@ -164,6 +166,7 @@ export function DriverProfileDialog({
           data.forEach((s) => {
             scheduleMap[s.day_of_week] = {
               is_off: s.is_off,
+              is_any_hours: (s as any).is_any_hours || false,
               start_time: s.start_time || "",
               end_time: s.end_time || "",
               note: (s as any).note || "",
@@ -248,6 +251,7 @@ export function DriverProfileDialog({
       driver_id: driverId,
       day_of_week: parseInt(day),
       is_off: data.is_off,
+      is_any_hours: data.is_off ? false : data.is_any_hours,
       start_time: data.is_off ? null : data.start_time || null,
       end_time: data.is_off ? null : data.end_time || null,
       note: data.is_off ? null : data.note || null,
@@ -789,6 +793,20 @@ export function DriverProfileDialog({
                         onChange={(e) => updateDaySchedule(day.value, "note", e.target.value)}
                         className="h-7 text-xs flex-1"
                       />
+                      <div className="flex items-center gap-1.5 ml-2">
+                        <Checkbox
+                          id={`any-hours-${day.value}`}
+                          checked={schedule[day.value]?.is_any_hours || false}
+                          onCheckedChange={(checked) => updateDaySchedule(day.value, "is_any_hours", checked === true)}
+                          className="h-3.5 w-3.5"
+                        />
+                        <Label 
+                          htmlFor={`any-hours-${day.value}`} 
+                          className="text-[10px] text-muted-foreground cursor-pointer"
+                        >
+                          Any
+                        </Label>
+                      </div>
                     </div>
                   )}
                 </div>
