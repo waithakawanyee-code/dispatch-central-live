@@ -88,6 +88,7 @@ interface VehicleFormData {
   assigned_driver_id: string;
   phone: string;
   has_car_wash_subscription: boolean;
+  always_clean: boolean;
 }
 const initialFormData: VehicleFormData = {
   unit: "",
@@ -100,7 +101,8 @@ const initialFormData: VehicleFormData = {
   classification: "house",
   assigned_driver_id: "",
   phone: "",
-  has_car_wash_subscription: false
+  has_car_wash_subscription: false,
+  always_clean: false
 };
 const validStatuses: VehicleStatus[] = ["active", "out-of-service"];
 const validCleanStatuses: CleanStatus[] = ["clean", "dirty"];
@@ -406,7 +408,8 @@ export function VehicleManagement() {
       notes: formData.notes.trim() || null,
       primary_category: formData.primary_category,
       classification: formData.primary_category === "above_all" ? formData.classification : "house",
-      assigned_driver_id: formData.assigned_driver_id || null
+      assigned_driver_id: formData.assigned_driver_id || null,
+      always_clean: formData.always_clean
     });
     if (error) {
       if (error.code === "23505") {
@@ -453,6 +456,7 @@ export function VehicleManagement() {
       primary_category: formData.primary_category,
       classification: formData.primary_category === "above_all" ? formData.classification : "house",
       assigned_driver_id: formData.assigned_driver_id || null,
+      always_clean: formData.always_clean,
       updated_at: new Date().toISOString()
     }).eq("id", id);
     if (error) {
@@ -501,7 +505,8 @@ export function VehicleManagement() {
       classification: (vehicle as any).classification || "house",
       assigned_driver_id: (vehicle as any).assigned_driver_id || "",
       phone: (vehicle as any).phone || "",
-      has_car_wash_subscription: (vehicle as any).has_car_wash_subscription || false
+      has_car_wash_subscription: (vehicle as any).has_car_wash_subscription || false,
+      always_clean: (vehicle as any).always_clean || false
     });
   };
   const getVehicleTypeLabel = (type: VehicleType | null) => {
@@ -1055,14 +1060,25 @@ export function VehicleManagement() {
                             </Select>
                           </div>}
                       </div>
-                      {formData.primary_category === "above_all" && <div className="flex items-center gap-2 pt-2">
-                          <Checkbox id="car-wash-sub" checked={formData.has_car_wash_subscription} onCheckedChange={checked => setFormData({
+                      {formData.primary_category === "above_all" && <div className="flex items-center gap-4 pt-2">
+                          <div className="flex items-center gap-2">
+                            <Checkbox id="car-wash-sub" checked={formData.has_car_wash_subscription} onCheckedChange={checked => setFormData({
                 ...formData,
                 has_car_wash_subscription: !!checked
               })} />
-                          <Label htmlFor="car-wash-sub" className="text-xs cursor-pointer">
-                            Car Wash Subscription
-                          </Label>
+                            <Label htmlFor="car-wash-sub" className="text-xs cursor-pointer">
+                              Car Wash Subscription
+                            </Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Checkbox id="always-clean" checked={formData.always_clean} onCheckedChange={checked => setFormData({
+                ...formData,
+                always_clean: !!checked
+              })} />
+                            <Label htmlFor="always-clean" className="text-xs cursor-pointer">
+                              Always Clean (exclude from automation)
+                            </Label>
+                          </div>
                         </div>}
                       <div className="space-y-1">
                         <Label className="text-xs">Notes</Label>
@@ -1090,6 +1106,10 @@ export function VehicleManagement() {
                         {(vehicle as any).has_car_wash_subscription && <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-cyan-500/20 text-cyan-600 dark:text-cyan-400">
                             <Droplets className="h-3 w-3" />
                             Car Wash
+                          </span>}
+                        {(vehicle as any).always_clean && <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-500/20 text-green-600 dark:text-green-400">
+                            <CheckCircle className="h-3 w-3" />
+                            Always Clean
                           </span>}
                       </div>
                       <div className="text-sm text-muted-foreground bg-secondary/30 rounded-md px-3 py-2">
