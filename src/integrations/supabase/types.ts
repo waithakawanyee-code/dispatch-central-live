@@ -644,6 +644,7 @@ export type Database = {
       }
       vehicles: {
         Row: {
+          always_clean: boolean
           assigned_driver_id: string | null
           classification: Database["public"]["Enums"]["vehicle_classification"]
           clean_status: Database["public"]["Enums"]["clean_status"]
@@ -662,6 +663,7 @@ export type Database = {
           vehicle_type: Database["public"]["Enums"]["vehicle_type"] | null
         }
         Insert: {
+          always_clean?: boolean
           assigned_driver_id?: string | null
           classification?: Database["public"]["Enums"]["vehicle_classification"]
           clean_status?: Database["public"]["Enums"]["clean_status"]
@@ -680,6 +682,7 @@ export type Database = {
           vehicle_type?: Database["public"]["Enums"]["vehicle_type"] | null
         }
         Update: {
+          always_clean?: boolean
           assigned_driver_id?: string | null
           classification?: Database["public"]["Enums"]["vehicle_classification"]
           clean_status?: Database["public"]["Enums"]["clean_status"]
