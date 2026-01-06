@@ -183,13 +183,14 @@ const Drivers = () => {
     const dayOfWeek = getDay(selectedDate);
     
     // Find schedules for this day that are NOT marked as off
-    const scheduleMap = new Map<string, { start_time: string | null; end_time: string | null }>();
+    const scheduleMap = new Map<string, { start_time: string | null; end_time: string | null; is_any_hours: boolean }>();
     
     schedules.forEach((schedule) => {
       if (schedule.day_of_week === dayOfWeek && !schedule.is_off) {
         scheduleMap.set(schedule.driver_id, {
           start_time: schedule.start_time,
           end_time: schedule.end_time,
+          is_any_hours: (schedule as any).is_any_hours || false,
         });
       }
     });
@@ -208,19 +209,22 @@ const Drivers = () => {
       // Get the day of week for today to filter by schedule
       const dayOfWeek = getDay(today);
       
-      // Get driver IDs that ARE scheduled for today (not marked as off)
-      const scheduledDriverIds = new Set(
-        schedules
-          .filter((s) => s.day_of_week === dayOfWeek && !s.is_off)
-          .map((s) => s.driver_id)
-      );
+      // Get driver IDs that ARE scheduled for today (not marked as off) with their is_any_hours
+      const scheduledDriverMap = new Map<string, boolean>();
+      schedules
+        .filter((s) => s.day_of_week === dayOfWeek && !s.is_off)
+        .forEach((s) => scheduledDriverMap.set(s.driver_id, (s as any).is_any_hours || false));
       
       // Include drivers who are scheduled for today OR who have been manually assigned/working/punched-out
       // This allows off-drivers who were added to today's schedule to appear
       const activeStatuses = ["assigned", "working", "punched-out"];
       return drivers
-        .filter((d) => (scheduledDriverIds.has(d.id) || activeStatuses.includes(d.status)) && d.status !== "off")
-        .map((d) => ({ ...d, schedule: null as { start_time: string | null; end_time: string | null } | null }));
+        .filter((d) => (scheduledDriverMap.has(d.id) || activeStatuses.includes(d.status)) && d.status !== "off")
+        .map((d) => ({ 
+          ...d, 
+          schedule: null as { start_time: string | null; end_time: string | null; is_any_hours: boolean } | null,
+          isAnyHours: scheduledDriverMap.get(d.id) || false,
+        }));
     }
     
     // Create a map of assigned driver IDs
@@ -235,6 +239,7 @@ const Drivers = () => {
           status: "assigned" as const,
           vehicle: assignment.vehicle,
           report_time: assignment.report_time,
+          isAnyHours: driver.schedule?.is_any_hours || false,
         };
       }
       return {
@@ -242,6 +247,7 @@ const Drivers = () => {
         status: "unassigned" as const,
         vehicle: null,
         report_time: null,
+        isAnyHours: driver.schedule?.is_any_hours || false,
       };
     });
   }, [isToday, getAvailableDriversWithSchedule, drivers, futureAssignments, schedules]);
@@ -1464,6 +1470,7 @@ const Drivers = () => {
                           mini
                           isSelected={selectedDriverId === driver.id}
                           onSelect={handleDriverSelect}
+                          isAnyHours={(driver as any).isAnyHours || false}
                         />
                       ))}
                     {assignedDrivers === 0 && (
@@ -1509,6 +1516,7 @@ const Drivers = () => {
                           mini
                           isSelected={selectedDriverId === driver.id}
                           onSelect={handleDriverSelect}
+                          isAnyHours={(driver as any).isAnyHours || false}
                         />
                       ))}
                     {unassignedDrivers === 0 && (
@@ -1640,6 +1648,7 @@ const Drivers = () => {
                           mini
                           isSelected={selectedDriverId === driver.id}
                           onSelect={handleDriverSelect}
+                          isAnyHours={(driver as any).isAnyHours || false}
                         />
                       ))}
                     {workingDrivers === 0 && (
@@ -1670,6 +1679,7 @@ const Drivers = () => {
                           mini
                           isSelected={selectedDriverId === driver.id}
                           onSelect={handleDriverSelect}
+                          isAnyHours={(driver as any).isAnyHours || false}
                         />
                       ))}
                     {punchedOutDrivers === 0 && (
