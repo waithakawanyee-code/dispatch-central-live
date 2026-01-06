@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Truck, AlertTriangle, Droplets, BarChart3, ChevronDown } from "lucide-react";
+import { Truck, AlertTriangle, Droplets, BarChart3, ChevronDown, Car } from "lucide-react";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
 import { VehicleRow } from "@/components/VehicleRow";
@@ -7,6 +7,7 @@ import { useDispatchData } from "@/hooks/useDispatchData";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useVehicleServiceTickets } from "@/hooks/useVehicleServiceTickets";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Vehicles = () => {
   const {
@@ -19,17 +20,25 @@ const Vehicles = () => {
   const { isAdmin } = useUserRole();
   const { getOpenTicketCount, getVehicleTickets } = useVehicleServiceTickets();
   const [statsOpen, setStatsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"above-all" | "specialty">("above-all");
 
-  // Calculate stats - active means available for assignment
-  const activeVehicles = vehicles.filter((v) => v.status === "active");
+  // Filter by classification - "house" = Above All fleet, "take_home" = Specialty
+  const aboveAllVehicles = vehicles.filter((v) => v.classification === "house");
+  const specialtyVehicles = vehicles.filter((v) => v.classification === "take_home");
+
+  // Get vehicles for current tab
+  const currentVehicles = activeTab === "above-all" ? aboveAllVehicles : specialtyVehicles;
+
+  // Calculate stats for current tab
+  const activeVehicles = currentVehicles.filter((v) => v.status === "active");
   const unassignedVehicles = activeVehicles.filter((v) => !v.driver);
   const assignedVehicles = activeVehicles.filter((v) => v.driver);
-  const outOfServiceVehicles = vehicles.filter((v) => v.status === "out-of-service");
-  const cleanVehicles = vehicles.filter((v) => v.clean_status === "clean").length;
-  const dirtyVehicles = vehicles.filter((v) => v.clean_status === "dirty").length;
+  const outOfServiceVehicles = currentVehicles.filter((v) => v.status === "out-of-service");
+  const cleanVehicles = currentVehicles.filter((v) => v.clean_status === "clean").length;
+  const dirtyVehicles = currentVehicles.filter((v) => v.clean_status === "dirty").length;
 
   // Count vehicles with open tickets (yellow health state)
-  const vehiclesWithOpenTickets = vehicles.filter(
+  const vehiclesWithOpenTickets = currentVehicles.filter(
     (v) => v.status === "active" && getOpenTicketCount(v.id) > 0
   ).length;
 
@@ -62,13 +71,35 @@ const Vehicles = () => {
       <Header />
 
       <main className="p-4">
-        <div className="mb-4">
-          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Truck className="h-5 w-5 text-primary" />
-            Vehicle Workbook
-          </h1>
-          <p className="text-sm text-muted-foreground">Manage vehicle status and maintenance</p>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <Truck className="h-5 w-5 text-primary" />
+              Vehicle Workbook
+            </h1>
+            <p className="text-sm text-muted-foreground">Manage vehicle status and maintenance</p>
+          </div>
         </div>
+
+        {/* Fleet Tabs */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "above-all" | "specialty")} className="mb-4">
+          <TabsList className="grid w-full max-w-xs grid-cols-2">
+            <TabsTrigger value="above-all" className="flex items-center gap-1.5">
+              <Car className="h-3.5 w-3.5" />
+              Above All
+              <span className="ml-1 rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                {aboveAllVehicles.length}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="specialty" className="flex items-center gap-1.5">
+              <Truck className="h-3.5 w-3.5" />
+              Specialty
+              <span className="ml-1 rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
+                {specialtyVehicles.length}
+              </span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {/* Active Vehicles - Two Columns */}
         <section className="rounded-lg border border-border bg-card/50 p-3 mb-4">
