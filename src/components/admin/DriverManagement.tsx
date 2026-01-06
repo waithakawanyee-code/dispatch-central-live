@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, Pencil, Trash2, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, Home, Phone, User, Circle, UserCheck, UserX, CheckCircle, XCircle, Train, Stethoscope } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, Home, Phone, User, Circle, UserCheck, UserX, CheckCircle, XCircle, Train, Stethoscope, MoreHorizontal } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -31,6 +31,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -472,116 +473,30 @@ export function DriverManagement() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h2 className="text-lg font-semibold">Manage Drivers</h2>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search name or code..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 w-48 pl-8"
-            />
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 gap-2">
-                <SlidersHorizontal className="h-4 w-4" />
-                Filters
-                {(activeFilter !== "all" || sortBy !== "name") && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                    {[activeFilter !== "all", sortBy !== "name"].filter(Boolean).length}
-                  </Badge>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48 bg-popover">
-              <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
-              <DropdownMenuRadioGroup value={activeFilter} onValueChange={(v) => setActiveFilter(v as typeof activeFilter)}>
-                <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="active">Active Only</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="inactive">Inactive Only</DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-              <DropdownMenuRadioGroup value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-                <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="status">Active Status</DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-              {(activeFilter !== "all" || sortBy !== "name") && (
-                <>
-                  <DropdownMenuSeparator />
-                  <button
-                    onClick={() => {
-                      setActiveFilter("all");
-                      setSortBy("name");
-                    }}
-                    className="w-full px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 rounded-sm transition-colors text-left"
-                  >
-                    Reset all filters
-                  </button>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          {/* Shuttle Filter */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 gap-2">
-                <Train className="h-4 w-4" />
-                Shuttle
-                {shuttleFilter !== "all" && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">1</Badge>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48 bg-popover">
-              <DropdownMenuLabel>Filter by Shuttle</DropdownMenuLabel>
-              <DropdownMenuRadioGroup value={shuttleFilter} onValueChange={(v) => { setShuttleFilter(v as typeof shuttleFilter); setCurrentPage(1); }}>
-                <DropdownMenuRadioItem value="all">All Drivers</DropdownMenuRadioItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuRadioItem value="amtrak-primary">
-                  <Train className="h-3 w-3 mr-1.5 text-blue-500" />
-                  Amtrak – Primary
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="amtrak-trained">
-                  <Train className="h-3 w-3 mr-1.5 text-blue-400" />
-                  Amtrak – Trained
-                </DropdownMenuRadioItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuRadioItem value="bph-primary">
-                  <Stethoscope className="h-3 w-3 mr-1.5 text-green-500" />
-                  BPH – Primary
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="bph-trained">
-                  <Stethoscope className="h-3 w-3 mr-1.5 text-green-400" />
-                  BPH – Trained
-                </DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-              {shuttleFilter !== "all" && (
-                <>
-                  <DropdownMenuSeparator />
-                  <button
-                    onClick={() => setShuttleFilter("all")}
-                    className="w-full px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 rounded-sm transition-colors text-left"
-                  >
-                    Clear filter
-                  </button>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <h2 className="text-lg font-semibold">Manage Drivers</h2>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="gap-2" onClick={handleDownloadTemplate}>
-            <Download className="h-4 w-4" />
-            Template
-          </Button>
-          <Button size="sm" variant="outline" className="gap-2" onClick={handleExport}>
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" className="gap-2">
+                <MoreHorizontal className="h-4 w-4" />
+                Actions
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleDownloadTemplate}>
+                <Download className="h-4 w-4 mr-2" />
+                Download Template
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExport}>
+                <Download className="h-4 w-4 mr-2" />
+                Export Drivers
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => fileInputRef.current?.click()} disabled={importing}>
+                <Upload className="h-4 w-4 mr-2" />
+                {importing ? "Importing..." : "Import Drivers"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <input
             ref={fileInputRef}
             type="file"
@@ -589,21 +504,90 @@ export function DriverManagement() {
             className="hidden"
             onChange={handleFileSelect}
           />
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-2"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importing}
-          >
-            <Upload className="h-4 w-4" />
-            {importing ? "Importing..." : "Import"}
-          </Button>
           <Button size="sm" className="gap-2" onClick={() => setIsAddOpen(true)}>
             <Plus className="h-4 w-4" />
             Add Driver
           </Button>
         </div>
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex items-center gap-2">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search name or code..."
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+            className="h-8 w-48 pl-8"
+          />
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8 gap-2">
+              <SlidersHorizontal className="h-4 w-4" />
+              Filters
+              {(activeFilter !== "all" || sortBy !== "name" || shuttleFilter !== "all") && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  {[activeFilter !== "all", sortBy !== "name", shuttleFilter !== "all"].filter(Boolean).length}
+                </Badge>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56 bg-popover">
+            <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={activeFilter} onValueChange={(v) => { setActiveFilter(v as typeof activeFilter); setCurrentPage(1); }}>
+              <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="active">Active Only</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="inactive">Inactive Only</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Filter by Shuttle</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={shuttleFilter} onValueChange={(v) => { setShuttleFilter(v as typeof shuttleFilter); setCurrentPage(1); }}>
+              <DropdownMenuRadioItem value="all">All Drivers</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="amtrak-primary">
+                <Train className="h-3 w-3 mr-1.5 text-blue-500" />
+                Amtrak – Primary
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="amtrak-trained">
+                <Train className="h-3 w-3 mr-1.5 text-blue-400" />
+                Amtrak – Trained
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="bph-primary">
+                <Stethoscope className="h-3 w-3 mr-1.5 text-green-500" />
+                BPH – Primary
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="bph-trained">
+                <Stethoscope className="h-3 w-3 mr-1.5 text-green-400" />
+                BPH – Trained
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="status">Active Status</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+            {(activeFilter !== "all" || sortBy !== "name" || shuttleFilter !== "all") && (
+              <>
+                <DropdownMenuSeparator />
+                <button
+                  onClick={() => {
+                    setActiveFilter("all");
+                    setSortBy("name");
+                    setShuttleFilter("all");
+                  }}
+                  className="w-full px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 rounded-sm transition-colors text-left"
+                >
+                  Reset all filters
+                </button>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <span className="ml-auto text-xs text-muted-foreground">
+          {filteredDrivers.length} of {drivers.length} drivers
+        </span>
       </div>
 
       {/* Bulk Action Bar */}
