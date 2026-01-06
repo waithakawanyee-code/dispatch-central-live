@@ -366,21 +366,65 @@ export function useDispatchData() {
     }
   };
 
-  const updateVehicleCleanStatus = async (vehicleId: string, newCleanStatus: CleanStatus) => {
+  const updateVehicleCleanStatus = async (vehicleId: string, newCleanStatus: CleanStatus, reason?: string) => {
     const vehicle = vehicles.find((v) => v.id === vehicleId);
     if (!vehicle) return;
 
     const oldStatus = vehicle.clean_status;
+    const now = new Date().toISOString();
+    
+    // Prepare update data for manual override
+    const updateData: Record<string, unknown> = {
+      clean_status: newCleanStatus,
+      clean_status_updated_at: now,
+      clean_status_source: "manual",
+      updated_at: now,
+    };
+
+    // If marking clean, update last_wash_at
+    if (newCleanStatus === "clean") {
+      updateData.last_wash_at = now;
+      updateData.dirty_reason = null;
+    } else if (newCleanStatus === "dirty") {
+      updateData.last_marked_dirty_at = now;
+      updateData.dirty_reason = reason || "MANUAL";
+    }
+
     const { error } = await supabase
       .from("vehicles")
-      .update({ clean_status: newCleanStatus, updated_at: new Date().toISOString() })
+      .update(updateData)
       .eq("id", vehicleId);
 
     if (error) {
       console.error("Failed to update vehicle clean status:", error);
-    } else {
-      await logStatusChange("vehicle", vehicleId, vehicle.unit, "clean_status", oldStatus, newCleanStatus);
+      return;
     }
+    
+    // Log the status change
+    await logStatusChange("vehicle", vehicleId, vehicle.unit, "clean_status", oldStatus, newCleanStatus);
+
+    // Log an event
+    const idempotencyKey = `manual_${vehicleId}_${now.replace(/[:.]/g, "_")}`;
+    const { error: eventError } = await supabase
+      .from("vehicle_status_events")
+      .insert({
+        vehicle_id: vehicleId,
+        event_type: newCleanStatus === "clean" ? "CLEAN_STATUS_MARKED_CLEAN" : "CLEAN_STATUS_MARKED_DIRTY",
+        occurred_at: now,
+        source: "manual",
+        payload_json: {
+          previous_status: oldStatus,
+          new_status: newCleanStatus,
+          reason: newCleanStatus === "dirty" ? (reason || "MANUAL") : null,
+        },
+        idempotency_key: idempotencyKey,
+      });
+
+    if (eventError) {
+      console.error("Failed to log clean status event:", eventError);
+    }
+
+    console.log(`[Manual] ${vehicle.unit} clean status changed from ${oldStatus} to ${newCleanStatus}`);
   };
 
   return {
