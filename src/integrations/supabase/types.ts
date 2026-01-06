@@ -650,6 +650,7 @@ export type Database = {
           id: string
           mileage: number | null
           notes: string | null
+          primary_category: Database["public"]["Enums"]["vehicle_primary_category"]
           status: Database["public"]["Enums"]["vehicle_status"]
           unit: string
           updated_at: string
@@ -665,6 +666,7 @@ export type Database = {
           id?: string
           mileage?: number | null
           notes?: string | null
+          primary_category?: Database["public"]["Enums"]["vehicle_primary_category"]
           status?: Database["public"]["Enums"]["vehicle_status"]
           unit: string
           updated_at?: string
@@ -680,6 +682,7 @@ export type Database = {
           id?: string
           mileage?: number | null
           notes?: string | null
+          primary_category?: Database["public"]["Enums"]["vehicle_primary_category"]
           status?: Database["public"]["Enums"]["vehicle_status"]
           unit?: string
           updated_at?: string
@@ -752,6 +755,7 @@ export type Database = {
       maintenance_priority: "low" | "medium" | "high" | "critical"
       ticket_status: "open" | "in_progress" | "waiting_parts" | "closed"
       vehicle_classification: "house" | "take_home"
+      vehicle_primary_category: "above_all" | "specialty"
       vehicle_status: "active" | "out-of-service"
       vehicle_type:
         | "sedan_volvo"
@@ -918,6 +922,7 @@ export const Constants = {
       maintenance_priority: ["low", "medium", "high", "critical"],
       ticket_status: ["open", "in_progress", "waiting_parts", "closed"],
       vehicle_classification: ["house", "take_home"],
+      vehicle_primary_category: ["above_all", "specialty"],
       vehicle_status: ["active", "out-of-service"],
       vehicle_type: [
         "sedan_volvo",
