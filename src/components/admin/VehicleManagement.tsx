@@ -17,6 +17,7 @@ import {
   ChevronUp,
   Home,
   User,
+  Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,10 +126,43 @@ export function VehicleManagement() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Pagination
-  const totalPages = Math.ceil(vehicles.length / pageSize);
+  // Filter state
+  const [filterStatus, setFilterStatus] = useState<VehicleStatus | "all">("all");
+  const [filterType, setFilterType] = useState<VehicleType | "all">("all");
+  const [filterCategory, setFilterCategory] = useState<VehiclePrimaryCategory | "all">("all");
+  const [filterClassification, setFilterClassification] = useState<VehicleClassification | "all">("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Apply filters
+  const filteredVehicles = vehicles.filter((v) => {
+    if (filterStatus !== "all" && v.status !== filterStatus) return false;
+    if (filterType !== "all" && v.vehicle_type !== filterType) return false;
+    if (filterCategory !== "all" && v.primary_category !== filterCategory) return false;
+    if (filterClassification !== "all" && v.classification !== filterClassification) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const matchUnit = v.unit?.toLowerCase().includes(q);
+      const matchDriver = v.driver?.toLowerCase().includes(q);
+      const matchNotes = v.notes?.toLowerCase().includes(q);
+      if (!matchUnit && !matchDriver && !matchNotes) return false;
+    }
+    return true;
+  });
+
+  const hasActiveFilters = filterStatus !== "all" || filterType !== "all" || filterCategory !== "all" || filterClassification !== "all" || searchQuery !== "";
+
+  const clearFilters = () => {
+    setFilterStatus("all");
+    setFilterType("all");
+    setFilterCategory("all");
+    setFilterClassification("all");
+    setSearchQuery("");
+  };
+
+  // Pagination (use filtered vehicles)
+  const totalPages = Math.ceil(filteredVehicles.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
-  const paginatedVehicles = vehicles.slice(startIndex, startIndex + pageSize);
+  const paginatedVehicles = filteredVehicles.slice(startIndex, startIndex + pageSize);
 
   const toggleSelectVehicle = (id: string) => {
     setSelectedIds((prev) => {
@@ -660,47 +694,106 @@ export function VehicleManagement() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">
-          CSV format: Unit, Vehicle Type (e.g. sedan_volvo), Driver, Status, Clean Status, Notes
-        </p>
-        {selectedIds.size > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
-            <Button size="sm" variant="outline" onClick={() => bulkSetStatus("active")}>
-              <CheckCircle className="h-4 w-4 mr-1" />
-              Set Active
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => bulkSetStatus("out-of-service")}>
-              <XCircle className="h-4 w-4 mr-1" />
-              Out of Service
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button size="sm" variant="destructive">
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Delete
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete {selectedIds.size} vehicle(s)?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the selected vehicles.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={bulkDelete}>Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-              Clear
-            </Button>
-          </div>
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1 text-muted-foreground">
+          <Filter className="h-4 w-4" />
+        </div>
+        <Input
+          placeholder="Search unit, driver, notes..."
+          value={searchQuery}
+          onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+          className="h-8 w-48"
+        />
+        <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v as VehicleStatus | "all"); setCurrentPage(1); }}>
+          <SelectTrigger className="h-8 w-32">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="out-of-service">Out of Service</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterType} onValueChange={(v) => { setFilterType(v as VehicleType | "all"); setCurrentPage(1); }}>
+          <SelectTrigger className="h-8 w-40">
+            <SelectValue placeholder="Vehicle Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            {VEHICLE_TYPES.map((t) => (
+              <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterCategory} onValueChange={(v) => { setFilterCategory(v as VehiclePrimaryCategory | "all"); setCurrentPage(1); }}>
+          <SelectTrigger className="h-8 w-36">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="above_all">Above All</SelectItem>
+            <SelectItem value="specialty">Specialty</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterClassification} onValueChange={(v) => { setFilterClassification(v as VehicleClassification | "all"); setCurrentPage(1); }}>
+          <SelectTrigger className="h-8 w-36">
+            <SelectValue placeholder="Classification" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Classifications</SelectItem>
+            <SelectItem value="house">House</SelectItem>
+            <SelectItem value="take_home">Take Home</SelectItem>
+          </SelectContent>
+        </Select>
+        {hasActiveFilters && (
+          <Button size="sm" variant="ghost" onClick={clearFilters} className="h-8 text-xs">
+            <X className="h-3 w-3 mr-1" />
+            Clear
+          </Button>
         )}
+        <span className="ml-auto text-xs text-muted-foreground">
+          {filteredVehicles.length} of {vehicles.length} vehicles
+        </span>
       </div>
+
+      {/* Bulk actions */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
+          <Button size="sm" variant="outline" onClick={() => bulkSetStatus("active")}>
+            <CheckCircle className="h-4 w-4 mr-1" />
+            Set Active
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => bulkSetStatus("out-of-service")}>
+            <XCircle className="h-4 w-4 mr-1" />
+            Out of Service
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="destructive">
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {selectedIds.size} vehicle(s)?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete the selected vehicles.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={bulkDelete}>Delete</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+            Clear
+          </Button>
+        </div>
+      )}
 
       <div className="rounded-lg border border-border bg-card">
         <div className="grid grid-cols-[32px_100px_140px_90px_90px] gap-3 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
@@ -708,7 +801,7 @@ export function VehicleManagement() {
             <DropdownMenuTrigger asChild>
               <button className="flex items-center justify-center">
                 <Checkbox
-                  checked={paginatedVehicles.length > 0 && selectedIds.size === vehicles.length}
+                  checked={paginatedVehicles.length > 0 && selectedIds.size === filteredVehicles.length}
                   className="pointer-events-none"
                   aria-label="Select all"
                 />
@@ -725,10 +818,10 @@ export function VehicleManagement() {
                   Select page ({paginatedVehicles.length})
                 </DropdownMenuRadioItem>
                 <DropdownMenuRadioItem
-                  value="all-vehicles"
-                  onClick={() => setSelectedIds(new Set(vehicles.map((v) => v.id)))}
+                  value="all-filtered"
+                  onClick={() => setSelectedIds(new Set(filteredVehicles.map((v) => v.id)))}
                 >
-                  Select all vehicles ({vehicles.length})
+                  Select all filtered ({filteredVehicles.length})
                 </DropdownMenuRadioItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuRadioItem value="none" onClick={() => setSelectedIds(new Set())}>
@@ -743,9 +836,9 @@ export function VehicleManagement() {
           <span className="text-right">Actions</span>
         </div>
 
-        {vehicles.length === 0 ? (
+        {filteredVehicles.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-            No vehicles found. Add your first vehicle above.
+            {vehicles.length === 0 ? "No vehicles found. Add your first vehicle above." : "No vehicles match the current filters."}
           </div>
         ) : (
           paginatedVehicles.map((vehicle) => (
