@@ -1036,6 +1036,27 @@ export function VehicleManagement() {
                             </Select>
                           </div>
                         )}
+                        {formData.primary_category === "above_all" && formData.classification === "take_home" && (
+                          <div className="space-y-1">
+                            <Label className="text-xs">Assigned Driver</Label>
+                            <Select
+                              value={formData.driver || "_none"}
+                              onValueChange={(value) => setFormData({ ...formData, driver: value === "_none" ? "" : value })}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue placeholder="Select driver" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="_none">No driver</SelectItem>
+                                {allDrivers.filter(d => d.is_active).map((driver) => (
+                                  <SelectItem key={driver.id} value={driver.name}>
+                                    {driver.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">Notes</Label>
