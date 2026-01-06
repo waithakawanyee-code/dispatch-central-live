@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { X, Phone, Truck, Clock, Award, Home, User, Timer } from "lucide-react";
+import { X, Phone, Truck, Clock, Award, Home, User, Timer, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { getDay } from "date-fns";
 
 type DriverRowType = Database["public"]["Tables"]["drivers"]["Row"];
 
@@ -20,30 +21,48 @@ interface DriverDetailsPanelProps {
 
 export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps) {
   const [todayPunches, setTodayPunches] = useState<TimePunch[]>([]);
+  const [isAnyHours, setIsAnyHours] = useState(false);
 
   useEffect(() => {
     if (!driver) return;
 
-    const fetchTodayPunches = async () => {
+    const fetchDriverData = async () => {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
       const todayEnd = new Date();
       todayEnd.setHours(23, 59, 59, 999);
 
-      const { data } = await supabase
-        .from("time_punches")
-        .select("id, punch_type, punch_time")
-        .eq("driver_id", driver.id)
-        .gte("punch_time", todayStart.toISOString())
-        .lte("punch_time", todayEnd.toISOString())
-        .order("punch_time", { ascending: true });
+      // Fetch punches and today's schedule in parallel
+      const dayOfWeek = getDay(new Date());
+      
+      const [punchesRes, scheduleRes] = await Promise.all([
+        supabase
+          .from("time_punches")
+          .select("id, punch_type, punch_time")
+          .eq("driver_id", driver.id)
+          .gte("punch_time", todayStart.toISOString())
+          .lte("punch_time", todayEnd.toISOString())
+          .order("punch_time", { ascending: true }),
+        supabase
+          .from("driver_schedules")
+          .select("is_any_hours")
+          .eq("driver_id", driver.id)
+          .eq("day_of_week", dayOfWeek)
+          .maybeSingle(),
+      ]);
 
-      if (data) {
-        setTodayPunches(data);
+      if (punchesRes.data) {
+        setTodayPunches(punchesRes.data);
+      }
+      
+      if (scheduleRes.data) {
+        setIsAnyHours((scheduleRes.data as any).is_any_hours || false);
+      } else {
+        setIsAnyHours(false);
       }
     };
 
-    fetchTodayPunches();
+    fetchDriverData();
   }, [driver?.id]);
 
   if (!driver) return null;
@@ -147,6 +166,12 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
             <span className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded">
               <Home className="h-3 w-3" />
               {(driver as any).default_vehicle}
+            </span>
+          )}
+          {isAnyHours && (
+            <span className="inline-flex items-center gap-1 text-xs bg-muted text-muted-foreground px-2 py-1 rounded" title="Open to work any shift today">
+              <Calendar className="h-3 w-3" />
+              Any
             </span>
           )}
         </div>
