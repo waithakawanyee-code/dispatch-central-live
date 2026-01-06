@@ -83,6 +83,7 @@ const Drivers = () => {
   const [offDriver, setOffDriver] = useState<{ id: string; name: string } | null>(null);
   const [isCallOutChecked, setIsCallOutChecked] = useState(false);
   const [callOutNote, setCallOutNote] = useState("");
+  const [offForTomorrow, setOffForTomorrow] = useState(false);
   
   // Punch In dialog state
   const [showPunchInDialog, setShowPunchInDialog] = useState(false);
@@ -444,17 +445,21 @@ const Drivers = () => {
   const handleConfirmOff = async () => {
     if (!offDriver) return;
     
-    // Store previous state for undo
-    const driver = drivers.find(d => d.id === offDriver.id);
-    if (driver) {
-      setLastAction({
-        driverId: driver.id,
-        driverName: driver.name,
-        previousStatus: driver.status,
-        previousVehicle: driver.vehicle,
-        previousReportTime: driver.report_time,
-        actionType: "off",
-      });
+    const targetDate = offForTomorrow ? addDays(today, 1) : today;
+    
+    // Store previous state for undo (only for today)
+    if (!offForTomorrow) {
+      const driver = drivers.find(d => d.id === offDriver.id);
+      if (driver) {
+        setLastAction({
+          driverId: driver.id,
+          driverName: driver.name,
+          previousStatus: driver.status,
+          previousVehicle: driver.vehicle,
+          previousReportTime: driver.report_time,
+          actionType: "off",
+        });
+      }
     }
     
     // If it's a call out, record it
@@ -465,6 +470,7 @@ const Drivers = () => {
         driver_name: offDriver.name,
         note: callOutNote.trim() || null,
         created_by: user?.id || null,
+        call_out_date: format(targetDate, "yyyy-MM-dd"),
       });
 
       if (error) {
@@ -476,24 +482,36 @@ const Drivers = () => {
       } else {
         toast({
           title: "Call out recorded",
-          description: `${offDriver.name} marked as called out`,
+          description: `${offDriver.name} marked as called out for ${offForTomorrow ? "tomorrow" : "today"}`,
         });
-        // Refresh call outs
-        const { data: callOutsRes } = await supabase
-          .from("call_outs")
-          .select("*")
-          .eq("call_out_date", format(today, "yyyy-MM-dd"));
-        if (callOutsRes) {
-          setTodayCallOuts(callOutsRes as CallOut[]);
+        // Refresh call outs for today
+        if (!offForTomorrow) {
+          const { data: callOutsRes } = await supabase
+            .from("call_outs")
+            .select("*")
+            .eq("call_out_date", format(today, "yyyy-MM-dd"));
+          if (callOutsRes) {
+            setTodayCallOuts(callOutsRes as CallOut[]);
+          }
         }
       }
     }
 
-    updateDriverStatus(offDriver.id, "off");
+    // Only update driver status if marking off for today
+    if (!offForTomorrow) {
+      updateDriverStatus(offDriver.id, "off");
+    } else {
+      toast({
+        title: "Scheduled OFF",
+        description: `${offDriver.name} will be marked OFF tomorrow`,
+      });
+    }
+    
     setShowOffDialog(false);
     setOffDriver(null);
     setIsCallOutChecked(false);
     setCallOutNote("");
+    setOffForTomorrow(false);
   };
 
   // Shortcut action handlers with guardrails
@@ -1945,6 +1963,16 @@ const Drivers = () => {
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
+                id="off-for-tomorrow"
+                checked={offForTomorrow}
+                onCheckedChange={(checked) => setOffForTomorrow(checked === true)}
+              />
+              <Label htmlFor="off-for-tomorrow" className="text-sm font-normal">
+                Mark off for tomorrow ({format(addDays(today, 1), "EEE, MMM d")})
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
                 id="call-out-page"
                 checked={isCallOutChecked}
                 onCheckedChange={(checked) => setIsCallOutChecked(checked === true)}
@@ -1967,7 +1995,10 @@ const Drivers = () => {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowOffDialog(false)} tabIndex={-1}>
+            <Button variant="outline" onClick={() => {
+              setShowOffDialog(false);
+              setOffForTomorrow(false);
+            }} tabIndex={-1}>
               Cancel
             </Button>
             <Button onClick={handleConfirmOff} disabled={!offDriver}>
