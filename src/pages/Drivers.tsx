@@ -209,22 +209,33 @@ const Drivers = () => {
       // Get the day of week for today to filter by schedule
       const dayOfWeek = getDay(today);
       
-      // Get driver IDs that ARE scheduled for today (not marked as off) with their is_any_hours
-      const scheduledDriverMap = new Map<string, boolean>();
+      // Get driver IDs that ARE scheduled for today (not marked as off) with their start times and is_any_hours
+      const scheduledDriverMap = new Map<string, { is_any_hours: boolean; start_time: string | null }>();
       schedules
         .filter((s) => s.day_of_week === dayOfWeek && !s.is_off)
-        .forEach((s) => scheduledDriverMap.set(s.driver_id, (s as any).is_any_hours || false));
+        .forEach((s) => scheduledDriverMap.set(s.driver_id, {
+          is_any_hours: (s as any).is_any_hours || false,
+          start_time: s.start_time,
+        }));
       
       // Include drivers who are scheduled for today OR who have been manually assigned/working/punched-out
       // This allows off-drivers who were added to today's schedule to appear
       const activeStatuses = ["assigned", "working", "punched-out"];
-      return drivers
+      const todayDrivers = drivers
         .filter((d) => (scheduledDriverMap.has(d.id) || activeStatuses.includes(d.status)) && d.status !== "off")
         .map((d) => ({ 
           ...d, 
           schedule: null as { start_time: string | null; end_time: string | null; is_any_hours: boolean } | null,
-          isAnyHours: scheduledDriverMap.get(d.id) || false,
+          isAnyHours: scheduledDriverMap.get(d.id)?.is_any_hours || false,
+          scheduledStartTime: scheduledDriverMap.get(d.id)?.start_time || null,
         }));
+      
+      // Sort today's drivers by their scheduled start times
+      return todayDrivers.sort((a, b) => {
+        const aTime = a.scheduledStartTime || "99:99";
+        const bTime = b.scheduledStartTime || "99:99";
+        return aTime.localeCompare(bTime);
+      });
     }
     
     // Create a map of assigned driver IDs
