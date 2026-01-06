@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Truck, Wrench, Droplets, User, Phone, Plus, FileText } from "lucide-react";
+import { Truck, Wrench, Droplets, User, Phone, Plus, FileText, SprayCan } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { VehicleHealthPill } from "./VehicleHealthPill";
 import { ServiceTicketDialog } from "./ServiceTicketDialog";
@@ -142,7 +142,23 @@ export function VehicleRow({
         </div>
 
         <div className="min-w-[90px] flex-1">
-          <p className="font-mono text-sm font-medium text-foreground">{vehicle.unit}</p>
+          <p className="font-mono text-sm font-medium text-foreground flex items-center gap-1">
+            {vehicle.unit}
+            {(vehicle as any).has_car_wash_subscription && (
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-cyan-500">
+                      <Droplets className="h-3.5 w-3.5" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <span className="text-xs">Car Wash Subscription</span>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </p>
           {vehicle.vehicle_type && (
             <p className="text-[10px] text-muted-foreground">{VEHICLE_TYPE_LABELS[vehicle.vehicle_type]}</p>
           )}

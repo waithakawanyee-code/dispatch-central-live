@@ -18,6 +18,7 @@ import {
   Home,
   User,
   Filter,
+  Droplets,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,6 +95,7 @@ interface VehicleFormData {
   classification: VehicleClassification;
   assigned_driver_id: string;
   phone: string;
+  has_car_wash_subscription: boolean;
 }
 
 const initialFormData: VehicleFormData = {
@@ -107,6 +109,7 @@ const initialFormData: VehicleFormData = {
   classification: "house",
   assigned_driver_id: "",
   phone: "",
+  has_car_wash_subscription: false,
 };
 
 const validStatuses: VehicleStatus[] = ["active", "out-of-service"];
@@ -410,6 +413,7 @@ export function VehicleManagement() {
       classification: (vehicle as any).classification || "house",
       assigned_driver_id: (vehicle as any).assigned_driver_id || "",
       phone: (vehicle as any).phone || "",
+      has_car_wash_subscription: (vehicle as any).has_car_wash_subscription || false,
     });
   };
 
@@ -948,6 +952,11 @@ export function VehicleManagement() {
                         )}
                       </>
                     )}
+                    {(vehicle as any).has_car_wash_subscription && (
+                      <span title="Car Wash Subscription">
+                        <Droplets className="h-3.5 w-3.5 text-cyan-500" />
+                      </span>
+                    )}
                     {(vehicle as any).notes && <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />}
                   </span>
                   <span className="text-xs text-muted-foreground truncate">
@@ -1068,6 +1077,18 @@ export function VehicleManagement() {
                           </div>
                         )}
                       </div>
+                      {formData.primary_category === "above_all" && (
+                        <div className="flex items-center gap-2 pt-2">
+                          <Checkbox
+                            id="car-wash-sub"
+                            checked={formData.has_car_wash_subscription}
+                            onCheckedChange={(checked) => setFormData({ ...formData, has_car_wash_subscription: !!checked })}
+                          />
+                          <Label htmlFor="car-wash-sub" className="text-xs cursor-pointer">
+                            Car Wash Subscription
+                          </Label>
+                        </div>
+                      )}
                       <div className="space-y-1">
                         <Label className="text-xs">Notes</Label>
                         <Textarea
@@ -1080,8 +1101,16 @@ export function VehicleManagement() {
                       </div>
                     </>
                   ) : (
-                    <div className="text-sm text-muted-foreground bg-secondary/30 rounded-md px-3 py-2">
-                      {(vehicle as any).notes || "No notes"}
+                    <div className="space-y-2">
+                      {(vehicle as any).has_car_wash_subscription && (
+                        <div className="flex items-center gap-1.5 text-xs text-cyan-600">
+                          <Droplets className="h-3.5 w-3.5" />
+                          <span>Car Wash Subscription</span>
+                        </div>
+                      )}
+                      <div className="text-sm text-muted-foreground bg-secondary/30 rounded-md px-3 py-2">
+                        {(vehicle as any).notes || "No notes"}
+                      </div>
                     </div>
                   )}
                 </div>
