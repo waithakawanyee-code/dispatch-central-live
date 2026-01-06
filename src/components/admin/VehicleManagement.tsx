@@ -796,7 +796,7 @@ export function VehicleManagement() {
       )}
 
       <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[32px_100px_140px_90px_90px] gap-3 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+        <div className="grid grid-cols-[32px_100px_120px_110px_90px_90px] gap-3 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center justify-center">
@@ -832,6 +832,7 @@ export function VehicleManagement() {
           </DropdownMenu>
           <span>Unit</span>
           <span>Type</span>
+          <span>Phone</span>
           <span>Status</span>
           <span className="text-right">Actions</span>
         </div>
@@ -844,7 +845,7 @@ export function VehicleManagement() {
           paginatedVehicles.map((vehicle) => (
             <div
               key={vehicle.id}
-              className="grid grid-cols-[32px_100px_140px_90px_90px] gap-3 border-b border-border px-4 py-3 text-sm last:border-0 items-center"
+              className="grid grid-cols-[32px_100px_120px_110px_90px_90px] gap-3 border-b border-border px-4 py-3 text-sm last:border-0 items-center"
             >
               <Checkbox
                 checked={selectedIds.has(vehicle.id)}
@@ -884,6 +885,12 @@ export function VehicleManagement() {
                       </SelectGroup>
                     </SelectContent>
                   </Select>
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="Phone"
+                    className="h-8"
+                  />
                   <Select
                     value={formData.status}
                     onValueChange={(value: VehicleStatus) => setFormData({ ...formData, status: value })}
@@ -946,6 +953,9 @@ export function VehicleManagement() {
                   <span className="text-xs text-muted-foreground truncate">
                     {getVehicleTypeLabel(vehicle.vehicle_type)}
                   </span>
+                  <span className="text-xs text-muted-foreground truncate font-mono">
+                    {vehicle.phone || "—"}
+                  </span>
                   <StatusBadge status={vehicle.status} size="sm" />
                   <div className="flex justify-end gap-1">
                     <Button
@@ -987,7 +997,7 @@ export function VehicleManagement() {
               )}
               {/* Expandable Edit Row */}
               {expandedId === vehicle.id && (
-                <div className="col-span-5 px-2 pb-3 pt-1 space-y-3">
+                <div className="col-span-6 px-2 pb-3 pt-1 space-y-3">
                   {editingId === vehicle.id ? (
                     <>
                       <div className="grid grid-cols-2 gap-3">
