@@ -959,21 +959,6 @@ export function VehicleManagement() {
                 </> : <>
                   <span className="font-mono font-medium flex items-center gap-1">
                     {vehicle.unit}
-                    {(vehicle as any).primary_category === "specialty" ? <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400" title="Specialty Vehicle">
-                        S
-                      </span> : <>
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" title="Above All">
-                          AA
-                        </span>
-                        {(vehicle as any).classification === "take_home" ? <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400" title="Take Home">
-                            <User className="h-3 w-3" />
-                          </span> : <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground" title="Fleet">
-                            <Home className="h-3 w-3" />
-                          </span>}
-                      </>}
-                    {(vehicle as any).has_car_wash_subscription && <span title="Car Wash Subscription">
-                        <Droplets className="h-3.5 w-3.5 text-cyan-500" />
-                      </span>}
                     {(vehicle as any).notes && <StickyNote className="h-3.5 w-3.5 text-muted-foreground" />}
                   </span>
                   <span className="text-xs text-muted-foreground truncate">
@@ -1087,10 +1072,26 @@ export function VehicleManagement() {
               })} placeholder="Add notes..." rows={2} className="text-sm" />
                       </div>
                     </> : <div className="space-y-2">
-                      {(vehicle as any).has_car_wash_subscription && <div className="flex items-center gap-1.5 text-xs text-cyan-600">
-                          <Droplets className="h-3.5 w-3.5" />
-                          <span>Car Wash Subscription</span>
-                        </div>}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {(vehicle as any).primary_category === "specialty" ? <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400">
+                            Specialty
+                          </span> : <>
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                              Above All
+                            </span>
+                            {(vehicle as any).classification === "take_home" ? <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                                <User className="h-3 w-3" />
+                                Take Home
+                              </span> : <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground">
+                                <Home className="h-3 w-3" />
+                                Fleet
+                              </span>}
+                          </>}
+                        {(vehicle as any).has_car_wash_subscription && <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-cyan-500/20 text-cyan-600 dark:text-cyan-400">
+                            <Droplets className="h-3 w-3" />
+                            Car Wash
+                          </span>}
+                      </div>
                       <div className="text-sm text-muted-foreground bg-secondary/30 rounded-md px-3 py-2">
                         {(vehicle as any).notes || "No notes"}
                       </div>
