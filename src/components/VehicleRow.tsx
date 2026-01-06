@@ -67,6 +67,7 @@ const getAvailableStatusActions = (currentStatus: VehicleStatus): { action: "mar
 const cleanStatusOptions: { value: CleanStatus; label: string }[] = [
   { value: "clean", label: "Clean" },
   { value: "dirty", label: "Dirty" },
+  { value: "unknown", label: "Unknown" },
 ];
 
 export function VehicleRow({ 
