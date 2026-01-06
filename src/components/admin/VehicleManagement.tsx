@@ -443,9 +443,13 @@ export function VehicleManagement() {
       });
       return;
     }
-    const {
-      error
-    } = await supabase.from("vehicles").update({
+    
+    const existingVehicle = vehicles.find(v => v.id === id);
+    const now = new Date().toISOString();
+    const cleanStatusChanged = existingVehicle && existingVehicle.clean_status !== formData.clean_status;
+    
+    // Build update data
+    const updateData: Record<string, unknown> = {
       unit: formData.unit.trim(),
       vehicle_type: formData.vehicle_type || null,
       driver: formData.driver.trim() || null,
@@ -457,8 +461,24 @@ export function VehicleManagement() {
       classification: formData.primary_category === "above_all" ? formData.classification : "house",
       assigned_driver_id: formData.assigned_driver_id || null,
       always_clean: formData.always_clean,
-      updated_at: new Date().toISOString()
-    }).eq("id", id);
+      updated_at: now
+    };
+    
+    // If clean_status changed, add manual tracking fields
+    if (cleanStatusChanged) {
+      updateData.clean_status_updated_at = now;
+      updateData.clean_status_source = "manual";
+      if (formData.clean_status === "clean") {
+        updateData.last_wash_at = now;
+        updateData.dirty_reason = null;
+      } else if (formData.clean_status === "dirty") {
+        updateData.last_marked_dirty_at = now;
+        updateData.dirty_reason = "MANUAL";
+      }
+    }
+    
+    const { error } = await supabase.from("vehicles").update(updateData).eq("id", id);
+    
     if (error) {
       toast({
         title: "Error",
@@ -466,6 +486,24 @@ export function VehicleManagement() {
         variant: "destructive"
       });
     } else {
+      // Log event if clean_status changed
+      if (cleanStatusChanged && existingVehicle) {
+        const idempotencyKey = `manual_admin_${id}_${now.replace(/[:.]/g, "_")}`;
+        await supabase.from("vehicle_status_events").insert({
+          vehicle_id: id,
+          event_type: formData.clean_status === "clean" ? "CLEAN_STATUS_MARKED_CLEAN" : "CLEAN_STATUS_MARKED_DIRTY",
+          occurred_at: now,
+          source: "manual",
+          payload_json: {
+            previous_status: existingVehicle.clean_status,
+            new_status: formData.clean_status,
+            reason: formData.clean_status === "dirty" ? "MANUAL" : null,
+            context: "admin_edit"
+          },
+          idempotency_key: idempotencyKey,
+        });
+      }
+      
       toast({
         title: "Success",
         description: "Vehicle updated successfully"
