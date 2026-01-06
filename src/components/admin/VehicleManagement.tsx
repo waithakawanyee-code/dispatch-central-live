@@ -868,10 +868,10 @@ export function VehicleManagement() {
         </div>}
 
       <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[32px_100px_120px_110px_90px_90px] gap-3 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+        <div className="grid grid-cols-[40px_100px_120px_110px_90px_90px] gap-3 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center justify-center">
+              <button className="w-[40px] flex items-center justify-center shrink-0">
                 <Checkbox checked={paginatedVehicles.length > 0 && selectedIds.size === filteredVehicles.length} className="pointer-events-none" aria-label="Select all" />
               </button>
             </DropdownMenuTrigger>
@@ -901,8 +901,10 @@ export function VehicleManagement() {
 
         {filteredVehicles.length === 0 ? <div className="px-4 py-8 text-center text-sm text-muted-foreground">
             {vehicles.length === 0 ? "No vehicles found. Add your first vehicle above." : "No vehicles match the current filters."}
-          </div> : paginatedVehicles.map(vehicle => <div key={vehicle.id} className="grid grid-cols-[32px_100px_120px_110px_90px_90px] gap-3 border-b border-border px-4 py-3 text-sm last:border-0 items-center">
-              <Checkbox checked={selectedIds.has(vehicle.id)} onCheckedChange={() => toggleSelectVehicle(vehicle.id)} aria-label={`Select ${vehicle.unit}`} />
+          </div> : paginatedVehicles.map(vehicle => <div key={vehicle.id} className="grid grid-cols-[40px_100px_120px_110px_90px_90px] gap-3 border-b border-border px-4 py-3 text-sm last:border-0 items-center">
+              <div className="w-[40px] flex items-center justify-center shrink-0">
+                <Checkbox checked={selectedIds.has(vehicle.id)} onCheckedChange={() => toggleSelectVehicle(vehicle.id)} aria-label={`Select ${vehicle.unit}`} />
+              </div>
               {editingId === vehicle.id ? <>
                   <Input value={formData.unit} onChange={e => setFormData({
             ...formData,
