@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.clean-status-automation]
 verify_jwt = false
+
+[functions.wash-events]
+verify_jwt = false
