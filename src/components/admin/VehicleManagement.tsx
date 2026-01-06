@@ -92,6 +92,7 @@ interface VehicleFormData {
   primary_category: VehiclePrimaryCategory;
   classification: VehicleClassification;
   assigned_driver_id: string;
+  phone: string;
 }
 
 const initialFormData: VehicleFormData = {
@@ -104,6 +105,7 @@ const initialFormData: VehicleFormData = {
   primary_category: "above_all",
   classification: "house",
   assigned_driver_id: "",
+  phone: "",
 };
 
 const validStatuses: VehicleStatus[] = ["active", "out-of-service"];
@@ -171,8 +173,10 @@ export function VehicleManagement() {
     const csv = generateCSV(vehicles, [
       { key: "unit", header: "Unit" },
       { key: "vehicle_type", header: "Vehicle Type" },
+      { key: "primary_category", header: "Primary Category" },
       { key: "classification", header: "Classification" },
       { key: "driver", header: "Driver" },
+      { key: "phone", header: "Phone" },
       { key: "status", header: "Status" },
       { key: "clean_status", header: "Clean Status" },
       { key: "notes", header: "Notes" },
@@ -183,7 +187,7 @@ export function VehicleManagement() {
 
   const handleDownloadTemplate = () => {
     const template =
-      "Unit,Vehicle Type,Classification,Driver,Status,Clean Status,Notes\nV-109,sedan_volvo,house,Jane Smith,active,clean,Maintenance note";
+      "Unit,Vehicle Type,Primary Category,Classification,Driver,Phone,Status,Clean Status,Notes\nV-109,sedan_volvo,above_all,house,Jane Smith,555-123-4567,active,clean,Maintenance note";
     downloadCSV(template, "vehicles-template.csv");
     toast({ title: "Template Downloaded", description: "CSV template with example row" });
   };
@@ -198,8 +202,10 @@ export function VehicleManagement() {
       const rows = parseCSV<{
         unit: string;
         vehicle_type?: string;
+        primary_category?: string;
         classification?: string;
         driver?: string;
+        phone?: string;
         status?: string;
         clean_status?: string;
         notes?: string;
@@ -223,6 +229,14 @@ export function VehicleManagement() {
         return null;
       };
 
+      // Helper to match primary category
+      const matchPrimaryCategory = (input?: string): VehiclePrimaryCategory => {
+        if (!input) return "above_all";
+        const trimmed = input.trim().toLowerCase().replace(/\s+/g, "_");
+        if (trimmed === "specialty") return "specialty";
+        return "above_all";
+      };
+
       // Helper to match classification
       const matchClassification = (input?: string): VehicleClassification => {
         if (!input) return "house";
@@ -233,17 +247,22 @@ export function VehicleManagement() {
 
       const validRows = rows
         .filter((row) => row.unit?.trim())
-        .map((row) => ({
-          unit: row.unit.trim(),
-          vehicle_type: matchVehicleType(row.vehicle_type),
-          classification: matchClassification(row.classification),
-          driver: row.driver?.trim() || null,
-          status: (validStatuses.includes(row.status as VehicleStatus) ? row.status : "active") as VehicleStatus,
-          clean_status: (validCleanStatuses.includes(row.clean_status as CleanStatus)
-            ? row.clean_status
-            : "clean") as CleanStatus,
-          notes: row.notes?.trim() || null,
-        }));
+        .map((row) => {
+          const primaryCategory = matchPrimaryCategory(row.primary_category);
+          return {
+            unit: row.unit.trim(),
+            vehicle_type: matchVehicleType(row.vehicle_type),
+            primary_category: primaryCategory,
+            classification: primaryCategory === "above_all" ? matchClassification(row.classification) : "house" as VehicleClassification,
+            driver: row.driver?.trim() || null,
+            phone: row.phone?.trim() || null,
+            status: (validStatuses.includes(row.status as VehicleStatus) ? row.status : "active") as VehicleStatus,
+            clean_status: (validCleanStatuses.includes(row.clean_status as CleanStatus)
+              ? row.clean_status
+              : "clean") as CleanStatus,
+            notes: row.notes?.trim() || null,
+          };
+        });
 
       if (validRows.length === 0) {
         toast({ title: "Error", description: "No valid vehicles found (unit is required)", variant: "destructive" });
@@ -279,6 +298,7 @@ export function VehicleManagement() {
       unit: formData.unit.trim(),
       vehicle_type: formData.vehicle_type || null,
       driver: formData.driver.trim() || null,
+      phone: formData.phone.trim() || null,
       status: formData.status,
       clean_status: formData.clean_status,
       notes: formData.notes.trim() || null,
@@ -312,6 +332,7 @@ export function VehicleManagement() {
         unit: formData.unit.trim(),
         vehicle_type: formData.vehicle_type || null,
         driver: formData.driver.trim() || null,
+        phone: formData.phone.trim() || null,
         status: formData.status,
         clean_status: formData.clean_status,
         notes: formData.notes.trim() || null,
@@ -354,6 +375,7 @@ export function VehicleManagement() {
       primary_category: (vehicle as any).primary_category || "above_all",
       classification: (vehicle as any).classification || "house",
       assigned_driver_id: (vehicle as any).assigned_driver_id || "",
+      phone: (vehicle as any).phone || "",
     });
   };
 
@@ -470,6 +492,15 @@ export function VehicleManagement() {
                       )}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="555-123-4567"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="vehicle_type">Vehicle Type</Label>

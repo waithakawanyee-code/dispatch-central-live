@@ -650,6 +650,7 @@ export type Database = {
           id: string
           mileage: number | null
           notes: string | null
+          phone: string | null
           primary_category: Database["public"]["Enums"]["vehicle_primary_category"]
           status: Database["public"]["Enums"]["vehicle_status"]
           unit: string
@@ -666,6 +667,7 @@ export type Database = {
           id?: string
           mileage?: number | null
           notes?: string | null
+          phone?: string | null
           primary_category?: Database["public"]["Enums"]["vehicle_primary_category"]
           status?: Database["public"]["Enums"]["vehicle_status"]
           unit: string
@@ -682,6 +684,7 @@ export type Database = {
           id?: string
           mileage?: number | null
           notes?: string | null
+          phone?: string | null
           primary_category?: Database["public"]["Enums"]["vehicle_primary_category"]
           status?: Database["public"]["Enums"]["vehicle_status"]
           unit?: string
