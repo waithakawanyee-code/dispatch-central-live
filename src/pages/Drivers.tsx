@@ -718,7 +718,15 @@ const Drivers = () => {
       return;
     }
     
-    // Allow punch-in for any status - driver will be assigned the vehicle when punching in
+    // Require vehicle selection for unassigned drivers
+    if (driver.status === "unassigned" && (punchInVehicle === "__none__" || !punchInVehicle)) {
+      toast({
+        title: "Vehicle required",
+        description: "Please select a vehicle for this unassigned driver",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Store previous state for undo
     setLastAction({
