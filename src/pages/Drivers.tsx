@@ -2268,12 +2268,27 @@ const Drivers = () => {
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="punch-in-vehicle">Vehicle</Label>
+              <Label htmlFor="punch-in-vehicle" className={
+                punchInDriver && drivers.find(d => d.id === punchInDriver.id)?.status === "unassigned"
+                  ? "text-amber-400 font-medium"
+                  : ""
+              }>
+                Vehicle {punchInDriver && drivers.find(d => d.id === punchInDriver.id)?.status === "unassigned" && (
+                  <span className="text-amber-400 text-xs ml-1">(required)</span>
+                )}
+              </Label>
               <Select 
                 value={punchInVehicle} 
                 onValueChange={setPunchInVehicle}
               >
-                <SelectTrigger id="punch-in-vehicle">
+                <SelectTrigger 
+                  id="punch-in-vehicle"
+                  className={
+                    punchInDriver && drivers.find(d => d.id === punchInDriver.id)?.status === "unassigned" && (punchInVehicle === "__none__" || !punchInVehicle)
+                      ? "ring-2 ring-amber-400 border-amber-400"
+                      : ""
+                  }
+                >
                   <SelectValue placeholder="Select vehicle" />
                 </SelectTrigger>
                 <SelectContent>
