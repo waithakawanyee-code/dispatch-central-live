@@ -718,14 +718,7 @@ const Drivers = () => {
       return;
     }
     
-    if (driver.status !== "assigned") {
-      toast({
-        title: "Cannot punch in",
-        description: "Driver must be assigned first",
-        variant: "destructive",
-      });
-      return; // Keep dialog open so user can select a different driver
-    }
+    // Allow punch-in for any status - driver will be assigned the vehicle when punching in
     
     // Store previous state for undo
     setLastAction({
