@@ -345,25 +345,23 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
           isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background border-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
         )}
       >
-        <span
-          className={cn(
-            "h-1.5 w-1.5 rounded-full shrink-0",
-            driver.status === "scheduled" && "bg-amber-500",
-            driver.status === "unassigned" && "bg-slate-500",
-            driver.status === "assigned" && "bg-emerald-500",
-            ["working", "on-route"].includes(driver.status) && "bg-status-available",
-            ["offline", "punched-out"].includes(driver.status) && "bg-status-offline"
-          )}
-        />
-        <span className="font-mono font-medium text-foreground truncate max-w-[100px]">{driver.name}</span>
-        {(driver as any).default_vehicle && (
+        {(driver as any).default_vehicle ? (
           <Home className="h-3 w-3 text-primary shrink-0" />
+        ) : (
+          <span
+            className={cn(
+              "h-1.5 w-1.5 rounded-full shrink-0",
+              driver.status === "scheduled" && "bg-amber-500",
+              driver.status === "unassigned" && "bg-slate-500",
+              driver.status === "assigned" && "bg-emerald-500",
+              ["working", "on-route"].includes(driver.status) && "bg-status-available",
+              ["offline", "punched-out"].includes(driver.status) && "bg-status-offline"
+            )}
+          />
         )}
+        <span className="font-mono font-medium text-foreground truncate max-w-[100px]">{driver.name}</span>
         {driver.has_cdl && (
           <span className="text-[9px] font-semibold text-primary bg-primary/10 px-1 rounded">CDL</span>
-        )}
-        {isAnyHours && (
-          <span className="text-[8px] font-medium text-muted-foreground bg-muted px-1 rounded" title="Open to any shift">Any</span>
         )}
       </div>
     );
