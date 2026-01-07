@@ -61,9 +61,10 @@ const Drivers = () => {
   const [schedulesLoading, setSchedulesLoading] = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
   const [todayCallOuts, setTodayCallOuts] = useState<CallOut[]>([]);
+  const [selectedDateCallOuts, setSelectedDateCallOuts] = useState<CallOut[]>([]);
   const [offDriversOpen, setOffDriversOpen] = useState(false);
   const [offDriverSearch, setOffDriverSearch] = useState("");
-  const [futureAssignments, setFutureAssignments] = useState<FutureAssignment[]>([]);
+  const [futureAssignments, setFutureAssignments] = useState<FutureAssignment[]>();
   const [globalCdlFilter, setGlobalCdlFilter] = useState<"all" | "cdl" | "non-cdl">("all");
   
   // Selected driver state
@@ -152,26 +153,38 @@ const Drivers = () => {
     fetchData();
   }, []);
 
-  // Fetch future assignments when selected date changes
+  // Fetch future assignments and call-outs when selected date changes
   useEffect(() => {
     if (!isFutureDate) {
       setFutureAssignments([]);
+      setSelectedDateCallOuts([]);
       return;
     }
     
-    const fetchFutureAssignments = async () => {
+    const fetchFutureData = async () => {
       const dateStr = format(selectedDate, "yyyy-MM-dd");
-      const { data, error } = await supabase
-        .from("future_assignments")
-        .select("*")
-        .eq("assignment_date", dateStr);
       
-      if (!error && data) {
-        setFutureAssignments(data as FutureAssignment[]);
+      const [assignmentsRes, callOutsRes] = await Promise.all([
+        supabase
+          .from("future_assignments")
+          .select("*")
+          .eq("assignment_date", dateStr),
+        supabase
+          .from("call_outs")
+          .select("*")
+          .eq("call_out_date", dateStr),
+      ]);
+      
+      if (!assignmentsRes.error && assignmentsRes.data) {
+        setFutureAssignments(assignmentsRes.data as FutureAssignment[]);
+      }
+      
+      if (!callOutsRes.error && callOutsRes.data) {
+        setSelectedDateCallOuts(callOutsRes.data as CallOut[]);
       }
     };
     
-    fetchFutureAssignments();
+    fetchFutureData();
   }, [selectedDate, isFutureDate]);
 
   // Get drivers available on selected date based on their schedule
@@ -255,26 +268,32 @@ const Drivers = () => {
     // Create a map of assigned driver IDs
     const assignedMap = new Map(futureAssignments.map(a => [a.driver_id, a]));
     
+    // Create a set of driver IDs who are marked OFF for this date
+    const offDriverIds = new Set(selectedDateCallOuts.map(c => c.driver_id));
+    
     // For future dates, return available drivers with their assignment status
-    const futureDrivers = (getAvailableDriversWithSchedule || []).map((driver) => {
-      const assignment = assignedMap.get(driver.id);
-      if (assignment) {
+    // Exclude drivers who are marked OFF
+    const futureDrivers = (getAvailableDriversWithSchedule || [])
+      .filter((driver) => !offDriverIds.has(driver.id))
+      .map((driver) => {
+        const assignment = assignedMap.get(driver.id);
+        if (assignment) {
+          return {
+            ...driver,
+            status: "assigned" as const,
+            vehicle: assignment.vehicle,
+            report_time: assignment.report_time,
+            isAnyHours: driver.schedule?.is_any_hours || false,
+          };
+        }
         return {
           ...driver,
-          status: "assigned" as const,
-          vehicle: assignment.vehicle,
-          report_time: assignment.report_time,
+          status: "unassigned" as const,
+          vehicle: null,
+          report_time: null,
           isAnyHours: driver.schedule?.is_any_hours || false,
         };
-      }
-      return {
-        ...driver,
-        status: "unassigned" as const,
-        vehicle: null,
-        report_time: null,
-        isAnyHours: driver.schedule?.is_any_hours || false,
-      };
-    });
+      });
 
     // Define status priority order for future dates
     const statusOrder: Record<string, number> = {
@@ -293,7 +312,7 @@ const Drivers = () => {
       const bTime = b.schedule?.start_time || "99:99";
       return aTime.localeCompare(bTime);
     });
-  }, [isToday, getAvailableDriversWithSchedule, drivers, futureAssignments, schedules]);
+  }, [isToday, getAvailableDriversWithSchedule, drivers, futureAssignments, schedules, selectedDateCallOuts]);
 
   // Handler for assigning a driver
   const handleAssignDriver = async () => {
@@ -384,6 +403,79 @@ const Drivers = () => {
         description: `${driverName} unassigned from ${format(selectedDate, "EEEE, MMM d")}`,
       });
       setFutureAssignments(futureAssignments.filter(a => a.driver_id !== driverId));
+    }
+  };
+
+  // Handler for marking a driver OFF for a future date
+  const handleMarkOffFutureDriver = async (driverId: string, driverName: string) => {
+    if (!isFutureDate) return;
+    
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // First, remove any future assignment for this driver on this date
+    await supabase
+      .from("future_assignments")
+      .delete()
+      .eq("driver_id", driverId)
+      .eq("assignment_date", dateStr);
+    
+    // Then, create a call_out record
+    const { error } = await supabase.from("call_outs").insert({
+      driver_id: driverId,
+      driver_name: driverName,
+      call_out_date: dateStr,
+      created_by: user?.id || null,
+      note: null,
+    });
+    
+    if (error) {
+      toast({
+        title: "Error marking driver OFF",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Driver marked OFF",
+        description: `${driverName} marked OFF for ${format(selectedDate, "EEEE, MMM d")}`,
+      });
+      // Update local state
+      setFutureAssignments(futureAssignments.filter(a => a.driver_id !== driverId));
+      setSelectedDateCallOuts([...selectedDateCallOuts, {
+        id: crypto.randomUUID(),
+        driver_id: driverId,
+        driver_name: driverName,
+        call_out_date: dateStr,
+        note: null,
+      }]);
+    }
+  };
+
+  // Handler for removing OFF status from a driver for a future date
+  const handleRemoveOffFutureDriver = async (driverId: string, driverName: string) => {
+    if (!isFutureDate) return;
+    
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    
+    const { error } = await supabase
+      .from("call_outs")
+      .delete()
+      .eq("driver_id", driverId)
+      .eq("call_out_date", dateStr);
+    
+    if (error) {
+      toast({
+        title: "Error removing OFF status",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "OFF status removed",
+        description: `${driverName} is now scheduled for ${format(selectedDate, "EEEE, MMM d")}`,
+      });
+      setSelectedDateCallOuts(selectedDateCallOuts.filter(c => c.driver_id !== driverId));
     }
   };
 
@@ -1416,15 +1508,15 @@ const Drivers = () => {
                     .map((driver) => (
                       <div
                         key={driver.id}
+                        className={cn(
+                          "flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm transition-all duration-200 group",
+                          isAdmin && "cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-500/5",
+                          selectedDriverId === driver.id && "ring-2 ring-primary ring-offset-1 ring-offset-background border-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
+                        )}
                         onClick={() => {
                           handleDriverSelect(driver.id);
                           if (isAdmin) openAssignDialog(driver.id, driver.name);
                         }}
-                        className={cn(
-                          "flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm transition-all duration-200",
-                          isAdmin && "cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-500/5",
-                          selectedDriverId === driver.id && "ring-2 ring-primary ring-offset-1 ring-offset-background border-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
-                        )}
                       >
                         <span className="h-2 w-2 rounded-full bg-slate-500 shrink-0" />
                         <span className="font-medium text-foreground flex-1">{driver.name}</span>
@@ -1438,6 +1530,20 @@ const Drivers = () => {
                               {driver.schedule.start_time?.slice(0, 5) || "--:--"}
                             </span>
                           </div>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                            title="Mark OFF"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMarkOffFutureDriver(driver.id, driver.name);
+                            }}
+                          >
+                            <PhoneOff className="h-3.5 w-3.5" />
+                          </Button>
                         )}
                       </div>
                     ))}
@@ -1514,6 +1620,53 @@ const Drivers = () => {
                 </div>
               </div>
               </div>
+              {/* OFF Drivers Section for Future Dates */}
+              {selectedDateCallOuts.length > 0 && (
+                <div className="space-y-2 mt-4">
+                  <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
+                    <span className="flex items-center gap-2">
+                      <PhoneOff className="h-4 w-4 text-destructive" />
+                      OFF
+                    </span>
+                    <span className="rounded bg-destructive/20 text-destructive px-2 py-0.5 font-mono text-xs">
+                      {selectedDateCallOuts.length}
+                    </span>
+                  </h3>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedDateCallOuts.map((callOut) => {
+                      const driver = drivers.find(d => d.id === callOut.driver_id);
+                      return (
+                        <div
+                          key={callOut.id}
+                          className="flex items-center gap-2 rounded border border-destructive/30 bg-destructive/5 px-3 py-1.5 text-sm group"
+                        >
+                          <span className="h-2 w-2 rounded-full bg-status-offline shrink-0" />
+                          <span className="font-medium text-foreground">{callOut.driver_name}</span>
+                          {driver?.has_cdl && (
+                            <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
+                          )}
+                          {callOut.note && (
+                            <span className="text-xs text-muted-foreground italic truncate max-w-[120px]" title={callOut.note}>
+                              {callOut.note}
+                            </span>
+                          )}
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary"
+                              title="Remove OFF status"
+                              onClick={() => handleRemoveOffFutureDriver(callOut.driver_id, callOut.driver_name)}
+                            >
+                              <Undo2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             /* Today View - Full Status Grid */
@@ -1806,7 +1959,6 @@ const Drivers = () => {
                 </div>
               </div>
             </div>
-          </div>
           )}
         </section>
 
