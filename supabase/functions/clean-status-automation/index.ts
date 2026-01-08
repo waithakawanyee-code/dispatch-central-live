@@ -14,6 +14,9 @@ Deno.serve(async (req) => {
   try {
     const expectedSecret = Deno.env.get("WASH_EVENTS_SECRET");
     const providedSecret = req.headers.get("x-lovable-secret");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     if (expectedSecret && providedSecret !== expectedSecret) {
       return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
