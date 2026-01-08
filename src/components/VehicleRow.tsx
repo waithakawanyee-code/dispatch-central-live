@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Database } from "@/integrations/supabase/types";
 import { useOpenMaintenanceEvent } from "@/hooks/useMaintenanceEvents";
-type VehicleStatus = Database["public"]["Enums"]["vehicle_status"];
+
 type CleanStatus = Database["public"]["Enums"]["clean_status"];
 type VehicleType = Database["public"]["Enums"]["vehicle_type"];
 type VehicleRowType = Database["public"]["Tables"]["vehicles"]["Row"];
@@ -41,23 +41,6 @@ interface VehicleRowProps {
   hasAnyTickets?: boolean;
 }
 
-// Status transition rules: Mark OOS opens dialog, Return to Service closes maintenance event
-const getAvailableStatusActions = (currentStatus: VehicleStatus): {
-  action: "mark-oos" | "return-to-service";
-  label: string;
-}[] => {
-  if (currentStatus === "active") {
-    return [{
-      action: "mark-oos",
-      label: "Mark Out of Service"
-    }];
-  } else {
-    return [{
-      action: "return-to-service",
-      label: "Return to Service"
-    }];
-  }
-};
 const cleanStatusOptions: {
   value: CleanStatus;
   label: string;
@@ -90,7 +73,7 @@ export function VehicleRow({
 
   // Find the driver details if the vehicle has a driver assigned
   const assignedDriver = vehicle.driver ? drivers.find(d => d.name === vehicle.driver) : null;
-  const availableActions = getAvailableStatusActions(vehicle.status);
+  
   const getStatusIcon = () => {
     switch (vehicle.status) {
       case "active":
@@ -245,27 +228,6 @@ export function VehicleRow({
             <StatusBadge status={vehicle.clean_status} size="sm" />
           </div>}
 
-        <div className="ml-auto">
-          {canEdit ? <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="cursor-pointer focus:outline-none">
-                  <StatusBadge status={vehicle.status} showPulse={vehicle.status === "active"} size="sm" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[180px]">
-                {availableActions.map(option => <DropdownMenuItem key={option.action} onClick={() => {
-              if (option.action === "mark-oos") {
-                setMarkOOSDialogOpen(true);
-              } else if (option.action === "return-to-service") {
-                setMaintenanceSheetOpen(true);
-              }
-            }} className="cursor-pointer text-xs">
-                    {option.action === "mark-oos" ? <Wrench className="h-3 w-3 mr-2 text-status-out-of-service" /> : <Truck className="h-3 w-3 mr-2 text-status-active" />}
-                    <span>{option.label}</span>
-                  </DropdownMenuItem>)}
-              </DropdownMenuContent>
-            </DropdownMenu> : <StatusBadge status={vehicle.status} showPulse={vehicle.status === "active"} size="sm" />}
-        </div>
       </div>
 
       {/* Dialogs */}
