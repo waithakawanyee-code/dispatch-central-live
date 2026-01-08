@@ -76,8 +76,8 @@ export function IntegrationsManagement() {
       const { data, error } = await supabase.functions.invoke("wash-events", {
         body: {
           vehicle_identifier: "Car-12",
-          raw_source: "admin_test"
-        }
+          raw_source: `admin_test_${new Date().toISOString()}`,
+        },
       });
 
       if (error) throw error;
@@ -149,9 +149,7 @@ export function IntegrationsManagement() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-lg font-medium">
-              {lastWash?.vehicles?.unit || "—"}
-            </p>
+            <p className="text-lg font-medium">{lastWash?.vehicles?.unit || "—"}</p>
           </CardContent>
         </Card>
 
@@ -163,9 +161,7 @@ export function IntegrationsManagement() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Badge variant="secondary">
-              {getPayloadValue(lastWash?.payload_json || null, "raw_source")}
-            </Badge>
+            <Badge variant="secondary">{getPayloadValue(lastWash?.payload_json || null, "raw_source")}</Badge>
           </CardContent>
         </Card>
 
@@ -176,18 +172,21 @@ export function IntegrationsManagement() {
               Status Updated
             </CardDescription>
           </CardHeader>
-        <CardContent>
-          {lastWash?.payload_json && typeof lastWash.payload_json === "object" && !Array.isArray(lastWash.payload_json) ? (
-            ((payload) => (payload as Record<string, unknown>).status_updated === true ? (
-              <Badge className="bg-green-500/20 text-green-600 border-green-500/30">Yes</Badge>
-            ) : (payload as Record<string, unknown>).status_updated === false ? (
-              <Badge variant="secondary">No</Badge>
+          <CardContent>
+            {lastWash?.payload_json &&
+            typeof lastWash.payload_json === "object" &&
+            !Array.isArray(lastWash.payload_json) ? (
+              ((payload) =>
+                (payload as Record<string, unknown>).status_updated === true ? (
+                  <Badge className="bg-green-500/20 text-green-600 border-green-500/30">Yes</Badge>
+                ) : (payload as Record<string, unknown>).status_updated === false ? (
+                  <Badge variant="secondary">No</Badge>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                ))(lastWash.payload_json)
             ) : (
               <span className="text-muted-foreground">—</span>
-            ))(lastWash.payload_json)
-          ) : (
-            <span className="text-muted-foreground">—</span>
-          )}
+            )}
           </CardContent>
         </Card>
       </div>
@@ -201,9 +200,16 @@ export function IntegrationsManagement() {
         <CardContent>
           {lastWash ? (
             <div className="bg-muted/50 rounded-lg p-4 font-mono text-sm space-y-1">
-              <div><span className="text-muted-foreground">Vehicle Unit:</span> {lastWash.vehicles?.unit || "Unknown"}</div>
-              <div><span className="text-muted-foreground">Washed At:</span> {formatTimestamp(lastWash.occurred_at)}</div>
-              <div><span className="text-muted-foreground">Raw Source:</span> {getPayloadValue(lastWash.payload_json, "raw_source")}</div>
+              <div>
+                <span className="text-muted-foreground">Vehicle Unit:</span> {lastWash.vehicles?.unit || "Unknown"}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Washed At:</span> {formatTimestamp(lastWash.occurred_at)}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Raw Source:</span>{" "}
+                {getPayloadValue(lastWash.payload_json, "raw_source")}
+              </div>
               <div className="flex items-start gap-2">
                 <span className="text-muted-foreground">Idempotency Key:</span>
                 <span className="break-all">{lastWash.idempotency_key || "—"}</span>
@@ -244,26 +250,22 @@ export function IntegrationsManagement() {
                 ) : (
                   recentEvents.map((event) => (
                     <TableRow key={event.id}>
-                      <TableCell className="whitespace-nowrap text-sm">
-                        {formatTimestamp(event.occurred_at)}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {event.vehicles?.unit || "Unknown"}
-                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-sm">{formatTimestamp(event.occurred_at)}</TableCell>
+                      <TableCell className="font-medium">{event.vehicles?.unit || "Unknown"}</TableCell>
                       <TableCell>
                         <Badge
                           variant={event.event_type === "WASH_RECORDED" ? "default" : "secondary"}
-                          className={event.event_type === "WASH_RECORDED" ? "bg-blue-500/20 text-blue-600 border-blue-500/30" : ""}
+                          className={
+                            event.event_type === "WASH_RECORDED"
+                              ? "bg-blue-500/20 text-blue-600 border-blue-500/30"
+                              : ""
+                          }
                         >
                           {event.event_type}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {event.source}
-                      </TableCell>
-                      <TableCell>
-                        {getPayloadValue(event.payload_json, "new_status")}
-                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{event.source}</TableCell>
+                      <TableCell>{getPayloadValue(event.payload_json, "new_status")}</TableCell>
                       <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
                         {getPayloadValue(event.payload_json, "reason")}
                       </TableCell>
@@ -286,7 +288,10 @@ export function IntegrationsManagement() {
           <CardDescription>Send a test wash event to verify the integration</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Alert variant="destructive" className="bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-400">
+          <Alert
+            variant="destructive"
+            className="bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-400"
+          >
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Admin Testing Only</AlertTitle>
             <AlertDescription>
@@ -296,17 +301,15 @@ export function IntegrationsManagement() {
 
           <div className="flex items-center gap-4">
             <Button onClick={handleTestWebhook} disabled={testLoading}>
-              {testLoading ? (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4 mr-2" />
-              )}
+              {testLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
               Send Test Wash Event
             </Button>
           </div>
 
           {testResult && (
-            <div className={`rounded-lg p-4 ${testResult.success ? "bg-green-500/10 border border-green-500/30" : "bg-destructive/10 border border-destructive/30"}`}>
+            <div
+              className={`rounded-lg p-4 ${testResult.success ? "bg-green-500/10 border border-green-500/30" : "bg-destructive/10 border border-destructive/30"}`}
+            >
               <div className="flex items-center gap-2 mb-2">
                 {testResult.success ? (
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
