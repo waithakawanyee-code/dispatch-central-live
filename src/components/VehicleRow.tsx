@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Truck, Wrench, Droplets, User, Phone, Plus, FileText, SprayCan, Home, Unlock } from "lucide-react";
+import { Truck, Wrench, Droplets, User, Phone, Home, Unlock } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 
 import { ServiceTicketDialog } from "./ServiceTicketDialog";
@@ -7,7 +7,7 @@ import { VehicleTicketsSheet } from "./VehicleTicketsSheet";
 import { MarkOOSDialog } from "./MarkOOSDialog";
 import { MaintenanceEventSheet } from "./MaintenanceEventSheet";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Database } from "@/integrations/supabase/types";
@@ -198,36 +198,9 @@ export function VehicleRow({
             </TooltipProvider>}
         </div>
 
-
-        {/* Quick Actions */}
-        {canEdit && <div className="flex items-center gap-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setTicketDialogOpen(true)}>
-                    <Plus className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>New Ticket</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            {hasAnyTickets && <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setTicketsSheetOpen(true)}>
-                      <FileText className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>View Tickets</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>}
-          </div>}
-
         {canEdit ? <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex cursor-pointer items-center gap-1.5 focus:outline-none">
-                <Droplets className="h-3 w-3 text-muted-foreground" />
                 <StatusBadge status={vehicle.clean_status} size="sm" />
               </button>
             </DropdownMenuTrigger>
@@ -237,10 +210,7 @@ export function VehicleRow({
                   <span className="ml-2">{option.label}</span>
                 </DropdownMenuItem>)}
             </DropdownMenuContent>
-          </DropdownMenu> : <div className="flex items-center gap-1.5">
-            <Droplets className="h-3 w-3 text-muted-foreground" />
-            <StatusBadge status={vehicle.clean_status} size="sm" />
-          </div>}
+          </DropdownMenu> : <StatusBadge status={vehicle.clean_status} size="sm" />}
 
       </div>
 
