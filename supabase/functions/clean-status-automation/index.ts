@@ -2,8 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-lovable-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-lovable-secret",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -92,3 +91,51 @@ Deno.serve(async (req) => {
         .eq("id", vehicle.id);
 
       if (updateError) {
+        console.error(`[clean-status-automation] Error updating ${vehicle.unit}:`, updateError);
+        skippedVehicles.push(vehicle.unit);
+        continue;
+      }
+
+      const { error: eventError } = await supabase.from("vehicle_status_events").insert({
+        vehicle_id: vehicle.id,
+        event_type: "CLEAN_STATUS_TIMEOUT_24H",
+        occurred_at: now,
+        source: "automation",
+        payload_json: {
+          previous_status: vehicle.clean_status,
+          new_status: "dirty",
+          reason: "TIMEOUT_24H",
+          last_wash_at: vehicle.last_wash_at,
+        },
+        idempotency_key: idempotencyKey,
+      });
+
+      if (eventError) {
+        console.error(`[clean-status-automation] Error logging event for ${vehicle.unit}:`, eventError);
+      }
+
+      updatedVehicles.push(vehicle.unit);
+    }
+
+    const result = {
+      success: true,
+      timestamp: new Date().toISOString(),
+      updated: updatedVehicles,
+      skipped: skippedVehicles,
+      message: `Updated ${updatedVehicles.length} vehicles, skipped ${skippedVehicles.length}`,
+    };
+
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("[clean-status-automation] Error:", error);
+
+    return new Response(JSON.stringify({ success: false, error: errorMessage }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
+});
