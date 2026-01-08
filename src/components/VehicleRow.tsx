@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Truck, Wrench, Droplets, User, Phone, Plus, FileText, SprayCan, Home, Unlock } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
-import { VehicleHealthPill } from "./VehicleHealthPill";
+
 import { ServiceTicketDialog } from "./ServiceTicketDialog";
 import { VehicleTicketsSheet } from "./VehicleTicketsSheet";
 import { MarkOOSDialog } from "./MarkOOSDialog";
@@ -74,22 +74,38 @@ export function VehicleRow({
   // Find the driver details if the vehicle has a driver assigned
   const assignedDriver = vehicle.driver ? drivers.find(d => d.name === vehicle.driver) : null;
   
-  const getStatusIcon = () => {
-    switch (vehicle.status) {
-      case "active":
-        return <Truck className="h-3.5 w-3.5 text-status-active" />;
-      case "out-of-service":
-        return <Wrench className="h-3.5 w-3.5 text-status-out-of-service" />;
+  // Icon color based on clean status for active vehicles, or status for OOS
+  const getIconColor = () => {
+    if (vehicle.status === "out-of-service") {
+      return "text-status-out-of-service";
+    }
+    switch (vehicle.clean_status) {
+      case "clean":
+        return "text-status-active"; // Green
+      case "dirty":
+        return "text-amber-500"; // Yellow
       default:
-        return <Truck className="h-3.5 w-3.5 text-muted-foreground" />;
+        return "text-muted-foreground";
     }
   };
+  
+  const getStatusIcon = () => {
+    const iconColor = getIconColor();
+    if (vehicle.status === "out-of-service") {
+      return <Wrench className={cn("h-3.5 w-3.5", iconColor)} />;
+    }
+    return <Truck className={cn("h-3.5 w-3.5", iconColor)} />;
+  };
+  
   const getStatusBgClass = () => {
-    switch (vehicle.status) {
-      case "active":
+    if (vehicle.status === "out-of-service") {
+      return "bg-status-out-of-service/20";
+    }
+    switch (vehicle.clean_status) {
+      case "clean":
         return "bg-status-active/20";
-      case "out-of-service":
-        return "bg-status-out-of-service/20";
+      case "dirty":
+        return "bg-amber-500/20";
       default:
         return "bg-muted/20";
     }
@@ -182,8 +198,6 @@ export function VehicleRow({
             </TooltipProvider>}
         </div>
 
-        {/* Health Pill */}
-        <VehicleHealthPill vehicleStatus={vehicle.status} openTicketCount={openTicketCount} />
 
         {/* Quick Actions */}
         {canEdit && <div className="flex items-center gap-1">
