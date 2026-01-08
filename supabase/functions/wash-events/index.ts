@@ -2,7 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-lovable-secret",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 interface WashEventRequest {
@@ -13,20 +14,20 @@ interface WashEventRequest {
 }
 
 Deno.serve(async (req) => {
-  // CORS
+  // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   // Only allow POST
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+    return new Response(JSON.stringify({ success: false, error: "Method not allowed" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 405,
     });
   }
 
-  // DEBUG: log headers + raw body (temporary)
+  // ---- DEBUG: log headers + raw body (temporary) ----
   const rawText = await req.text();
 
   console.log("[wash-events] headers:", Object.fromEntries(req.headers.entries()));
@@ -38,45 +39,82 @@ Deno.serve(async (req) => {
     parsedBody = rawText ? JSON.parse(rawText) : {};
   } catch (e) {
     console.log("[wash-events] JSON parse failed:", String(e));
-    parsedBody = {};
+
+    // IMPORTANT: return 400 instead of 500 so we can see what's coming in
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "Invalid JSON body",
+        raw_body: rawText,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
+    );
   }
+  // --------------------------------------------------
 
   try {
+    // Optional shared secret (recommended for webhook hardening)
+    const expectedSecret = Deno.env.get("WASH_EVENTS_SECRET");
+    const providedSecret = req.headers.get("x-lovable-secret");
+
+    if (expectedSecret && providedSecret !== expectedSecret) {
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
+    }
+
+    // Supabase service client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Support BOTH formats:
-    // 1) Direct call: { vehicle_identifier, washed_at?, raw_source?, set_clean? }
-    // 2) Samsara webhook: { eventType, data: { ... } }  (we will map later once we see payload)
+    /**
+     * We support BOTH:
+     * A) Direct calls: { vehicle_identifier, washed_at?, raw_source?, set_clean? }
+     * B) Webhook-ish payloads (best effort until we see exact Samsara payload)
+     */
     const vehicle_identifier: string | undefined =
       parsedBody?.vehicle_identifier ??
       parsedBody?.data?.vehicle?.name ??
+      parsedBody?.data?.vehicle?.unit ??
       parsedBody?.data?.asset?.name ??
-      parsedBody?.data?.vehicleName;
+      parsedBody?.data?.asset?.externalId ??
+      parsedBody?.vehicle?.name ??
+      parsedBody?.vehicleName;
 
     const washed_at: string | undefined =
       parsedBody?.washed_at ?? parsedBody?.data?.eventTime ?? parsedBody?.data?.occurredAt ?? parsedBody?.eventTime;
 
-    const raw_source: string | undefined = parsedBody?.raw_source ?? "samsara_webhook";
+    const raw_source: string = parsedBody?.raw_source ?? parsedBody?.data?.source ?? "webhook";
 
     const set_clean: boolean = typeof parsedBody?.set_clean === "boolean" ? parsedBody.set_clean : true;
 
     if (!vehicle_identifier) {
-      return new Response(JSON.stringify({ error: "vehicle_identifier is required" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "vehicle_identifier is required",
+          hint: "Send { vehicle_identifier: 'Car-12' }",
+          received_keys: Object.keys(parsedBody || {}),
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
+      );
     }
 
     console.log(`[wash-events] Processing wash event for: ${vehicle_identifier}`);
 
     // Match vehicle by unit (case-insensitive)
     const identifier = vehicle_identifier.trim();
+
+    // NOTE: For ilike in Supabase filters, safest is to include % wildcards
+    // so it matches exact or partial. If you want exact-only, remove the %.
+    const ilikePattern = `%${identifier}%`;
+
     const { data: vehicles, error: searchError } = await supabase
       .from("vehicles")
       .select("id, unit, primary_category, always_clean_exempt, clean_status")
-      .or(`unit.ilike.${identifier}`);
+      .ilike("unit", ilikePattern);
 
     if (searchError) {
       console.error("[wash-events] Error searching vehicles:", searchError);
@@ -85,19 +123,24 @@ Deno.serve(async (req) => {
 
     if (!vehicles || vehicles.length === 0) {
       console.log(`[wash-events] Vehicle not found: ${vehicle_identifier}`);
-      return new Response(JSON.stringify({ success: false, error: "Vehicle not found", vehicle_identifier }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 404,
-      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Vehicle not found",
+          vehicle_identifier,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 },
+      );
     }
 
     const vehicle = vehicles[0];
+
     const washedAtTime = washed_at ? new Date(washed_at).toISOString() : new Date().toISOString();
     const now = new Date().toISOString();
 
     // Idempotency key (vehicle + date + source)
     const washDate = washedAtTime.split("T")[0];
-    const sourceHash = raw_source ? raw_source.substring(0, 20) : "unknown";
+    const sourceHash = (raw_source || "unknown").substring(0, 20);
     const idempotencyKey = `wash_${vehicle.id}_${washDate}_${sourceHash}`;
 
     const { data: existingEvent } = await supabase
@@ -120,7 +163,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Update clean status only for Above All non-exempt vehicles
+    // Only update clean status for Above All vehicles that are not exempt
     const isAboveAll = vehicle.primary_category === "above_all";
     const isNotExempt = !vehicle.always_clean_exempt;
     const shouldUpdateStatus = isAboveAll && isNotExempt && set_clean;
@@ -129,6 +172,7 @@ Deno.serve(async (req) => {
       `[wash-events] Vehicle ${vehicle.unit}: above_all=${isAboveAll}, not_exempt=${isNotExempt}, set_clean=${set_clean}`,
     );
 
+    // Update vehicle
     const updateData: Record<string, unknown> = {
       last_wash_at: washedAtTime,
       updated_at: now,
@@ -155,18 +199,19 @@ Deno.serve(async (req) => {
       occurred_at: washedAtTime,
       source: "integration",
       payload_json: {
-        raw_source: raw_source || null,
+        raw_source,
         previous_status: vehicle.clean_status,
         new_status: shouldUpdateStatus ? "clean" : vehicle.clean_status,
         status_updated: shouldUpdateStatus,
         washed_at: washedAtTime,
-        received_payload: parsedBody, // helpful for debugging; remove later if you want
+        received_payload: parsedBody, // keep for now so we can map Samsara fields, remove later if you want
       },
       idempotency_key: idempotencyKey,
     });
 
     if (eventError) {
       console.error(`[wash-events] Error logging event for ${vehicle.unit}:`, eventError);
+      // Don't throw — event logging failure shouldn't fail the whole request
     }
 
     const result = {
@@ -187,6 +232,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("[wash-events] Error:", error);
+
     return new Response(JSON.stringify({ success: false, error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
