@@ -92,9 +92,9 @@ export function VehicleRow({
   const getStatusIcon = () => {
     const iconColor = getIconColor();
     if (vehicle.status === "out-of-service") {
-      return <Wrench className={cn("h-3.5 w-3.5", iconColor)} />;
+      return <Wrench className={cn("h-3 w-3", iconColor)} />;
     }
-    return <Truck className={cn("h-3.5 w-3.5", iconColor)} />;
+    return <Truck className={cn("h-3 w-3", iconColor)} />;
   };
   
   const getStatusBgClass = () => {
@@ -121,12 +121,12 @@ export function VehicleRow({
     }
   };
   return <>
-      <div className={cn("flex items-center gap-4 rounded-lg border border-border bg-card px-3 py-2 transition-all duration-200", "hover:border-primary/30", getBorderClass(), isUpdated && "animate-row-flash")}>
-        <div className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded", getStatusBgClass())}>
+      <div className={cn("flex items-center gap-2 rounded border border-border bg-card px-2 py-1.5 transition-all duration-200", "hover:border-primary/30", getBorderClass(), isUpdated && "animate-row-flash")}>
+        <div className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded", getStatusBgClass())}>
           {getStatusIcon()}
         </div>
 
-        <div className="min-w-[130px] flex-1">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <p className="font-mono text-sm font-medium text-foreground flex items-center gap-1">
               {vehicle.unit}

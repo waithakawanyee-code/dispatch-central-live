@@ -91,41 +91,37 @@ const Vehicles = () => {
     />
   );
 
+  // Helper to render vehicles in a 2-column grid
+  const renderVehicleGrid = (vehicleList: typeof vehicles, showHeader = true, headerLabel = "Unassigned") => {
+    return (
+      <div>
+        {showHeader && (
+          <h4 className="flex items-center justify-between text-[10px] font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1 mb-1.5">
+            <span>{headerLabel}</span>
+            <span className="rounded bg-secondary px-1 py-0.5 font-mono text-[9px]">
+              {vehicleList.length}
+            </span>
+          </h4>
+        )}
+        <div className="grid grid-cols-2 gap-1.5">
+          {vehicleList.map(renderVehicleRow)}
+          {vehicleList.length === 0 && (
+            <p className="text-xs text-muted-foreground italic py-1 col-span-2">None</p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Helper to split vehicles into unassigned/assigned columns
   const renderVehicleColumns = (vehicleList: typeof vehicles) => {
     const unassigned = vehicleList.filter((v) => !v.driver);
     const assigned = vehicleList.filter((v) => v.driver);
     
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <h4 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-            <span>Unassigned</span>
-            <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
-              {unassigned.length}
-            </span>
-          </h4>
-          <div className="space-y-2">
-            {unassigned.map(renderVehicleRow)}
-            {unassigned.length === 0 && (
-              <p className="text-xs text-muted-foreground italic py-2">None</p>
-            )}
-          </div>
-        </div>
-        <div className="space-y-2">
-          <h4 className="flex items-center justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1">
-            <span>Assigned</span>
-            <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px]">
-              {assigned.length}
-            </span>
-          </h4>
-          <div className="space-y-2">
-            {assigned.map(renderVehicleRow)}
-            {assigned.length === 0 && (
-              <p className="text-xs text-muted-foreground italic py-2">None</p>
-            )}
-          </div>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {renderVehicleGrid(unassigned, true, "Unassigned")}
+        {renderVehicleGrid(assigned, true, "Assigned")}
       </div>
     );
   };
@@ -134,17 +130,16 @@ const Vehicles = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="p-4 space-y-4">
-        <div className="mb-4">
-          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Truck className="h-5 w-5 text-primary" />
-            Vehicle Workbook
-          </h1>
-          <p className="text-sm text-muted-foreground">Manage vehicle status and maintenance</p>
-        </div>
-
-        {/* Color Legend */}
-        <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
+      <main className="p-3 space-y-3">
+        <div className="mb-2 flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Truck className="h-4 w-4 text-primary" />
+              Vehicle Workbook
+            </h1>
+          </div>
+          {/* Color Legend */}
+          <div className="flex gap-3 text-[9px] text-muted-foreground">
           <div className="flex items-center gap-1">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
             <span>OK</span>
@@ -158,89 +153,89 @@ const Vehicles = () => {
             <span>OOS</span>
           </div>
         </div>
-
+      </div>
         {/* Above All Section */}
-        <section className="rounded-lg border border-border bg-card/50 p-3">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Car className="h-4 w-4 text-primary" />
+        <section className="rounded border border-border bg-card/50 p-2">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+              <Car className="h-3.5 w-3.5 text-primary" />
               Above All
             </h2>
-            <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-              {groupedVehicles.aboveAllVehicles.length} TOTAL
+            <span className="rounded bg-secondary px-1 py-0.5 font-mono text-[9px] text-muted-foreground">
+              {groupedVehicles.aboveAllVehicles.length}
             </span>
           </div>
 
           {/* Sedans Sub-group */}
-          <div className="mb-6">
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-xs font-semibold text-primary/80 uppercase tracking-wide flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+          <div className="mb-3">
+            <div className="mb-1 flex items-center justify-between">
+              <h3 className="text-[10px] font-semibold text-primary/80 uppercase tracking-wide flex items-center gap-1">
+                <span className="w-1 h-1 rounded-full bg-primary" />
                 Sedans
               </h3>
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-[9px] text-muted-foreground">
                 {groupedVehicles.sedanVehicles.length}
               </span>
             </div>
             {groupedVehicles.sedanVehicles.length > 0 ? (
               renderVehicleColumns(groupedVehicles.sedanVehicles)
             ) : (
-              <p className="text-xs text-muted-foreground italic py-2">No sedan vehicles</p>
+              <p className="text-xs text-muted-foreground italic py-1">No sedan vehicles</p>
             )}
           </div>
 
           {/* SUVs Sub-group */}
           <div>
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-xs font-semibold text-primary/80 uppercase tracking-wide flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+            <div className="mb-1 flex items-center justify-between">
+              <h3 className="text-[10px] font-semibold text-primary/80 uppercase tracking-wide flex items-center gap-1">
+                <span className="w-1 h-1 rounded-full bg-primary" />
                 SUVs
               </h3>
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-[9px] text-muted-foreground">
                 {groupedVehicles.suvVehicles.length}
               </span>
             </div>
             {groupedVehicles.suvVehicles.length > 0 ? (
               renderVehicleColumns(groupedVehicles.suvVehicles)
             ) : (
-              <p className="text-xs text-muted-foreground italic py-2">No SUV vehicles</p>
+              <p className="text-xs text-muted-foreground italic py-1">No SUV vehicles</p>
             )}
           </div>
         </section>
 
         {/* Specialty Section */}
-        <section className="rounded-lg border border-border bg-card/50 p-3">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Bus className="h-4 w-4 text-accent" />
+        <section className="rounded border border-border bg-card/50 p-2">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+              <Bus className="h-3.5 w-3.5 text-accent" />
               Specialty
             </h2>
-            <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-              {groupedVehicles.specialtyVehicles.length} TOTAL
+            <span className="rounded bg-secondary px-1 py-0.5 font-mono text-[9px] text-muted-foreground">
+              {groupedVehicles.specialtyVehicles.length}
             </span>
           </div>
           {groupedVehicles.specialtyVehicles.length > 0 ? (
             renderVehicleColumns(groupedVehicles.specialtyVehicles)
           ) : (
-            <p className="text-xs text-muted-foreground italic py-2">No specialty vehicles</p>
+            <p className="text-xs text-muted-foreground italic py-1">No specialty vehicles</p>
           )}
         </section>
 
         {/* Out of Service Vehicles */}
-        <section className="rounded-lg border border-border bg-card/50 p-3">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <AlertTriangle className="h-4 w-4 text-destructive" />
+        <section className="rounded border border-border bg-card/50 p-2">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+              <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
               Out of Service
             </h2>
-            <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+            <span className="rounded bg-secondary px-1 py-0.5 font-mono text-[9px] text-muted-foreground">
               {groupedVehicles.outOfServiceVehicles.length}
             </span>
           </div>
-          <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-1.5">
             {groupedVehicles.outOfServiceVehicles.map(renderVehicleRow)}
             {groupedVehicles.outOfServiceVehicles.length === 0 && (
-              <p className="text-xs text-muted-foreground italic py-2">No out of service vehicles</p>
+              <p className="text-xs text-muted-foreground italic py-1 col-span-2">No out of service vehicles</p>
             )}
           </div>
         </section>
