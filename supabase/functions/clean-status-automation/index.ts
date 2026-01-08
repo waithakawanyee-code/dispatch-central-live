@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Only allow POST (keeps behavior consistent + safer)
+  // Only allow POST
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ success: false, error: "Method not allowed" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // --- Secret protection (Lovable Cloud best practice) ---
+    // Secret protection
     const expectedSecret = Deno.env.get("WASH_EVENTS_SECRET");
     const providedSecret = req.headers.get("x-lovable-secret");
 
@@ -33,21 +33,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // --- Supabase service client (bypasses RLS safely inside Edge Function) ---
+    // Supabase service client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log("[clean-status-automation] Starting 24hr timeout check...");
 
-    // 24 hours ago timestamp
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    // Find vehicles:
-    // - Above All only
-    // - Not exempt
-    // - last_wash_at exists
-    // - last_wash_at older than 24 hours
     const { data: vehicles, error: fetchError } = await supabase
       .from("vehicles")
       .select("id, unit, clean_status, dirty_reason, last_wash_at")
@@ -61,19 +55,40 @@ Deno.serve(async (req) => {
       throw fetchError;
     }
 
-    console.log(
-      `[clean-status-automation] Found ${vehicles?.length || 0} vehicles past 24hr threshold`
-    );
-
     const updatedVehicles: string[] = [];
     const skippedVehicles: string[] = [];
 
-    // Idempotency per vehicle per day (so this job can run multiple times/day safely)
     const today = new Date().toISOString().split("T")[0];
 
     for (const vehicle of vehicles || []) {
-      // Skip if already dirty for this specific reason
       if (vehicle.clean_status === "dirty" && vehicle.dirty_reason === "TIMEOUT_24H") {
         skippedVehicles.push(vehicle.unit);
         continue;
       }
+
+      const now = new Date().toISOString();
+      const idempotencyKey = `timeout_24h_${vehicle.id}_${today}`;
+
+      const { data: existingEvent } = await supabase
+        .from("vehicle_status_events")
+        .select("id")
+        .eq("idempotency_key", idempotencyKey)
+        .maybeSingle();
+
+      if (existingEvent) {
+        skippedVehicles.push(vehicle.unit);
+        continue;
+      }
+
+      const { error: updateError } = await supabase
+        .from("vehicles")
+        .update({
+          clean_status: "dirty",
+          dirty_reason: "TIMEOUT_24H",
+          last_marked_dirty_at: now,
+          clean_status_updated_at: now,
+          clean_status_source: "automation",
+        })
+        .eq("id", vehicle.id);
+
+      if (updateError) {
