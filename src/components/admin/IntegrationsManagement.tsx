@@ -81,8 +81,10 @@ export function IntegrationsManagement() {
       });
 
       if (error) throw error;
+
       setTestResult({ success: true, data });
       toast.success("Test webhook sent successfully");
+
       // Refresh data after test
       fetchData();
     } catch (err: unknown) {
