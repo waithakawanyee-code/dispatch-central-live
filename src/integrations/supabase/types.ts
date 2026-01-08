@@ -14,6 +14,70 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_assignment_overrides: {
+        Row: {
+          created_at: string
+          driver_id: string | null
+          driver_name: string
+          id: string
+          override_at: string
+          override_by: string | null
+          owner_driver_id: string | null
+          owner_driver_name: string | null
+          reason: string | null
+          vehicle_id: string
+          vehicle_unit: string
+        }
+        Insert: {
+          created_at?: string
+          driver_id?: string | null
+          driver_name: string
+          id?: string
+          override_at?: string
+          override_by?: string | null
+          owner_driver_id?: string | null
+          owner_driver_name?: string | null
+          reason?: string | null
+          vehicle_id: string
+          vehicle_unit: string
+        }
+        Update: {
+          created_at?: string
+          driver_id?: string | null
+          driver_name?: string
+          id?: string
+          override_at?: string
+          override_by?: string | null
+          owner_driver_id?: string | null
+          owner_driver_name?: string | null
+          reason?: string | null
+          vehicle_id?: string
+          vehicle_unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_assignment_overrides_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_assignment_overrides_owner_driver_id_fkey"
+            columns: ["owner_driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_assignment_overrides_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       call_outs: {
         Row: {
           call_out_date: string
@@ -704,6 +768,7 @@ export type Database = {
           notes: string | null
           phone: string | null
           primary_category: Database["public"]["Enums"]["vehicle_primary_category"]
+          released_as_fleet_until: string | null
           status: Database["public"]["Enums"]["vehicle_status"]
           unit: string
           updated_at: string
@@ -729,6 +794,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           primary_category?: Database["public"]["Enums"]["vehicle_primary_category"]
+          released_as_fleet_until?: string | null
           status?: Database["public"]["Enums"]["vehicle_status"]
           unit: string
           updated_at?: string
@@ -754,6 +820,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           primary_category?: Database["public"]["Enums"]["vehicle_primary_category"]
+          released_as_fleet_until?: string | null
           status?: Database["public"]["Enums"]["vehicle_status"]
           unit?: string
           updated_at?: string
