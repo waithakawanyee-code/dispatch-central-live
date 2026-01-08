@@ -29,7 +29,8 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const body: WashEventRequest = await req.json();
+    const parsed: WashEventRequest = body as WashEventRequest;
+    const { vehicle_identifier, washed_at, raw_source, set_clean = true } = parsed;
     const { vehicle_identifier, washed_at, raw_source, set_clean = true } = body;
 
     if (!vehicle_identifier) {
@@ -55,14 +56,17 @@ Deno.serve(async (req) => {
 
     if (!vehicles || vehicles.length === 0) {
       console.log(`[wash-events] Vehicle not found: ${vehicle_identifier}`);
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: "Vehicle not found",
-        vehicle_identifier 
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 404,
-      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Vehicle not found",
+          vehicle_identifier,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 404,
+        },
+      );
     }
 
     const vehicle = vehicles[0];
@@ -83,16 +87,19 @@ Deno.serve(async (req) => {
 
     if (existingEvent) {
       console.log(`[wash-events] Duplicate wash event detected: ${idempotencyKey}`);
-      return new Response(JSON.stringify({
-        success: true,
-        duplicate: true,
-        message: "Wash event already recorded",
-        vehicle_unit: vehicle.unit,
-        idempotency_key: idempotencyKey,
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          duplicate: true,
+          message: "Wash event already recorded",
+          vehicle_unit: vehicle.unit,
+          idempotency_key: idempotencyKey,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        },
+      );
     }
 
     // Determine if we should update clean status
@@ -100,7 +107,9 @@ Deno.serve(async (req) => {
     const isNotExempt = !vehicle.always_clean_exempt;
     const shouldUpdateStatus = isAboveAll && isNotExempt && set_clean;
 
-    console.log(`[wash-events] Vehicle ${vehicle.unit}: above_all=${isAboveAll}, not_exempt=${isNotExempt}, set_clean=${set_clean}`);
+    console.log(
+      `[wash-events] Vehicle ${vehicle.unit}: above_all=${isAboveAll}, not_exempt=${isNotExempt}, set_clean=${set_clean}`,
+    );
 
     // Update vehicle
     const updateData: Record<string, unknown> = {
@@ -115,10 +124,7 @@ Deno.serve(async (req) => {
       updateData.dirty_reason = null;
     }
 
-    const { error: updateError } = await supabase
-      .from("vehicles")
-      .update(updateData)
-      .eq("id", vehicle.id);
+    const { error: updateError } = await supabase.from("vehicles").update(updateData).eq("id", vehicle.id);
 
     if (updateError) {
       console.error(`[wash-events] Error updating vehicle ${vehicle.unit}:`, updateError);
@@ -126,22 +132,20 @@ Deno.serve(async (req) => {
     }
 
     // Always log the wash event
-    const { error: eventError } = await supabase
-      .from("vehicle_status_events")
-      .insert({
-        vehicle_id: vehicle.id,
-        event_type: "WASH_RECORDED",
-        occurred_at: washedAtTime,
-        source: "integration",
-        payload_json: {
-          raw_source: raw_source || null,
-          previous_status: vehicle.clean_status,
-          new_status: shouldUpdateStatus ? "clean" : vehicle.clean_status,
-          status_updated: shouldUpdateStatus,
-          washed_at: washedAtTime,
-        },
-        idempotency_key: idempotencyKey,
-      });
+    const { error: eventError } = await supabase.from("vehicle_status_events").insert({
+      vehicle_id: vehicle.id,
+      event_type: "WASH_RECORDED",
+      occurred_at: washedAtTime,
+      source: "integration",
+      payload_json: {
+        raw_source: raw_source || null,
+        previous_status: vehicle.clean_status,
+        new_status: shouldUpdateStatus ? "clean" : vehicle.clean_status,
+        status_updated: shouldUpdateStatus,
+        washed_at: washedAtTime,
+      },
+      idempotency_key: idempotencyKey,
+    });
 
     if (eventError) {
       console.error(`[wash-events] Error logging event for ${vehicle.unit}:`, eventError);
