@@ -144,13 +144,12 @@ export function VehicleRow({
                   </Tooltip>
                 </TooltipProvider>}
             </p>
-            {/* Category badges */}
-            {vehicle.primary_category === "above_all" && (vehicle.classification === "take_home" ? <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400">
-                  <Home className="h-2.5 w-2.5" />
-                  ​ 
-                </span> : <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground">
-                  Fleet
-                </span>)}
+            {/* Take-home badge */}
+            {vehicle.primary_category === "above_all" && vehicle.classification === "take_home" && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                <Home className="h-2.5 w-2.5" />
+              </span>
+            )}
             {vehicle.primary_category === "specialty" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400">
                 Specialty
               </span>}
