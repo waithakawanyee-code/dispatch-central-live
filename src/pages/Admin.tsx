@@ -1,5 +1,5 @@
 import { Link, Navigate } from "react-router-dom";
-import { ArrowLeft, Users, Truck, History, ShieldAlert, UserCog, Calendar, Clock, Car, Settings, Wrench, Droplets } from "lucide-react";
+import { ArrowLeft, Users, Truck, History, ShieldAlert, UserCog, Calendar, Clock, Car, Settings, Wrench, Droplets, Plug } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DriverManagement } from "@/components/admin/DriverManagement";
 import { VehicleManagement } from "@/components/admin/VehicleManagement";
@@ -11,6 +11,7 @@ import { TimePunchReport } from "@/components/admin/TimePunchReport";
 import { SettingsManagement } from "@/components/admin/SettingsManagement";
 import { IssueCatalogManagement } from "@/components/admin/IssueCatalogManagement";
 import { VehicleStatusEventsLog } from "@/components/admin/VehicleStatusEventsLog";
+import { IntegrationsManagement } from "@/components/admin/IntegrationsManagement";
 
 import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
@@ -104,6 +105,10 @@ const Admin = () => {
               <Settings className="h-4 w-4" />
               Settings
             </TabsTrigger>
+            <TabsTrigger value="integrations" className="flex items-center gap-2">
+              <Plug className="h-4 w-4" />
+              Integrations
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="drivers">
@@ -144,6 +149,10 @@ const Admin = () => {
 
           <TabsContent value="settings">
             <SettingsManagement />
+          </TabsContent>
+
+          <TabsContent value="integrations">
+            <IntegrationsManagement />
           </TabsContent>
         </Tabs>
       </main>
