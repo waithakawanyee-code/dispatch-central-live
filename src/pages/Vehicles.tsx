@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Truck, AlertTriangle, Droplets, BarChart3, ChevronDown, Car, Bus } from "lucide-react";
+import { Truck, AlertTriangle, Droplets, BarChart3, ChevronDown, Car, Bus, Rows3, LayoutGrid } from "lucide-react";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
 import { VehicleRow } from "@/components/VehicleRow";
@@ -7,6 +7,8 @@ import { useDispatchData } from "@/hooks/useDispatchData";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useVehicleServiceTickets } from "@/hooks/useVehicleServiceTickets";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Toggle } from "@/components/ui/toggle";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Vehicle type groupings
 const SEDAN_TYPES = ["sedan_volvo", "sedan_aviator"];
@@ -24,6 +26,7 @@ const Vehicles = () => {
   const { isAdmin } = useUserRole();
   const { getOpenTicketCount, getVehicleTickets } = useVehicleServiceTickets();
   const [statsOpen, setStatsOpen] = useState(false);
+  const [compactView, setCompactView] = useState(false);
 
   // Group vehicles by category and type
   const groupedVehicles = useMemo(() => {
@@ -113,8 +116,20 @@ const Vehicles = () => {
     );
   };
 
-  // Helper to split vehicles into unassigned/assigned columns
+  // Helper to split vehicles into unassigned/assigned columns or flat grid
   const renderVehicleColumns = (vehicleList: typeof vehicles) => {
+    if (compactView) {
+      // Compact view: single flat 2-column grid, no headers
+      return (
+        <div className="grid grid-cols-2 gap-1.5">
+          {vehicleList.map(renderVehicleRow)}
+          {vehicleList.length === 0 && (
+            <p className="text-xs text-muted-foreground italic py-1 col-span-2">None</p>
+          )}
+        </div>
+      );
+    }
+    
     const unassigned = vehicleList.filter((v) => !v.driver);
     const assigned = vehicleList.filter((v) => v.driver);
     
@@ -138,22 +153,42 @@ const Vehicles = () => {
               Vehicle Workbook
             </h1>
           </div>
-          {/* Color Legend */}
-          <div className="flex gap-3 text-[9px] text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            <span>OK</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-amber-500" />
-            <span>Open Ticket(s)</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-red-500" />
-            <span>OOS</span>
+          <div className="flex items-center gap-3">
+            {/* Color Legend */}
+            <div className="flex gap-3 text-[9px] text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span>OK</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                <span>Open Ticket(s)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-red-500" />
+                <span>OOS</span>
+              </div>
+            </div>
+            {/* Compact View Toggle */}
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Toggle
+                    pressed={compactView}
+                    onPressedChange={setCompactView}
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                  >
+                    {compactView ? <LayoutGrid className="h-3.5 w-3.5" /> : <Rows3 className="h-3.5 w-3.5" />}
+                  </Toggle>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <span className="text-xs">{compactView ? "Show Assigned/Unassigned" : "Compact View"}</span>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
-      </div>
         {/* Above All Section */}
         <section className="rounded border border-border bg-card/50 p-2">
           <div className="mb-2 flex items-center justify-between">
