@@ -246,51 +246,8 @@ export function VehicleRow({
           )}
         </div>
 
-        {/* Health Pill */}
-        <VehicleHealthPill
-          vehicleStatus={vehicle.status}
-          openTicketCount={openTicketCount}
-        />
-
-        {/* Quick Actions */}
-        {canEdit && (
-          <div className="flex items-center gap-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={() => setTicketDialogOpen(true)}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>New Ticket</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            {hasAnyTickets && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0"
-                      onClick={() => setTicketsSheetOpen(true)}
-                    >
-                      <FileText className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>View Tickets</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-          </div>
-        )}
-
+        {/* Clean Status */}
+        <div className="ml-auto">
         {canEdit ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -321,41 +278,6 @@ export function VehicleRow({
             <StatusBadge status={vehicle.clean_status} size="sm" />
           </div>
         )}
-
-        <div className="ml-auto">
-          {canEdit ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="cursor-pointer focus:outline-none">
-                  <StatusBadge status={vehicle.status} showPulse={vehicle.status === "active"} size="sm" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[180px]">
-                {availableActions.map((option) => (
-                  <DropdownMenuItem
-                    key={option.action}
-                    onClick={() => {
-                      if (option.action === "mark-oos") {
-                        setMarkOOSDialogOpen(true);
-                      } else if (option.action === "return-to-service") {
-                        setMaintenanceSheetOpen(true);
-                      }
-                    }}
-                    className="cursor-pointer text-xs"
-                  >
-                    {option.action === "mark-oos" ? (
-                      <Wrench className="h-3 w-3 mr-2 text-status-out-of-service" />
-                    ) : (
-                      <Truck className="h-3 w-3 mr-2 text-status-active" />
-                    )}
-                    <span>{option.label}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <StatusBadge status={vehicle.status} showPulse={vehicle.status === "active"} size="sm" />
-          )}
         </div>
       </div>
 
