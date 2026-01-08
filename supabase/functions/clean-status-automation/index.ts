@@ -2,7 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-lovable-secret",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 Deno.serve(async (req) => {
@@ -11,9 +12,15 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const expectedSecret = Deno.env.get("WASH_EVENTS_SECRET");
+    const providedSecret = req.headers.get("x-lovable-secret");
+
+    if (expectedSecret && providedSecret !== expectedSecret) {
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
+    }
 
     console.log("[clean-status-automation] Starting 24hr timeout check...");
 
@@ -86,21 +93,19 @@ Deno.serve(async (req) => {
       }
 
       // Log the event
-      const { error: eventError } = await supabase
-        .from("vehicle_status_events")
-        .insert({
-          vehicle_id: vehicle.id,
-          event_type: "CLEAN_STATUS_TIMEOUT_24H",
-          occurred_at: now,
-          source: "automation",
-          payload_json: {
-            previous_status: vehicle.clean_status,
-            new_status: "dirty",
-            reason: "TIMEOUT_24H",
-            last_wash_at: vehicle.last_wash_at,
-          },
-          idempotency_key: idempotencyKey,
-        });
+      const { error: eventError } = await supabase.from("vehicle_status_events").insert({
+        vehicle_id: vehicle.id,
+        event_type: "CLEAN_STATUS_TIMEOUT_24H",
+        occurred_at: now,
+        source: "automation",
+        payload_json: {
+          previous_status: vehicle.clean_status,
+          new_status: "dirty",
+          reason: "TIMEOUT_24H",
+          last_wash_at: vehicle.last_wash_at,
+        },
+        idempotency_key: idempotencyKey,
+      });
 
       if (eventError) {
         console.error(`[clean-status-automation] Error logging event for ${vehicle.unit}:`, eventError);
