@@ -1,6 +1,6 @@
-import { Link, Navigate } from "react-router-dom";
-import { ArrowLeft, Users, Truck, History, ShieldAlert, UserCog, Calendar, Clock, Car, Settings, Wrench, Droplets, Plug } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowLeft, Users, Truck, History, ShieldAlert, UserCog, Calendar, Clock, Car, Settings, Wrench, Droplets, Plug, FileText, ChevronDown } from "lucide-react";
 import { DriverManagement } from "@/components/admin/DriverManagement";
 import { VehicleManagement } from "@/components/admin/VehicleManagement";
 import { VehicleAssignmentHistory } from "@/components/admin/VehicleAssignmentHistory";
@@ -12,12 +12,82 @@ import { SettingsManagement } from "@/components/admin/SettingsManagement";
 import { IssueCatalogManagement } from "@/components/admin/IssueCatalogManagement";
 import { VehicleStatusEventsLog } from "@/components/admin/VehicleStatusEventsLog";
 import { IntegrationsManagement } from "@/components/admin/IntegrationsManagement";
-
+import { ServiceTicketsManagement } from "@/components/admin/ServiceTicketsManagement";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+
+type AdminSection = 
+  | "drivers" | "schedules" | "timeclock"
+  | "vehicles" | "issues" | "tickets"
+  | "cleanlog" | "assignments" | "history"
+  | "settings" | "users" | "issue-catalog" | "integrations";
+
+const NAVIGATION_GROUPS = [
+  {
+    id: "drivers",
+    label: "Drivers",
+    icon: Users,
+    items: [
+      { id: "drivers" as AdminSection, label: "Manage Drivers", icon: Users },
+      { id: "schedules" as AdminSection, label: "Schedules", icon: Calendar },
+      { id: "timeclock" as AdminSection, label: "Time Clock", icon: Clock },
+    ],
+  },
+  {
+    id: "vehicles",
+    label: "Vehicles",
+    icon: Truck,
+    items: [
+      { id: "vehicles" as AdminSection, label: "Manage Vehicles", icon: Truck },
+      { id: "issues" as AdminSection, label: "Issues", icon: Wrench },
+      { id: "tickets" as AdminSection, label: "Service Tickets", icon: FileText },
+    ],
+  },
+  {
+    id: "logs",
+    label: "Logs",
+    icon: History,
+    items: [
+      { id: "cleanlog" as AdminSection, label: "Clean Log", icon: Droplets },
+      { id: "assignments" as AdminSection, label: "Assignments", icon: Car },
+      { id: "history" as AdminSection, label: "History", icon: History },
+    ],
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    icon: Settings,
+    items: [
+      { id: "settings" as AdminSection, label: "App Settings", icon: Settings },
+      { id: "users" as AdminSection, label: "Users", icon: UserCog },
+      { id: "issue-catalog" as AdminSection, label: "Issue Catalog", icon: Wrench },
+      { id: "integrations" as AdminSection, label: "Integrations", icon: Plug },
+    ],
+  },
+];
 
 const Admin = () => {
   const { isAdmin, loading } = useUserRole();
+  const [activeSection, setActiveSection] = useState<AdminSection>("drivers");
+
+  // Find which group the active section belongs to
+  const getActiveGroup = () => {
+    for (const group of NAVIGATION_GROUPS) {
+      if (group.items.some(item => item.id === activeSection)) {
+        return group.id;
+      }
+    }
+    return "drivers";
+  };
+
+  const activeGroup = getActiveGroup();
 
   if (loading) {
     return (
@@ -49,10 +119,52 @@ const Admin = () => {
     );
   }
 
+  const renderContent = () => {
+    switch (activeSection) {
+      case "drivers":
+        return <DriverManagement />;
+      case "schedules":
+        return <ScheduleManagement />;
+      case "timeclock":
+        return <TimePunchReport />;
+      case "vehicles":
+        return <VehicleManagement />;
+      case "issues":
+        return <IssueCatalogManagement />;
+      case "tickets":
+        return <ServiceTicketsManagement />;
+      case "cleanlog":
+        return <VehicleStatusEventsLog />;
+      case "assignments":
+        return <VehicleAssignmentHistory />;
+      case "history":
+        return <HistoryLog />;
+      case "settings":
+        return <SettingsManagement />;
+      case "users":
+        return <UserManagement />;
+      case "issue-catalog":
+        return <IssueCatalogManagement />;
+      case "integrations":
+        return <IntegrationsManagement />;
+      default:
+        return <DriverManagement />;
+    }
+  };
+
+  // Get the current item label for the active section
+  const getCurrentLabel = () => {
+    for (const group of NAVIGATION_GROUPS) {
+      const item = group.items.find(i => i.id === activeSection);
+      if (item) return item.label;
+    }
+    return "Manage Drivers";
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/80 px-4 py-3">
-        <div className="flex items-center gap-4">
+      <header className="border-b border-border bg-card/80">
+        <div className="px-4 py-3 flex items-center gap-4">
           <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-4 w-4" />
             <span className="text-sm">Back to Dispatch</span>
@@ -60,101 +172,64 @@ const Admin = () => {
           <div className="h-4 w-px bg-border" />
           <h1 className="text-lg font-semibold text-foreground">Admin Panel</h1>
         </div>
+        
+        {/* Navigation Bar */}
+        <div className="px-4 pb-2 flex items-center gap-1">
+          {NAVIGATION_GROUPS.map((group) => {
+            const isActiveGroup = activeGroup === group.id;
+            const GroupIcon = group.icon;
+            
+            return (
+              <DropdownMenu key={group.id}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "gap-1.5 h-8 px-3 text-xs font-medium",
+                      isActiveGroup 
+                        ? "bg-primary/10 text-primary hover:bg-primary/15" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <GroupIcon className="h-3.5 w-3.5" />
+                    {group.label}
+                    <ChevronDown className="h-3 w-3 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[160px]">
+                  {group.items.map((item) => {
+                    const ItemIcon = item.icon;
+                    const isActive = activeSection === item.id;
+                    
+                    return (
+                      <DropdownMenuItem
+                        key={item.id}
+                        onClick={() => setActiveSection(item.id)}
+                        className={cn(
+                          "gap-2 cursor-pointer",
+                          isActive && "bg-accent"
+                        )}
+                      >
+                        <ItemIcon className="h-3.5 w-3.5" />
+                        {item.label}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            );
+          })}
+          
+          {/* Current section indicator */}
+          <div className="ml-auto text-xs text-muted-foreground">
+            {getCurrentLabel()}
+          </div>
+        </div>
       </header>
 
       <main className="p-4 max-w-5xl mx-auto">
-        <Tabs defaultValue="drivers" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="drivers" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Drivers
-            </TabsTrigger>
-            <TabsTrigger value="vehicles" className="flex items-center gap-2">
-              <Truck className="h-4 w-4" />
-              Vehicles
-            </TabsTrigger>
-            <TabsTrigger value="schedules" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Schedules
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <UserCog className="h-4 w-4" />
-              Users
-            </TabsTrigger>
-            <TabsTrigger value="timepunch" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Time Clock
-            </TabsTrigger>
-            <TabsTrigger value="assignments" className="flex items-center gap-2">
-              <Car className="h-4 w-4" />
-              Assignments
-            </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-2">
-              <History className="h-4 w-4" />
-              History
-            </TabsTrigger>
-            <TabsTrigger value="issues" className="flex items-center gap-2">
-              <Wrench className="h-4 w-4" />
-              Issues
-            </TabsTrigger>
-            <TabsTrigger value="cleanlog" className="flex items-center gap-2">
-              <Droplets className="h-4 w-4" />
-              Clean Log
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Settings
-            </TabsTrigger>
-            <TabsTrigger value="integrations" className="flex items-center gap-2">
-              <Plug className="h-4 w-4" />
-              Integrations
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="drivers">
-            <DriverManagement />
-          </TabsContent>
-
-          <TabsContent value="vehicles">
-            <VehicleManagement />
-          </TabsContent>
-
-          <TabsContent value="schedules">
-            <ScheduleManagement />
-          </TabsContent>
-
-          <TabsContent value="users">
-            <UserManagement />
-          </TabsContent>
-
-          <TabsContent value="timepunch">
-            <TimePunchReport />
-          </TabsContent>
-
-          <TabsContent value="assignments">
-            <VehicleAssignmentHistory />
-          </TabsContent>
-
-          <TabsContent value="history">
-            <HistoryLog />
-          </TabsContent>
-
-          <TabsContent value="issues">
-            <IssueCatalogManagement />
-          </TabsContent>
-
-          <TabsContent value="cleanlog">
-            <VehicleStatusEventsLog />
-          </TabsContent>
-
-          <TabsContent value="settings">
-            <SettingsManagement />
-          </TabsContent>
-
-          <TabsContent value="integrations">
-            <IntegrationsManagement />
-          </TabsContent>
-        </Tabs>
+        {renderContent()}
       </main>
     </div>
   );
