@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { RefreshCw, Send, AlertTriangle, CheckCircle2, XCircle, Clock, Truck, Droplets, Key } from "lucide-react";
 import { toast } from "sonner";
 import type { Json } from "@/integrations/supabase/types";
+import { VehicleCombobox } from "@/components/VehicleCombobox";
 
 interface WashEvent {
   id: string;
@@ -27,12 +28,20 @@ interface TestResult {
   error?: string;
 }
 
+interface Vehicle {
+  id: string;
+  unit: string;
+  vehicle_type: string | null;
+}
+
 export function IntegrationsManagement() {
   const [lastWash, setLastWash] = useState<WashEvent | null>(null);
   const [recentEvents, setRecentEvents] = useState<WashEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [testLoading, setTestLoading] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [selectedTestVehicle, setSelectedTestVehicle] = useState("Car-12");
 
   const fetchData = async () => {
     setLoading(true);
@@ -56,6 +65,15 @@ export function IntegrationsManagement() {
         .limit(20);
 
       setRecentEvents(eventsData || []);
+
+      // Fetch active vehicles for dropdown
+      const { data: vehiclesData } = await supabase
+        .from("vehicles")
+        .select("id, unit, vehicle_type")
+        .eq("status", "active")
+        .order("unit");
+
+      setVehicles(vehiclesData || []);
     } catch (error) {
       console.error("Error fetching integration data:", error);
       toast.error("Failed to fetch integration data");
@@ -75,7 +93,7 @@ export function IntegrationsManagement() {
     try {
       const { data, error } = await supabase.functions.invoke("wash-events", {
         body: {
-          vehicle_identifier: "Car-12",
+          vehicle_identifier: selectedTestVehicle,
           raw_source: `admin_test_${new Date().toISOString()}`,
         },
       });
@@ -297,12 +315,21 @@ export function IntegrationsManagement() {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Admin Testing Only</AlertTitle>
             <AlertDescription>
-              This will create a real wash event for <strong>Car-12</strong> with source "admin_test"
+              This will create a real wash event with source "admin_test"
             </AlertDescription>
           </Alert>
 
           <div className="flex items-center gap-4">
-            <Button onClick={handleTestWebhook} disabled={testLoading}>
+            <div className="w-48">
+              <VehicleCombobox
+                vehicles={vehicles}
+                value={selectedTestVehicle}
+                onValueChange={setSelectedTestVehicle}
+                placeholder="Select vehicle"
+                includeNone={false}
+              />
+            </div>
+            <Button onClick={handleTestWebhook} disabled={testLoading || !selectedTestVehicle}>
               {testLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
               Send Test Wash Event
             </Button>
