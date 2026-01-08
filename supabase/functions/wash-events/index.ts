@@ -13,10 +13,12 @@ interface WashEventRequest {
 }
 
 Deno.serve(async (req) => {
+  // CORS
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Only allow POST
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -24,14 +26,41 @@ Deno.serve(async (req) => {
     });
   }
 
+  // DEBUG: log headers + raw body (temporary)
+  const rawText = await req.text();
+
+  console.log("[wash-events] headers:", Object.fromEntries(req.headers.entries()));
+  console.log("[wash-events] raw body:", rawText);
+
+  // Parse JSON once
+  let parsedBody: any = {};
+  try {
+    parsedBody = rawText ? JSON.parse(rawText) : {};
+  } catch (e) {
+    console.log("[wash-events] JSON parse failed:", String(e));
+    parsedBody = {};
+  }
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const parsed: WashEventRequest = body as WashEventRequest;
-    const { vehicle_identifier, washed_at, raw_source, set_clean = true } = parsed;
-    const { vehicle_identifier, washed_at, raw_source, set_clean = true } = body;
+    // Support BOTH formats:
+    // 1) Direct call: { vehicle_identifier, washed_at?, raw_source?, set_clean? }
+    // 2) Samsara webhook: { eventType, data: { ... } }  (we will map later once we see payload)
+    const vehicle_identifier: string | undefined =
+      parsedBody?.vehicle_identifier ??
+      parsedBody?.data?.vehicle?.name ??
+      parsedBody?.data?.asset?.name ??
+      parsedBody?.data?.vehicleName;
+
+    const washed_at: string | undefined =
+      parsedBody?.washed_at ?? parsedBody?.data?.eventTime ?? parsedBody?.data?.occurredAt ?? parsedBody?.eventTime;
+
+    const raw_source: string | undefined = parsedBody?.raw_source ?? "samsara_webhook";
+
+    const set_clean: boolean = typeof parsedBody?.set_clean === "boolean" ? parsedBody.set_clean : true;
 
     if (!vehicle_identifier) {
       return new Response(JSON.stringify({ error: "vehicle_identifier is required" }), {
@@ -42,7 +71,7 @@ Deno.serve(async (req) => {
 
     console.log(`[wash-events] Processing wash event for: ${vehicle_identifier}`);
 
-    // Match vehicle by unit (case-insensitive) - could also match by plate if field exists
+    // Match vehicle by unit (case-insensitive)
     const identifier = vehicle_identifier.trim();
     const { data: vehicles, error: searchError } = await supabase
       .from("vehicles")
@@ -56,29 +85,21 @@ Deno.serve(async (req) => {
 
     if (!vehicles || vehicles.length === 0) {
       console.log(`[wash-events] Vehicle not found: ${vehicle_identifier}`);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Vehicle not found",
-          vehicle_identifier,
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 404,
-        },
-      );
+      return new Response(JSON.stringify({ success: false, error: "Vehicle not found", vehicle_identifier }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404,
+      });
     }
 
     const vehicle = vehicles[0];
     const washedAtTime = washed_at ? new Date(washed_at).toISOString() : new Date().toISOString();
     const now = new Date().toISOString();
 
-    // Generate idempotency key based on vehicle, date, and source
+    // Idempotency key (vehicle + date + source)
     const washDate = washedAtTime.split("T")[0];
     const sourceHash = raw_source ? raw_source.substring(0, 20) : "unknown";
     const idempotencyKey = `wash_${vehicle.id}_${washDate}_${sourceHash}`;
 
-    // Check for duplicate
     const { data: existingEvent } = await supabase
       .from("vehicle_status_events")
       .select("id")
@@ -95,14 +116,11 @@ Deno.serve(async (req) => {
           vehicle_unit: vehicle.unit,
           idempotency_key: idempotencyKey,
         }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        },
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
       );
     }
 
-    // Determine if we should update clean status
+    // Update clean status only for Above All non-exempt vehicles
     const isAboveAll = vehicle.primary_category === "above_all";
     const isNotExempt = !vehicle.always_clean_exempt;
     const shouldUpdateStatus = isAboveAll && isNotExempt && set_clean;
@@ -111,7 +129,6 @@ Deno.serve(async (req) => {
       `[wash-events] Vehicle ${vehicle.unit}: above_all=${isAboveAll}, not_exempt=${isNotExempt}, set_clean=${set_clean}`,
     );
 
-    // Update vehicle
     const updateData: Record<string, unknown> = {
       last_wash_at: washedAtTime,
       updated_at: now,
@@ -131,7 +148,7 @@ Deno.serve(async (req) => {
       throw updateError;
     }
 
-    // Always log the wash event
+    // Log wash event (always)
     const { error: eventError } = await supabase.from("vehicle_status_events").insert({
       vehicle_id: vehicle.id,
       event_type: "WASH_RECORDED",
@@ -143,13 +160,13 @@ Deno.serve(async (req) => {
         new_status: shouldUpdateStatus ? "clean" : vehicle.clean_status,
         status_updated: shouldUpdateStatus,
         washed_at: washedAtTime,
+        received_payload: parsedBody, // helpful for debugging; remove later if you want
       },
       idempotency_key: idempotencyKey,
     });
 
     if (eventError) {
       console.error(`[wash-events] Error logging event for ${vehicle.unit}:`, eventError);
-      // Don't throw - event logging failure shouldn't fail the whole request
     }
 
     const result = {
