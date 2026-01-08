@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Truck, Wrench, Droplets, User, Phone, Plus, FileText, SprayCan } from "lucide-react";
+import { Truck, Wrench, Droplets, User, Phone, Plus, FileText, SprayCan, Home, Unlock } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { VehicleHealthPill } from "./VehicleHealthPill";
 import { ServiceTicketDialog } from "./ServiceTicketDialog";
@@ -142,33 +142,83 @@ export function VehicleRow({
           {getStatusIcon()}
         </div>
 
-        <div className="min-w-[90px] flex-1">
-          <p className="font-mono text-sm font-medium text-foreground flex items-center gap-1">
-            {vehicle.unit}
-            {(vehicle as any).has_car_wash_subscription && (
+        <div className="min-w-[130px] flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="font-mono text-sm font-medium text-foreground flex items-center gap-1">
+              {vehicle.unit}
+              {(vehicle as any).has_car_wash_subscription && (
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-cyan-500">
+                        <Droplets className="h-3.5 w-3.5" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <span className="text-xs">Car Wash Subscription</span>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </p>
+            {/* Category badges */}
+            {vehicle.primary_category === "above_all" && (
+              vehicle.classification === "take_home" ? (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                  <Home className="h-2.5 w-2.5" />
+                  Take Home
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground">
+                  Fleet
+                </span>
+              )
+            )}
+            {vehicle.primary_category === "specialty" && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400">
+                Specialty
+              </span>
+            )}
+            {/* Released as Fleet indicator */}
+            {vehicle.classification === "take_home" && 
+             vehicle.released_as_fleet_until && 
+             new Date(vehicle.released_as_fleet_until) > new Date() && (
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="text-cyan-500">
-                      <Droplets className="h-3.5 w-3.5" />
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                      <Unlock className="h-2.5 w-2.5" />
+                      Fleet Today
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="top">
-                    <span className="text-xs">Car Wash Subscription</span>
+                    <span className="text-xs">Released as Fleet until end of day</span>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             )}
-          </p>
+          </div>
           {vehicle.vehicle_type && (
             <p className="text-[10px] text-muted-foreground">{VEHICLE_TYPE_LABELS[vehicle.vehicle_type]}</p>
           )}
+          {/* Show Owner for Take Home vehicles */}
+          {vehicle.classification === "take_home" && vehicle.assigned_driver_id && (
+            <p className="text-[10px] text-muted-foreground">
+              Owner: <span className="font-medium">{drivers.find(d => d.id === vehicle.assigned_driver_id)?.name || "Unknown"}</span>
+            </p>
+          )}
+          {/* Show currently assigned driver if different from owner */}
           {vehicle.driver && (
             <TooltipProvider delayDuration={1000}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <p className="text-[10px] text-muted-foreground cursor-default hover:text-foreground transition-colors">
-                    {vehicle.driver}
+                    {vehicle.classification === "take_home" && vehicle.assigned_driver_id 
+                      ? (vehicle.driver !== drivers.find(d => d.id === vehicle.assigned_driver_id)?.name 
+                          ? `Assigned: ${vehicle.driver}` 
+                          : null)
+                      : vehicle.driver
+                    }
                   </p>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="p-3">

@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Pencil, Trash2, X, Check, Download, Upload, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertTriangle, StickyNote, ChevronDown, ChevronUp, Home, User, Filter, Droplets, MoreHorizontal, Search, SlidersHorizontal } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Download, Upload, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertTriangle, StickyNote, ChevronDown, ChevronUp, Home, User, Filter, Droplets, MoreHorizontal, Search, SlidersHorizontal, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -396,6 +396,17 @@ export function VehicleManagement() {
       });
       return;
     }
+    // Validate Take Home requires assigned driver
+    if (formData.primary_category === "above_all" && 
+        formData.classification === "take_home" && 
+        !formData.assigned_driver_id) {
+      toast({
+        title: "Error",
+        description: "Take Home vehicles require an assigned owner (driver)",
+        variant: "destructive"
+      });
+      return;
+    }
     const {
       error
     } = await supabase.from("vehicles").insert({
@@ -439,6 +450,17 @@ export function VehicleManagement() {
       toast({
         title: "Error",
         description: "Unit ID is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    // Validate Take Home requires assigned driver
+    if (formData.primary_category === "above_all" && 
+        formData.classification === "take_home" && 
+        !formData.assigned_driver_id) {
+      toast({
+        title: "Error",
+        description: "Take Home vehicles require an assigned owner (driver)",
         variant: "destructive"
       });
       return;
@@ -725,21 +747,26 @@ export function VehicleManagement() {
                     </Select>
                   </div>}
                 {formData.primary_category === "above_all" && formData.classification === "take_home" && <div className="space-y-2">
-                    <Label>Take-Home Driver</Label>
-                    <Select value={formData.assigned_driver_id} onValueChange={value => setFormData({
+                    <Label className={!formData.assigned_driver_id ? "text-destructive" : ""}>
+                      Owner (Required) *
+                    </Label>
+                    <Select value={formData.assigned_driver_id || "_none"} onValueChange={value => setFormData({
                   ...formData,
                   assigned_driver_id: value === "_none" ? "" : value
                 })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select driver" />
+                      <SelectTrigger className={!formData.assigned_driver_id ? "border-destructive" : ""}>
+                        <SelectValue placeholder="Select owner" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="_none">No driver assigned</SelectItem>
+                        <SelectItem value="_none">No owner assigned</SelectItem>
                         {allDrivers.filter(d => d.is_active).map(driver => <SelectItem key={driver.id} value={driver.id}>
                               {driver.name} {driver.has_cdl && <span className="text-muted-foreground">(CDL)</span>}
                             </SelectItem>)}
                       </SelectContent>
                     </Select>
+                    {!formData.assigned_driver_id && (
+                      <p className="text-xs text-destructive">Take Home vehicles must have an owner assigned</p>
+                    )}
                   </div>}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -1081,21 +1108,24 @@ export function VehicleManagement() {
                             </Select>
                           </div>}
                         {formData.primary_category === "above_all" && formData.classification === "take_home" && <div className="space-y-1">
-                            <Label className="text-xs">Assigned Driver</Label>
-                            <Select value={formData.driver || "_none"} onValueChange={value => setFormData({
+                            <Label className={`text-xs ${!formData.assigned_driver_id ? "text-destructive" : ""}`}>Owner *</Label>
+                            <Select value={formData.assigned_driver_id || "_none"} onValueChange={value => setFormData({
                   ...formData,
-                  driver: value === "_none" ? "" : value
+                  assigned_driver_id: value === "_none" ? "" : value
                 })}>
-                              <SelectTrigger className="h-8">
-                                <SelectValue placeholder="Select driver" />
+                              <SelectTrigger className={`h-8 ${!formData.assigned_driver_id ? "border-destructive" : ""}`}>
+                                <SelectValue placeholder="Select owner" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="_none">No driver</SelectItem>
-                                {allDrivers.filter(d => d.is_active).map(driver => <SelectItem key={driver.id} value={driver.name}>
+                                <SelectItem value="_none">No owner</SelectItem>
+                                {allDrivers.filter(d => d.is_active).map(driver => <SelectItem key={driver.id} value={driver.id}>
                                     {driver.name}
                                   </SelectItem>)}
                               </SelectContent>
                             </Select>
+                            {!formData.assigned_driver_id && (
+                              <p className="text-[10px] text-destructive">Required</p>
+                            )}
                           </div>}
                       </div>
                       {formData.primary_category === "above_all" && <div className="flex items-center gap-4 pt-2">
@@ -1150,6 +1180,18 @@ export function VehicleManagement() {
                             Always Clean
                           </span>}
                       </div>
+                      {/* Take Home owner info */}
+                      {(vehicle as any).classification === "take_home" && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-muted-foreground">Owner:</span>
+                          <span className="font-medium">
+                            {vehicle.assigned_driver_id 
+                              ? allDrivers.find(d => d.id === vehicle.assigned_driver_id)?.name || "Unknown"
+                              : <span className="text-destructive">Not assigned (required)</span>
+                            }
+                          </span>
+                        </div>
+                      )}
                       <div className="text-sm text-muted-foreground bg-secondary/30 rounded-md px-3 py-2">
                         {(vehicle as any).notes || "No notes"}
                       </div>
