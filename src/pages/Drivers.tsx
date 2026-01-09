@@ -60,7 +60,7 @@ const Drivers = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   
   // Use shifts hook for selected workday
-  const { shifts, getDriverStatusForWorkday } = useShifts(selectedDate);
+  const { shifts, getDriverStatusForWorkday, punchIn, punchOut, getOpenShiftForDriver } = useShifts(selectedDate);
   const [schedules, setSchedules] = useState<DriverSchedule[]>([]);
   const [schedulesLoading, setSchedulesLoading] = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
@@ -749,14 +749,15 @@ const Drivers = () => {
     setShowPunchOutDialog(true);
   }, [drivers]);
 
-  const handleConfirmPunchIn = () => {
+  const handleConfirmPunchIn = async () => {
     if (!punchInDriver) return;
     
     const driver = drivers.find(d => d.id === punchInDriver.id);
     if (!driver) return;
     
-    // Validate on submit
-    if (["working", "on-route"].includes(driver.status)) {
+    // Check if driver already has an open shift for today
+    const existingShift = await getOpenShiftForDriver(punchInDriver.id);
+    if (existingShift) {
       toast({
         title: "Already punched in",
         description: `${driver.name} is already on the clock`,
@@ -786,12 +787,27 @@ const Drivers = () => {
       actionType: "punch-in",
     });
     
-    const vehicleToAssign = punchInVehicle === "__none__" ? undefined : punchInVehicle;
-    updateDriverStatus(punchInDriver.id, "working", undefined, vehicleToAssign, punchInTime);
-    toast({
-      title: "Punched In",
-      description: `${punchInDriver.name} is now working`,
-    });
+    const vehicleToAssign = punchInVehicle === "__none__" ? null : punchInVehicle;
+    const result = await punchIn(
+      punchInDriver.id,
+      punchInDriver.name,
+      punchInTime,
+      vehicleToAssign
+    );
+    
+    if (result.success) {
+      toast({
+        title: "Punched In",
+        description: `${punchInDriver.name} is now working`,
+      });
+    } else {
+      toast({
+        title: "Error punching in",
+        description: result.error || "Failed to punch in",
+        variant: "destructive",
+      });
+    }
+    
     setShowPunchInDialog(false);
     setPunchInDriver(null);
     setPunchInTime("");
@@ -801,69 +817,64 @@ const Drivers = () => {
   const handleConfirmPunchOut = async () => {
     if (!punchOutDriver) return;
     
-    const driver = drivers.find(d => d.id === punchOutDriver.id);
-    if (!driver) return;
+    // Find the open shift for this driver
+    const openShift = await getOpenShiftForDriver(punchOutDriver.id);
     
-    // Validate on submit - must be working to punch out
-    if (!["working", "on-route"].includes(driver.status)) {
+    if (!openShift) {
       toast({
         title: "Cannot punch out",
-        description: `${driver.name} must be working to punch out`,
+        description: `${punchOutDriver.name} must be punched in first`,
         variant: "destructive",
       });
       return; // Keep dialog open so user can select a different driver
     }
     
     // Validate punch-out time is after punch-in time
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    const punchInDate = new Date(openShift.punch_in_at);
+    const punchInMinutes = punchInDate.getHours() * 60 + punchInDate.getMinutes();
     
-    const { data: todayPunches } = await supabase
-      .from("time_punches")
-      .select("punch_type, punch_time")
-      .eq("driver_id", punchOutDriver.id)
-      .gte("punch_time", todayStart.toISOString())
-      .lte("punch_time", todayEnd.toISOString())
-      .order("punch_time", { ascending: false });
+    const [outHours, outMinutes] = punchOutTime.split(":").map(Number);
+    const punchOutMinutes = outHours * 60 + outMinutes;
     
-    // Find the most recent punch-in for today
-    const lastPunchIn = todayPunches?.find(p => p.punch_type === "in");
-    
-    if (lastPunchIn && punchOutTime) {
-      const punchInDate = new Date(lastPunchIn.punch_time);
-      const punchInMinutes = punchInDate.getHours() * 60 + punchInDate.getMinutes();
-      
-      const [outHours, outMinutes] = punchOutTime.split(":").map(Number);
-      const punchOutMinutes = outHours * 60 + outMinutes;
-      
-      if (punchOutMinutes < punchInMinutes) {
-        const punchInTimeStr = `${punchInDate.getHours().toString().padStart(2, "0")}:${punchInDate.getMinutes().toString().padStart(2, "0")}`;
-        toast({
-          title: "Invalid punch-out time",
-          description: `Punch-out time (${punchOutTime}) cannot be before punch-in time (${punchInTimeStr})`,
-          variant: "destructive",
-        });
-        return;
-      }
+    if (punchOutMinutes <= punchInMinutes) {
+      const punchInTimeStr = `${punchInDate.getHours().toString().padStart(2, "0")}:${punchInDate.getMinutes().toString().padStart(2, "0")}`;
+      toast({
+        title: "Invalid punch-out time",
+        description: `Punch-out time (${punchOutTime}) must be after punch-in time (${punchInTimeStr})`,
+        variant: "destructive",
+      });
+      return;
     }
     
-    // Store previous state for undo
-    setLastAction({
-      driverId: driver.id,
-      driverName: driver.name,
-      previousStatus: driver.status,
-      previousVehicle: driver.vehicle,
-      previousReportTime: driver.report_time,
-      actionType: "punch-out",
-    });
+    const driver = drivers.find(d => d.id === punchOutDriver.id);
     
-    updateDriverStatus(punchOutDriver.id, "punched-out", undefined, undefined, punchOutTime);
-    toast({
-      title: "Punched Out",
-      description: `${punchOutDriver.name} has punched out`,
-    });
+    // Store previous state for undo
+    if (driver) {
+      setLastAction({
+        driverId: driver.id,
+        driverName: driver.name,
+        previousStatus: driver.status,
+        previousVehicle: driver.vehicle,
+        previousReportTime: driver.report_time,
+        actionType: "punch-out",
+      });
+    }
+    
+    const result = await punchOut(openShift.id, punchOutTime);
+    
+    if (result.success) {
+      toast({
+        title: "Punched Out",
+        description: `${punchOutDriver.name} has punched out`,
+      });
+    } else {
+      toast({
+        title: "Error punching out",
+        description: result.error || "Failed to punch out",
+        variant: "destructive",
+      });
+    }
+    
     setShowPunchOutDialog(false);
     setPunchOutDriver(null);
     setPunchOutTime("");
