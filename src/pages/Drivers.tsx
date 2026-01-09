@@ -2615,6 +2615,19 @@ const Drivers = () => {
                 </SelectContent>
               </Select>
             </div>
+            {/* Display current vehicle as read-only */}
+            {punchOutDriver && (() => {
+              const driver = drivers.find(d => d.id === punchOutDriver.id);
+              const vehicleUnit = driver?.vehicle;
+              return vehicleUnit ? (
+                <div className="grid gap-2">
+                  <Label className="text-muted-foreground text-xs">Vehicle</Label>
+                  <div className="text-sm font-medium px-3 py-2 rounded-md bg-muted/50">
+                    {vehicleUnit}
+                  </div>
+                </div>
+              ) : null;
+            })()}
             <div className="grid gap-2">
               <Label htmlFor="punch-out-time">Time</Label>
               <TimeInput
