@@ -91,6 +91,8 @@ const Drivers = () => {
   const [punchInDriver, setPunchInDriver] = useState<{ id: string; name: string } | null>(null);
   const [punchInTime, setPunchInTime] = useState("");
   const [punchInVehicle, setPunchInVehicle] = useState<string>("__none__");
+  const [punchInTabStage, setPunchInTabStage] = useState<1 | 2>(1);
+  const punchInDriverRef = useRef<HTMLButtonElement>(null);
   const punchInVehicleRef = useRef<HTMLButtonElement>(null);
   const punchInTimeRef = useRef<HTMLInputElement>(null);
   const punchInButtonRef = useRef<HTMLButtonElement>(null);
@@ -2224,13 +2226,17 @@ const Drivers = () => {
         open={showPunchInDialog} 
         onOpenChange={(open) => {
           setShowPunchInDialog(open);
-          if (!open) setPunchInDriver(null);
+          if (!open) {
+            setPunchInDriver(null);
+            setPunchInTabStage(1);
+          }
         }}
       >
         <DialogContent 
           className="sm:max-w-[350px]"
           onOpenAutoFocus={(e) => {
             e.preventDefault();
+            setPunchInTabStage(1);
             // Smart focus: if vehicle is already assigned, skip to time
             setTimeout(() => {
               const hasVehicle = punchInVehicle && punchInVehicle !== "__none__";
@@ -2243,14 +2249,96 @@ const Drivers = () => {
             }, 0);
           }}
           onKeyDown={(e) => {
-            // Focus trap: when tabbing past Punch In button, wrap to first field
-            if (e.key === "Tab" && !e.shiftKey && document.activeElement === punchInButtonRef.current) {
-              e.preventDefault();
-              const hasVehicle = punchInVehicle && punchInVehicle !== "__none__";
-              if (hasVehicle) {
-                punchInTimeRef.current?.focus();
+            const hasVehicle = punchInVehicle && punchInVehicle !== "__none__";
+            const activeEl = document.activeElement;
+            
+            // Handle Tab key navigation
+            if (e.key === "Tab") {
+              // Stage 1: Minimal loop
+              if (punchInTabStage === 1) {
+                if (!e.shiftKey) {
+                  // Forward Tab
+                  if (activeEl === punchInButtonRef.current) {
+                    // Tab past Punch In → Switch to Stage 2, go to Driver
+                    e.preventDefault();
+                    setPunchInTabStage(2);
+                    punchInDriverRef.current?.focus();
+                  } else if (activeEl === punchInTimeRef.current) {
+                    // Time → Punch In (skip Driver/Vehicle in Stage 1)
+                    e.preventDefault();
+                    punchInButtonRef.current?.focus();
+                  } else if (activeEl === punchInVehicleRef.current && !hasVehicle) {
+                    // Vehicle → Time (only if vehicle field is in the loop)
+                    e.preventDefault();
+                    punchInTimeRef.current?.focus();
+                    punchInTimeRef.current?.select();
+                  }
+                } else {
+                  // Shift+Tab in Stage 1
+                  if (activeEl === punchInTimeRef.current) {
+                    if (hasVehicle) {
+                      // If vehicle assigned, Time is first field - wrap to Punch In
+                      e.preventDefault();
+                      punchInButtonRef.current?.focus();
+                    } else {
+                      // Vehicle not assigned, go to Vehicle
+                      e.preventDefault();
+                      punchInVehicleRef.current?.focus();
+                    }
+                  } else if (activeEl === punchInVehicleRef.current) {
+                    // Vehicle is first field in Stage 1 when no vehicle - wrap to Punch In
+                    e.preventDefault();
+                    punchInButtonRef.current?.focus();
+                  } else if (activeEl === punchInButtonRef.current) {
+                    // Punch In → Time
+                    e.preventDefault();
+                    punchInTimeRef.current?.focus();
+                    punchInTimeRef.current?.select();
+                  }
+                }
               } else {
-                punchInVehicleRef.current?.focus();
+                // Stage 2: Full cycle (Driver → Vehicle → Time → Punch In → Driver)
+                if (!e.shiftKey) {
+                  // Forward Tab in Stage 2
+                  if (activeEl === punchInButtonRef.current) {
+                    // Punch In → Driver (wrap)
+                    e.preventDefault();
+                    punchInDriverRef.current?.focus();
+                  } else if (activeEl === punchInDriverRef.current) {
+                    // Driver → Vehicle
+                    e.preventDefault();
+                    punchInVehicleRef.current?.focus();
+                  } else if (activeEl === punchInVehicleRef.current) {
+                    // Vehicle → Time
+                    e.preventDefault();
+                    punchInTimeRef.current?.focus();
+                    punchInTimeRef.current?.select();
+                  } else if (activeEl === punchInTimeRef.current) {
+                    // Time → Punch In
+                    e.preventDefault();
+                    punchInButtonRef.current?.focus();
+                  }
+                } else {
+                  // Shift+Tab in Stage 2 (reverse)
+                  if (activeEl === punchInDriverRef.current) {
+                    // Driver → Punch In (wrap backwards)
+                    e.preventDefault();
+                    punchInButtonRef.current?.focus();
+                  } else if (activeEl === punchInVehicleRef.current) {
+                    // Vehicle → Driver
+                    e.preventDefault();
+                    punchInDriverRef.current?.focus();
+                  } else if (activeEl === punchInTimeRef.current) {
+                    // Time → Vehicle
+                    e.preventDefault();
+                    punchInVehicleRef.current?.focus();
+                  } else if (activeEl === punchInButtonRef.current) {
+                    // Punch In → Time
+                    e.preventDefault();
+                    punchInTimeRef.current?.focus();
+                    punchInTimeRef.current?.select();
+                  }
+                }
               }
             }
           }}
@@ -2269,6 +2357,8 @@ const Drivers = () => {
                     setPunchInDriver({ id: driver.id, name: driver.name });
                     const newVehicle = getDriverDefaultVehicle(driver.id);
                     setPunchInVehicle(newVehicle);
+                    // Reset to Stage 1 when driver changes
+                    setPunchInTabStage(1);
                     // Re-focus based on new vehicle state
                     setTimeout(() => {
                       if (newVehicle && newVehicle !== "__none__") {
@@ -2281,7 +2371,7 @@ const Drivers = () => {
                   }
                 }}
               >
-                <SelectTrigger id="punch-in-driver" tabIndex={-1}>
+                <SelectTrigger id="punch-in-driver" ref={punchInDriverRef} tabIndex={punchInTabStage === 2 ? 0 : -1}>
                   <SelectValue placeholder="Select driver" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2324,6 +2414,7 @@ const Drivers = () => {
                 <SelectTrigger 
                   id="punch-in-vehicle"
                   ref={punchInVehicleRef}
+                  tabIndex={punchInTabStage === 2 || (punchInVehicle === "__none__" || !punchInVehicle) ? 0 : -1}
                   className={
                     punchInDriver && drivers.find(d => d.id === punchInDriver.id)?.status === "unassigned" && (punchInVehicle === "__none__" || !punchInVehicle)
                       ? "ring-2 ring-amber-400 border-amber-400"
