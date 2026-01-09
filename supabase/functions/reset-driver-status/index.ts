@@ -104,155 +104,74 @@ Deno.serve(async (req) => {
     if (activeShiftDriverIds.size > 0) {
       console.log(`Excluding ${activeShiftDriverIds.size} driver(s) with open shifts from reset`);
     }
+// ============================================
+// PHASE 2: Reset driver statuses (single atomic SQL)
+// ============================================
 
-    // ============================================
-    // PHASE 2: Reset driver statuses (fixed logic)
-    // ============================================
+const todayDayOfWeek = new Date().getDay();
 
-    const todayDayOfWeek = new Date().getDay();
-    console.log(`Today is day of week: ${todayDayOfWeek}`);
+const { data: resetResult, error: resetError } = await supabase
+  .from("drivers")
+  .select("*")
+  .limit(1); // dummy call to ensure client is alive
 
-    // 1) Pull take-home vehicle units (so we can detect take-home owners by default_vehicle)
-    const { data: vehicles, error: vehiclesError } = await supabase
-      .from("vehicles")
-      .select("unit, classification")
-      .eq("classification", "take_home");
+if (resetError) throw resetError;
 
-    if (vehiclesError) {
-      console.error("Error fetching vehicles:", vehiclesError);
-      throw vehiclesError;
-    }
+// Execute raw SQL via Postgres function call pattern
+const { error: sqlError } = await supabase.rpc("execute_sql", {
+  sql: `
+    with
+    active_shift_drivers as (
+      select distinct driver_id
+      from shifts
+      where punch_out_at is null
+        and driver_id is not null
+    ),
+    working_today as (
+      select driver_id
+      from driver_schedules
+      where day_of_week = ${todayDayOfWeek}
+        and coalesce(is_off, false) = false
+    ),
+    take_home_units as (
+      select unit
+      from vehicles
+      where classification = 'take_home'
+        and unit is not null
+        and unit <> ''
+    ),
+    eligible as (
+      select d.id, d.default_vehicle
+      from drivers d
+      where d.status <> 'off'
+        and d.id not in (select driver_id from active_shift_drivers)
+    ),
+    classified as (
+      select
+        e.id,
+        case
+          when e.default_vehicle is not null
+           and e.default_vehicle <> ''
+           and e.default_vehicle in (select unit from take_home_units)
+           and e.id in (select driver_id from working_today)
+          then true
+          else false
+        end as should_assign
+      from eligible e
+    )
+    update drivers d
+    set
+      status = case when c.should_assign then 'assigned' else 'unassigned' end,
+      vehicle = case when c.should_assign then d.default_vehicle else null end
+    from classified c
+    where d.id = c.id;
+  `,
+});
 
-    const takeHomeVehicleUnits = new Set<string>((vehicles || []).map((v) => v.unit).filter(Boolean));
-
-    // 2) Pull today's schedules: IMPORTANT change — missing schedule => NOT scheduled (OFF)
-    const { data: todaySchedules, error: schedulesError } = await supabase
-      .from("driver_schedules")
-      .select("driver_id, is_off")
-      .eq("day_of_week", todayDayOfWeek);
-
-    if (schedulesError) {
-      console.error("Error fetching today schedules:", schedulesError);
-      throw schedulesError;
-    }
-
-    // driver_id -> workingToday boolean
-    // workingToday = schedule exists AND is_off !== true
-    const workingTodayMap = new Map<string, boolean>();
-    (todaySchedules || []).forEach((s) => {
-      workingTodayMap.set(s.driver_id, s.is_off === true ? false : true);
-    });
-
-    // 3) Get all drivers that are not status=off (and we will exclude active-shift drivers)
-    const { data: allDrivers, error: allDriversError } = await supabase
-      .from("drivers")
-      .select("id, name, status, default_vehicle, vehicle")
-      .neq("status", "off");
-
-    if (allDriversError) {
-      console.error("Error fetching drivers:", allDriversError);
-      throw allDriversError;
-    }
-
-    const eligibleDrivers = (allDrivers || []).filter((d) => !activeShiftDriverIds.has(d.id));
-
-    // 4) Split drivers into buckets
-    const takeHomeWorkingIds: string[] = [];
-    const takeHomeWorkingVehicleById = new Map<string, string>();
-
-    const toUnassignIds: string[] = [];
-
-    for (const d of eligibleDrivers) {
-      const dv = (d.default_vehicle || "").trim();
-      const isTakeHomeOwner = dv !== "" && takeHomeVehicleUnits.has(dv);
-
-      const workingToday = workingTodayMap.get(d.id) === true; // missing => false
-
-      if (isTakeHomeOwner && workingToday) {
-        takeHomeWorkingIds.push(d.id);
-        takeHomeWorkingVehicleById.set(d.id, dv);
-      } else {
-        // Everyone else starts unassigned (including take-home owners who are NOT scheduled today)
-        toUnassignIds.push(d.id);
-      }
-    }
-
-    // 5) Bulk updates
-    let totalUnassigned = 0;
-    let totalAssigned = 0;
-
-    if (toUnassignIds.length > 0) {
-      const { data: unassignedDrivers, error: unassignError } = await supabase
-        .from("drivers")
-        .update({ status: "unassigned", vehicle: null })
-        .in("id", toUnassignIds)
-        .select("id, name");
-
-      if (unassignError) {
-        console.error("Error resetting drivers to unassigned:", unassignError);
-        throw unassignError;
-      }
-
-      totalUnassigned = unassignedDrivers?.length || 0;
-
-      // status_history entries
-      if (unassignedDrivers && unassignedDrivers.length > 0) {
-        await supabase.from("status_history").insert(
-          unassignedDrivers.map((driver: { id: string; name: string }) => ({
-            entity_type: "driver",
-            entity_id: driver.id,
-            entity_name: driver.name,
-            field_changed: "status",
-            old_value: "various",
-            new_value: "unassigned",
-          })),
-        );
-      }
-    }
-
-    // For take-home working drivers we need to set status=assigned and vehicle=their default_vehicle.
-    // Supabase update can't set vehicle per-row with different values in a single update,
-    // so we do 2-step: set assigned for all, then set vehicle for each (still much smaller than your original loop).
-    // If you want, we can replace this with an RPC later for a true single statement.
-
-    if (takeHomeWorkingIds.length > 0) {
-      const { data: assignedDrivers, error: assignedError } = await supabase
-        .from("drivers")
-        .update({ status: "assigned" })
-        .in("id", takeHomeWorkingIds)
-        .select("id, name, default_vehicle");
-
-      if (assignedError) {
-        console.error("Error setting take-home drivers to assigned:", assignedError);
-        throw assignedError;
-      }
-
-      totalAssigned = assignedDrivers?.length || 0;
-
-      // Set vehicle per driver to match their default_vehicle
-      // (service role key, so this is safe server-side)
-      for (const d of assignedDrivers || []) {
-        const dv = (d.default_vehicle || "").trim();
-        if (!dv) continue;
-
-        await supabase.from("drivers").update({ vehicle: dv }).eq("id", d.id);
-      }
-
-      // status_history entries
-      if (assignedDrivers && assignedDrivers.length > 0) {
-        await supabase.from("status_history").insert(
-          assignedDrivers.map((driver: { id: string; name: string }) => ({
-            entity_type: "driver",
-            entity_id: driver.id,
-            entity_name: driver.name,
-            field_changed: "status",
-            old_value: "various",
-            new_value: "assigned",
-          })),
-        );
-      }
-    }
-
+if (sqlError) {
+  console.error("Daily reset SQL failed:", sqlError);
+  throw sqlError;
+}
     const totalStaleClosed = staleShifts?.length || 0;
 
     console.log(
