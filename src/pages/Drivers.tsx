@@ -9,6 +9,7 @@ import { DriverPicker } from "@/components/DriverPicker";
 import { DriverActionToolbar } from "@/components/DriverActionToolbar";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useShifts } from "@/hooks/useShifts";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -57,6 +58,9 @@ const Drivers = () => {
   const { isAdmin } = useUserRole();
   const [statsOpen, setStatsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
+  
+  // Use shifts hook for selected workday
+  const { shifts, getDriverStatusForWorkday } = useShifts(selectedDate);
   const [schedules, setSchedules] = useState<DriverSchedule[]>([]);
   const [schedulesLoading, setSchedulesLoading] = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
@@ -225,6 +229,7 @@ const Drivers = () => {
   }, [selectedDate, schedules, drivers, isToday]);
 
   // For future dates, incorporate future assignments
+  // For today, derive working/punched-out status from shifts table
   const displayDrivers = useMemo(() => {
     if (isToday) {
       // Get the day of week for today to filter by schedule
@@ -239,17 +244,53 @@ const Drivers = () => {
           start_time: s.start_time,
         }));
       
-      // Include drivers who are scheduled for today OR who have been manually assigned/working/punched-out
-      // This allows off-drivers who were added to today's schedule to appear
-      const activeStatuses = ["assigned", "working", "punched-out"];
+      // Build a map of driver shift status from shifts table
+      const driverShiftStatusMap = new Map<string, { status: "working" | "punched-out"; shift: typeof shifts[0] }>();
+      shifts.forEach((shift) => {
+        // Prioritize open shifts (working) over closed shifts
+        const existing = driverShiftStatusMap.get(shift.driver_id);
+        if (!shift.punch_out_at) {
+          // Open shift = working
+          driverShiftStatusMap.set(shift.driver_id, { status: "working", shift });
+        } else if (!existing || existing.status !== "working") {
+          // Closed shift = punched-out (only if no open shift)
+          driverShiftStatusMap.set(shift.driver_id, { status: "punched-out", shift });
+        }
+      });
+      
+      // Include drivers who are scheduled for today OR who have shift activity for today
+      // Also include drivers with base status of assigned
       const todayDrivers = drivers
-        .filter((d) => (scheduledDriverMap.has(d.id) || activeStatuses.includes(d.status)) && d.status !== "off")
-        .map((d) => ({ 
-          ...d, 
-          schedule: null as { start_time: string | null; end_time: string | null; is_any_hours: boolean } | null,
-          isAnyHours: scheduledDriverMap.get(d.id)?.is_any_hours || false,
-          scheduledStartTime: scheduledDriverMap.get(d.id)?.start_time || null,
-        }));
+        .filter((d) => {
+          const hasSchedule = scheduledDriverMap.has(d.id);
+          const hasShiftActivity = driverShiftStatusMap.has(d.id);
+          const isAssigned = d.status === "assigned";
+          return (hasSchedule || hasShiftActivity || isAssigned) && d.status !== "off";
+        })
+        .map((d) => {
+          // Derive status from shifts table if available
+          const shiftData = driverShiftStatusMap.get(d.id);
+          let derivedStatus = d.status;
+          let vehicleFromShift = d.vehicle;
+          
+          if (shiftData) {
+            derivedStatus = shiftData.status;
+            // Use vehicle from shift if available
+            if (shiftData.shift.vehicle_unit) {
+              vehicleFromShift = shiftData.shift.vehicle_unit;
+            }
+          }
+          
+          return { 
+            ...d, 
+            status: derivedStatus,
+            vehicle: vehicleFromShift,
+            schedule: null as { start_time: string | null; end_time: string | null; is_any_hours: boolean } | null,
+            isAnyHours: scheduledDriverMap.get(d.id)?.is_any_hours || false,
+            scheduledStartTime: scheduledDriverMap.get(d.id)?.start_time || null,
+            shiftData: shiftData?.shift || null,
+          };
+        });
       
       // Define status priority order
       const statusOrder: Record<string, number> = {
@@ -319,7 +360,7 @@ const Drivers = () => {
       const bTime = b.schedule?.start_time || "99:99";
       return aTime.localeCompare(bTime);
     });
-  }, [isToday, getAvailableDriversWithSchedule, drivers, futureAssignments, schedules, selectedDateCallOuts]);
+  }, [isToday, getAvailableDriversWithSchedule, drivers, futureAssignments, schedules, selectedDateCallOuts, shifts]);
 
   // Handler for assigning a driver
   const handleAssignDriver = async () => {
