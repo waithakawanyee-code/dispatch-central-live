@@ -17,8 +17,81 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    console.log('Starting daily driver status reset...')
+    console.log('Starting daily driver status reset and shift cleanup...')
 
+    // ============================================
+    // PHASE 1: Close stale shifts (2+ days old)
+    // ============================================
+    const twoDaysAgo = new Date()
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
+    twoDaysAgo.setHours(23, 59, 59, 999)
+    const twoDaysAgoStr = twoDaysAgo.toISOString()
+
+    // Find open shifts from 2+ days ago
+    const { data: staleShifts, error: staleShiftsError } = await supabase
+      .from('shifts')
+      .select('id, driver_id, driver_name, punch_in_at, workday_date, exception_flags')
+      .is('punch_out_at', null)
+      .lt('punch_in_at', twoDaysAgoStr)
+
+    if (staleShiftsError) {
+      console.error('Error fetching stale shifts:', staleShiftsError)
+    } else if (staleShifts && staleShifts.length > 0) {
+      console.log(`Found ${staleShifts.length} stale open shift(s) from 2+ days ago`)
+
+      for (const shift of staleShifts) {
+        // Calculate midnight of the day after the shift's workday as the close time
+        const shiftDate = new Date(shift.workday_date)
+        shiftDate.setDate(shiftDate.getDate() + 1)
+        shiftDate.setHours(0, 0, 0, 0)
+        const closeTime = shiftDate.toISOString()
+
+        // Update the shift with auto-close exception flag
+        const { error: updateError } = await supabase
+          .from('shifts')
+          .update({
+            punch_out_at: closeTime,
+            exception_flags: {
+              ...(shift.exception_flags || {}),
+              auto_closed_stale: true,
+              auto_closed_by_system: true,
+              auto_closed_at: new Date().toISOString(),
+              auto_close_reason: 'Shift open for 2+ days - auto-closed by daily reset',
+            },
+          })
+          .eq('id', shift.id)
+
+        if (updateError) {
+          console.error(`Error closing stale shift ${shift.id}:`, updateError)
+        } else {
+          console.log(`Auto-closed stale shift for ${shift.driver_name} (${shift.workday_date})`)
+
+          // Close any open vehicle segments for this shift
+          await supabase
+            .from('shift_vehicle_segments')
+            .update({ segment_out_at: closeTime })
+            .eq('shift_id', shift.id)
+            .is('segment_out_at', null)
+
+          // Log to status_history
+          await supabase.from('status_history').insert({
+            entity_type: 'driver',
+            entity_id: shift.driver_id,
+            entity_name: shift.driver_name,
+            field_changed: 'shift_auto_closed_stale',
+            old_value: `Open since ${shift.punch_in_at}`,
+            new_value: `Auto-closed (stale shift from ${shift.workday_date})`,
+          })
+        }
+      }
+    } else {
+      console.log('No stale shifts found to close')
+    }
+
+    // ============================================
+    // PHASE 2: Reset driver statuses (existing logic)
+    // ============================================
+    
     // Get today's day of week (0 = Sunday, 6 = Saturday)
     const todayDayOfWeek = new Date().getDay()
     console.log(`Today is day of week: ${todayDayOfWeek}`)
@@ -116,7 +189,8 @@ Deno.serve(async (req) => {
 
     const totalReset = (regularDrivers?.length || 0) + (otherDriversWithVehicles?.length || 0) + (takeHomeDriversOff?.length || 0)
     const totalAssigned = takeHomeDriversWorking?.length || 0
-    console.log(`Reset ${totalReset} drivers to unassigned, ${totalAssigned} take-home drivers to assigned`)
+    const totalStaleClosed = staleShifts?.length || 0
+    console.log(`Reset ${totalReset} drivers to unassigned, ${totalAssigned} take-home drivers to assigned, ${totalStaleClosed} stale shifts auto-closed`)
 
     // Log the reset to status_history for auditing
     const allResetDrivers = [...(regularDrivers || []), ...(otherDriversWithVehicles || []), ...(takeHomeDriversOff || [])]
@@ -158,7 +232,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Reset ${totalReset} drivers to unassigned, ${totalAssigned} take-home drivers to assigned` 
+        message: `Reset ${totalReset} drivers to unassigned, ${totalAssigned} take-home drivers to assigned, ${totalStaleClosed} stale shifts auto-closed` 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
