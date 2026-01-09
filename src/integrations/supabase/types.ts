@@ -1035,7 +1035,7 @@ export type Database = {
         | "other"
       maintenance_priority: "low" | "medium" | "high" | "critical"
       ticket_status: "open" | "in_progress" | "waiting_parts" | "closed"
-      vehicle_classification: "house" | "take_home"
+      vehicle_classification: "house" | "take_home" | "fleet"
       vehicle_primary_category: "above_all" | "specialty"
       vehicle_status: "active" | "out-of-service"
       vehicle_type:
@@ -1202,7 +1202,7 @@ export const Constants = {
       ],
       maintenance_priority: ["low", "medium", "high", "critical"],
       ticket_status: ["open", "in_progress", "waiting_parts", "closed"],
-      vehicle_classification: ["house", "take_home"],
+      vehicle_classification: ["house", "take_home", "fleet"],
       vehicle_primary_category: ["above_all", "specialty"],
       vehicle_status: ["active", "out-of-service"],
       vehicle_type: [

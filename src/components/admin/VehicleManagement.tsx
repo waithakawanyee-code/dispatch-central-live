@@ -19,7 +19,7 @@ import type { Database } from "@/integrations/supabase/types";
 type VehicleStatus = Database["public"]["Enums"]["vehicle_status"];
 type CleanStatus = Database["public"]["Enums"]["clean_status"];
 type VehicleType = Database["public"]["Enums"]["vehicle_type"];
-type VehicleClassification = "house" | "take_home";
+type VehicleClassification = "fleet" | "take_home";
 type VehiclePrimaryCategory = "above_all" | "specialty";
 
 // Vehicle types with CDL requirements
@@ -98,7 +98,7 @@ const initialFormData: VehicleFormData = {
   vehicle_type: "",
   notes: "",
   primary_category: "above_all",
-  classification: "house",
+  classification: "fleet",
   assigned_driver_id: "",
   phone: "",
   has_car_wash_subscription: false,
@@ -270,7 +270,7 @@ export function VehicleManagement() {
     });
   };
   const handleDownloadTemplate = () => {
-    const template = "Unit,Vehicle Type,Primary Category,Classification,Driver,Phone,Status,Clean Status,Notes\nV-109,sedan_volvo,above_all,house,Jane Smith,555-123-4567,active,clean,Maintenance note";
+    const template = "Unit,Vehicle Type,Primary Category,Classification,Driver,Phone,Status,Clean Status,Notes\nV-109,sedan_volvo,above_all,fleet,Jane Smith,555-123-4567,active,clean,Maintenance note";
     downloadCSV(template, "vehicles-template.csv");
     toast({
       title: "Template Downloaded",
@@ -326,10 +326,12 @@ export function VehicleManagement() {
 
       // Helper to match classification
       const matchClassification = (input?: string): VehicleClassification => {
-        if (!input) return "house";
+        if (!input) return "fleet";
         const trimmed = input.trim().toLowerCase().replace(/\s+/g, "_");
         if (trimmed === "take_home" || trimmed === "takehome") return "take_home";
-        return "house";
+        // Support both old "house" and new "fleet" values
+        if (trimmed === "house" || trimmed === "fleet") return "fleet";
+        return "fleet";
       };
       const validRows = rows.filter(row => row.unit?.trim()).map(row => {
         const primaryCategory = matchPrimaryCategory(row.primary_category);
@@ -337,7 +339,7 @@ export function VehicleManagement() {
           unit: row.unit.trim(),
           vehicle_type: matchVehicleType(row.vehicle_type),
           primary_category: primaryCategory,
-          classification: primaryCategory === "above_all" ? matchClassification(row.classification) : "house" as VehicleClassification,
+          classification: primaryCategory === "above_all" ? matchClassification(row.classification) : "fleet" as VehicleClassification,
           driver: row.driver?.trim() || null,
           phone: row.phone?.trim() || null,
           status: (validStatuses.includes(row.status as VehicleStatus) ? row.status : "active") as VehicleStatus,
@@ -418,7 +420,7 @@ export function VehicleManagement() {
       clean_status: formData.clean_status,
       notes: formData.notes.trim() || null,
       primary_category: formData.primary_category,
-      classification: formData.primary_category === "above_all" ? formData.classification : "house",
+      classification: formData.primary_category === "above_all" ? formData.classification : "fleet",
       assigned_driver_id: formData.assigned_driver_id || null,
       always_clean: formData.always_clean
     });
@@ -480,7 +482,7 @@ export function VehicleManagement() {
       clean_status: formData.clean_status,
       notes: formData.notes.trim() || null,
       primary_category: formData.primary_category,
-      classification: formData.primary_category === "above_all" ? formData.classification : "house",
+      classification: formData.primary_category === "above_all" ? formData.classification : "fleet",
       assigned_driver_id: formData.assigned_driver_id || null,
       always_clean: formData.always_clean,
       updated_at: now
@@ -562,7 +564,7 @@ export function VehicleManagement() {
       clean_status: vehicle.clean_status,
       notes: (vehicle as any).notes || "",
       primary_category: (vehicle as any).primary_category || "above_all",
-      classification: (vehicle as any).classification || "house",
+      classification: (vehicle as any).classification === "house" ? "fleet" : ((vehicle as any).classification || "fleet"),
       assigned_driver_id: (vehicle as any).assigned_driver_id || "",
       phone: (vehicle as any).phone || "",
       has_car_wash_subscription: (vehicle as any).has_car_wash_subscription || false,
@@ -715,7 +717,7 @@ export function VehicleManagement() {
                   setFormData({
                     ...formData,
                     primary_category: value,
-                    classification: value === "specialty" ? "house" : formData.classification,
+                    classification: value === "specialty" ? "fleet" : formData.classification,
                     assigned_driver_id: value === "specialty" ? "" : formData.assigned_driver_id
                   });
                 }}>
@@ -734,14 +736,14 @@ export function VehicleManagement() {
                   setFormData({
                     ...formData,
                     classification: value,
-                    assigned_driver_id: value === "house" ? "" : formData.assigned_driver_id
+                    assigned_driver_id: value === "fleet" ? "" : formData.assigned_driver_id
                   });
                 }}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="house">Fleet</SelectItem>
+                        <SelectItem value="fleet">Fleet</SelectItem>
                         <SelectItem value="take_home">Take Home</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1076,7 +1078,7 @@ export function VehicleManagement() {
                   setFormData({
                     ...formData,
                     primary_category: value,
-                    classification: value === "specialty" ? "house" : formData.classification,
+                    classification: value === "specialty" ? "fleet" : formData.classification,
                     assigned_driver_id: value === "specialty" ? "" : formData.assigned_driver_id
                   });
                 }}>
@@ -1095,14 +1097,14 @@ export function VehicleManagement() {
                   setFormData({
                     ...formData,
                     classification: value,
-                    assigned_driver_id: value === "house" ? "" : formData.assigned_driver_id
+                    assigned_driver_id: value === "fleet" ? "" : formData.assigned_driver_id
                   });
                 }}>
                               <SelectTrigger className="h-8">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="house">Fleet</SelectItem>
+                                <SelectItem value="fleet">Fleet</SelectItem>
                                 <SelectItem value="take_home">Take Home</SelectItem>
                               </SelectContent>
                             </Select>

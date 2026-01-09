@@ -285,14 +285,14 @@ export function useDispatchData() {
     // Check conditions:
     // - primary_category = 'above_all' (no automation for specialty)
     // - always_clean_exempt = false
-    // - classification = 'house' (non-take-home)
+    // - classification = 'fleet' (non-take-home)
     const isAboveAll = vehicle.primary_category === "above_all";
     const isNotExempt = !(vehicle as any).always_clean_exempt;
-    const isHouseVehicle = vehicle.classification === "house";
+    const isFleetVehicle = vehicle.classification === "fleet";
 
-    console.log(`[Rule B] Checking vehicle ${vehicle.unit}: above_all=${isAboveAll}, not_exempt=${isNotExempt}, house=${isHouseVehicle}`);
+    console.log(`[Rule B] Checking vehicle ${vehicle.unit}: above_all=${isAboveAll}, not_exempt=${isNotExempt}, fleet=${isFleetVehicle}`);
 
-    if (!isAboveAll || !isNotExempt || !isHouseVehicle) {
+    if (!isAboveAll || !isNotExempt || !isFleetVehicle) {
       console.log(`[Rule B] Skipping ${vehicle.unit} - conditions not met`);
       return;
     }
