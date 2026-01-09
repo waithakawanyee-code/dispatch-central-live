@@ -101,7 +101,10 @@ const Drivers = () => {
   const [showPunchOutDialog, setShowPunchOutDialog] = useState(false);
   const [punchOutDriver, setPunchOutDriver] = useState<{ id: string; name: string } | null>(null);
   const [punchOutTime, setPunchOutTime] = useState("");
-  const punchOutSelectRef = useRef<HTMLButtonElement>(null);
+  const [punchOutTabStage, setPunchOutTabStage] = useState<1 | 2>(1);
+  const punchOutDriverRef = useRef<HTMLButtonElement>(null);
+  const punchOutTimeRef = useRef<HTMLInputElement>(null);
+  const punchOutButtonRef = useRef<HTMLButtonElement>(null);
   
   // Driver picker state (for keyboard shortcuts when no driver selected)
   const [showDriverPicker, setShowDriverPicker] = useState(false);
@@ -2463,14 +2466,112 @@ const Drivers = () => {
         open={showPunchOutDialog} 
         onOpenChange={(open) => {
           setShowPunchOutDialog(open);
-          if (!open) setPunchOutDriver(null);
+          if (!open) {
+            setPunchOutDriver(null);
+            setPunchOutTabStage(1);
+          }
         }}
       >
         <DialogContent 
           className="sm:max-w-[350px]"
           onOpenAutoFocus={(e) => {
             e.preventDefault();
-            setTimeout(() => punchOutSelectRef.current?.focus(), 0);
+            setPunchOutTabStage(1);
+            // If driver is pre-selected, focus time; otherwise focus driver
+            setTimeout(() => {
+              if (punchOutDriver) {
+                punchOutTimeRef.current?.focus();
+                punchOutTimeRef.current?.select();
+              } else {
+                punchOutDriverRef.current?.focus();
+              }
+            }, 0);
+          }}
+          onKeyDown={(e) => {
+            const hasDriver = !!punchOutDriver;
+            const activeEl = document.activeElement;
+            
+            // Handle Tab key navigation
+            if (e.key === "Tab") {
+              // Stage 1: Minimal loop
+              if (punchOutTabStage === 1) {
+                if (!e.shiftKey) {
+                  // Forward Tab
+                  if (activeEl === punchOutButtonRef.current) {
+                    // Tab past Punch Out → Switch to Stage 2, go to Driver
+                    e.preventDefault();
+                    setPunchOutTabStage(2);
+                    punchOutDriverRef.current?.focus();
+                  } else if (activeEl === punchOutTimeRef.current) {
+                    // Time → Punch Out
+                    e.preventDefault();
+                    punchOutButtonRef.current?.focus();
+                  } else if (activeEl === punchOutDriverRef.current && !hasDriver) {
+                    // Driver → Time (only if driver field is in the loop initially)
+                    e.preventDefault();
+                    punchOutTimeRef.current?.focus();
+                    punchOutTimeRef.current?.select();
+                  }
+                } else {
+                  // Shift+Tab in Stage 1
+                  if (activeEl === punchOutTimeRef.current) {
+                    if (hasDriver) {
+                      // If driver pre-selected, Time is first field - wrap to Punch Out
+                      e.preventDefault();
+                      punchOutButtonRef.current?.focus();
+                    } else {
+                      // Driver not pre-selected, go to Driver
+                      e.preventDefault();
+                      punchOutDriverRef.current?.focus();
+                    }
+                  } else if (activeEl === punchOutDriverRef.current) {
+                    // Driver is first field - wrap to Punch Out
+                    e.preventDefault();
+                    punchOutButtonRef.current?.focus();
+                  } else if (activeEl === punchOutButtonRef.current) {
+                    // Punch Out → Time
+                    e.preventDefault();
+                    punchOutTimeRef.current?.focus();
+                    punchOutTimeRef.current?.select();
+                  }
+                }
+              } else {
+                // Stage 2: Full cycle (Driver → Time → Punch Out → Driver)
+                if (!e.shiftKey) {
+                  // Forward Tab in Stage 2
+                  if (activeEl === punchOutButtonRef.current) {
+                    // Punch Out → Driver (wrap)
+                    e.preventDefault();
+                    punchOutDriverRef.current?.focus();
+                  } else if (activeEl === punchOutDriverRef.current) {
+                    // Driver → Time
+                    e.preventDefault();
+                    punchOutTimeRef.current?.focus();
+                    punchOutTimeRef.current?.select();
+                  } else if (activeEl === punchOutTimeRef.current) {
+                    // Time → Punch Out
+                    e.preventDefault();
+                    punchOutButtonRef.current?.focus();
+                  }
+                } else {
+                  // Shift+Tab in Stage 2 (reverse)
+                  if (activeEl === punchOutDriverRef.current) {
+                    // Driver → Punch Out (wrap backwards)
+                    e.preventDefault();
+                    punchOutButtonRef.current?.focus();
+                  } else if (activeEl === punchOutTimeRef.current) {
+                    // Time → Driver
+                    e.preventDefault();
+                    punchOutDriverRef.current?.focus();
+                  } else if (activeEl === punchOutButtonRef.current) {
+                    // Punch Out → Time
+                    e.preventDefault();
+                    punchOutTimeRef.current?.focus();
+                    punchOutTimeRef.current?.select();
+                  }
+                }
+              }
+            }
           }}
         >
           <DialogHeader>
@@ -2485,10 +2586,17 @@ const Drivers = () => {
                   const driver = drivers.find(d => d.id === val);
                   if (driver) {
                     setPunchOutDriver({ id: driver.id, name: driver.name });
+                    // Reset to Stage 1 when driver changes
+                    setPunchOutTabStage(1);
+                    // Focus time after driver selection
+                    setTimeout(() => {
+                      punchOutTimeRef.current?.focus();
+                      punchOutTimeRef.current?.select();
+                    }, 0);
                   }
                 }}
               >
-                <SelectTrigger id="punch-out-driver" ref={punchOutSelectRef}>
+                <SelectTrigger id="punch-out-driver" ref={punchOutDriverRef} tabIndex={punchOutTabStage === 2 || !punchOutDriver ? 0 : -1}>
                   <SelectValue placeholder="Select driver" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2511,8 +2619,11 @@ const Drivers = () => {
               <Label htmlFor="punch-out-time">Time</Label>
               <TimeInput
                 id="punch-out-time"
+                ref={punchOutTimeRef}
                 value={punchOutTime}
                 onChange={setPunchOutTime}
+                onEnterSubmit={handleConfirmPunchOut}
+                placeholder="e.g. 530, 5:30pm, 17:30"
               />
             </div>
           </div>
@@ -2520,7 +2631,7 @@ const Drivers = () => {
             <Button variant="outline" onClick={() => setShowPunchOutDialog(false)} tabIndex={-1}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmPunchOut} disabled={!punchOutDriver}>
+            <Button ref={punchOutButtonRef} onClick={handleConfirmPunchOut} disabled={!punchOutDriver}>
               Punch Out
             </Button>
           </DialogFooter>
