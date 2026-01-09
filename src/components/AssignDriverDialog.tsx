@@ -131,7 +131,38 @@ export function AssignDriverDialog({
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
-          {/* Driver Select - Only shown if drivers provided, tabIndex makes it last in first cycle */}
+          {/* Report Time - First in tab order */}
+          <div className="grid gap-2">
+            <Label htmlFor="assign-report-time">Report Time (optional)</Label>
+            <TimeInput
+              ref={timeInputRef}
+              id="assign-report-time"
+              value={reportTime}
+              onChange={(val) => {
+                setReportTime(val);
+                setValidationError("");
+              }}
+              placeholder="HH:MM"
+              onEnterSubmit={handleAssign}
+            />
+          </div>
+
+          {/* Vehicle - Second in tab order */}
+          <div className="grid gap-2">
+            <Label>Vehicle (optional)</Label>
+            <VehicleCombobox
+              vehicles={activeVehicles}
+              value={selectedVehicle}
+              onValueChange={(val) => {
+                setSelectedVehicle(val);
+                setValidationError("");
+              }}
+              placeholder="No vehicle"
+              includeNone
+            />
+          </div>
+
+          {/* Driver Select - Last in DOM, skipped in first cycle via tabIndex */}
           {showDriverSelect && (
             <div className="grid gap-2">
               <Label htmlFor="assign-driver">Driver</Label>
@@ -144,7 +175,7 @@ export function AssignDriverDialog({
                   setValidationError("");
                 }}
                 onKeyDown={handleDriverSelectKeyDown}
-                tabIndex={hasCompletedFirstCycle.current ? 0 : -1}
+                tabIndex={-1}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {unassignedDrivers.map(d => (
@@ -153,37 +184,6 @@ export function AssignDriverDialog({
               </select>
             </div>
           )}
-
-          {/* Report Time - First in tab order */}
-          <div className="grid gap-2">
-            <Label htmlFor="assign-report-time">Report Time</Label>
-            <TimeInput
-              ref={timeInputRef}
-              id="assign-report-time"
-              value={reportTime}
-              onChange={(val) => {
-                setReportTime(val);
-                setValidationError("");
-              }}
-              placeholder="e.g. 730, 9:00a, 14:30"
-              onEnterSubmit={handleAssign}
-            />
-          </div>
-
-          {/* Vehicle - Second in tab order */}
-          <div className="grid gap-2">
-            <Label>Vehicle</Label>
-            <VehicleCombobox
-              vehicles={activeVehicles}
-              value={selectedVehicle}
-              onValueChange={(val) => {
-                setSelectedVehicle(val);
-                setValidationError("");
-              }}
-              placeholder="Select vehicle"
-              includeNone
-            />
-          </div>
 
           {/* Validation error */}
           {validationError && (

@@ -81,6 +81,8 @@ const Drivers = () => {
   const [assignReportTime, setAssignReportTime] = useState("");
   const [assignVehicle, setAssignVehicle] = useState("__none__");
   const assignButtonRef = useRef<HTMLButtonElement>(null);
+  const assignReportTimeRef = useRef<HTMLInputElement>(null);
+  const assignDriverSelectRef = useRef<HTMLButtonElement>(null);
   const driverListRef = useRef<HTMLDivElement>(null);
   
   // OFF dialog state
@@ -543,6 +545,10 @@ const Drivers = () => {
     // Pre-fill with driver's default/take-home vehicle if set
     setAssignVehicle(defaultVehicle || "__none__");
     setShowAssignDialog(true);
+    // Focus report time after dialog opens
+    setTimeout(() => {
+      assignReportTimeRef.current?.focus();
+    }, 50);
   };
   
   const confirmOffDriverAssign = () => {
@@ -556,6 +562,10 @@ const Drivers = () => {
     setShowOffDriverConfirm(false);
     setPendingOffDriver(null);
     setShowAssignDialog(true);
+    // Focus report time after dialog opens
+    setTimeout(() => {
+      assignReportTimeRef.current?.focus();
+    }, 50);
   };
 
   const openOffDialog = (driverId: string, driverName: string) => {
@@ -1055,6 +1065,10 @@ const Drivers = () => {
     setAssignVehicle(defaultVehicle || "__none__");
     setShowAssignDialog(true);
     setOffDriverSearch("");
+    // Focus report time after dialog opens
+    setTimeout(() => {
+      assignReportTimeRef.current?.focus();
+    }, 50);
   };
 
   // Calculate stats based on displayed drivers
@@ -2077,6 +2091,33 @@ const Drivers = () => {
             Assign for {format(selectedDate, "EEEE, MMMM d, yyyy")}
           </p>
           <div className="grid gap-4 py-4">
+            {/* Report Time - First in tab order */}
+            <div className="grid gap-2">
+              <Label htmlFor="future-report-time">Report Time (optional)</Label>
+              <TimeInput
+                ref={assignReportTimeRef}
+                id="future-report-time"
+                value={assignReportTime}
+                onChange={setAssignReportTime}
+                placeholder="HH:MM"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    assignButtonRef.current?.focus();
+                  }
+                }}
+              />
+            </div>
+            {/* Vehicle - Second in tab order */}
+            <div className="grid gap-2">
+              <Label htmlFor="future-vehicle">Vehicle (optional)</Label>
+              <VehicleCombobox
+                vehicles={vehicles.filter((v) => v.status === "active")}
+                value={assignVehicle}
+                onValueChange={setAssignVehicle}
+                placeholder="No vehicle"
+              />
+            </div>
+            {/* Driver - Third in tab order (skipped in first cycle via tabIndex) */}
             <div className="grid gap-2">
               <Label htmlFor="assign-driver">Driver</Label>
               <Select 
@@ -2090,7 +2131,11 @@ const Drivers = () => {
                   }
                 }}
               >
-                <SelectTrigger id="assign-driver">
+                <SelectTrigger 
+                  ref={assignDriverSelectRef}
+                  id="assign-driver"
+                  tabIndex={-1}
+                >
                   <SelectValue placeholder="Select driver" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover">
@@ -2106,28 +2151,6 @@ const Drivers = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="future-report-time">Report Time (optional)</Label>
-              <TimeInput
-                id="future-report-time"
-                value={assignReportTime}
-                onChange={setAssignReportTime}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    assignButtonRef.current?.focus();
-                  }
-                }}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="future-vehicle">Vehicle (optional)</Label>
-              <VehicleCombobox
-                vehicles={vehicles.filter((v) => v.status === "active")}
-                value={assignVehicle}
-                onValueChange={setAssignVehicle}
-                placeholder="Select vehicle"
-              />
-            </div>
           </div>
           <DialogFooter>
             <Button 
@@ -2141,6 +2164,13 @@ const Drivers = () => {
               ref={assignButtonRef}
               onClick={handleAssignDriver}
               disabled={!assigningDriver}
+              onKeyDown={(e) => {
+                // Tab from Assign cycles to Driver field
+                if (e.key === "Tab" && !e.shiftKey) {
+                  e.preventDefault();
+                  assignDriverSelectRef.current?.focus();
+                }
+              }}
             >
               Assign
             </Button>
