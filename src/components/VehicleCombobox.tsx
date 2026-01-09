@@ -97,6 +97,8 @@ export function VehicleCombobox({
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const [highlightedIndex, setHighlightedIndex] = React.useState(0);
+  const [pendingSearch, setPendingSearch] = React.useState("");
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   const selectedLabel = value === "__none__" 
     ? "No vehicle" 
@@ -126,6 +128,23 @@ export function VehicleCombobox({
     setHighlightedIndex(0);
   }, [search, open]);
 
+  // Handle pending search when dropdown opens
+  React.useEffect(() => {
+    if (open && pendingSearch) {
+      setSearch(pendingSearch);
+      setPendingSearch("");
+      // Focus the input after a short delay to ensure it's mounted
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+      });
+    } else if (open) {
+      // Always focus input when dropdown opens
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+      });
+    }
+  }, [open, pendingSearch]);
+
   // Reset search when dropdown closes
   React.useEffect(() => {
     if (!open) {
@@ -138,7 +157,7 @@ export function VehicleCombobox({
     setOpen(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
     if (allItems.length === 0) return;
 
     switch (e.key) {
@@ -169,6 +188,23 @@ export function VehicleCombobox({
     }
   };
 
+  // Handle keydown on the trigger button when dropdown is closed
+  const handleTriggerKeyDown = (e: React.KeyboardEvent) => {
+    // If Enter or Space, let default behavior open the dropdown
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      setOpen(true);
+      return;
+    }
+
+    // If it's a printable character (alphanumeric), open dropdown and start search
+    if (e.key.length === 1 && /[a-zA-Z0-9]/.test(e.key)) {
+      e.preventDefault();
+      setPendingSearch(e.key);
+      setOpen(true);
+    }
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -177,22 +213,27 @@ export function VehicleCombobox({
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between font-normal"
+          onKeyDown={handleTriggerKeyDown}
         >
           {selectedLabel}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[var(--radix-popover-trigger-width)] p-0 z-50" 
+        className="w-[var(--radix-popover-trigger-width)] p-0 z-50 bg-popover" 
         align="start"
-        onOpenAutoFocus={(e) => e.preventDefault()}
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          inputRef.current?.focus();
+        }}
       >
         <Command shouldFilter={false}>
           <CommandInput
+            ref={inputRef}
             placeholder="Search... (v49, b37, c23)" 
             value={search}
             onValueChange={setSearch}
-            onKeyDown={handleKeyDown}
+            onKeyDown={handleInputKeyDown}
           />
           <CommandList>
             {allItems.length === 0 ? (
