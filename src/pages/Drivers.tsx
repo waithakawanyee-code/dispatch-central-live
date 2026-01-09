@@ -91,7 +91,9 @@ const Drivers = () => {
   const [punchInDriver, setPunchInDriver] = useState<{ id: string; name: string } | null>(null);
   const [punchInTime, setPunchInTime] = useState("");
   const [punchInVehicle, setPunchInVehicle] = useState<string>("__none__");
-  const punchInSelectRef = useRef<HTMLButtonElement>(null);
+  const punchInVehicleRef = useRef<HTMLButtonElement>(null);
+  const punchInTimeRef = useRef<HTMLInputElement>(null);
+  const punchInButtonRef = useRef<HTMLButtonElement>(null);
   
   // Punch Out dialog state
   const [showPunchOutDialog, setShowPunchOutDialog] = useState(false);
@@ -2229,7 +2231,28 @@ const Drivers = () => {
           className="sm:max-w-[350px]"
           onOpenAutoFocus={(e) => {
             e.preventDefault();
-            setTimeout(() => punchInSelectRef.current?.focus(), 0);
+            // Smart focus: if vehicle is already assigned, skip to time
+            setTimeout(() => {
+              const hasVehicle = punchInVehicle && punchInVehicle !== "__none__";
+              if (hasVehicle) {
+                punchInTimeRef.current?.focus();
+                punchInTimeRef.current?.select();
+              } else {
+                punchInVehicleRef.current?.focus();
+              }
+            }, 0);
+          }}
+          onKeyDown={(e) => {
+            // Focus trap: when tabbing past Punch In button, wrap to first field
+            if (e.key === "Tab" && !e.shiftKey && document.activeElement === punchInButtonRef.current) {
+              e.preventDefault();
+              const hasVehicle = punchInVehicle && punchInVehicle !== "__none__";
+              if (hasVehicle) {
+                punchInTimeRef.current?.focus();
+              } else {
+                punchInVehicleRef.current?.focus();
+              }
+            }
           }}
         >
           <DialogHeader>
@@ -2244,11 +2267,21 @@ const Drivers = () => {
                   const driver = drivers.find(d => d.id === val);
                   if (driver) {
                     setPunchInDriver({ id: driver.id, name: driver.name });
-                    setPunchInVehicle(getDriverDefaultVehicle(driver.id));
+                    const newVehicle = getDriverDefaultVehicle(driver.id);
+                    setPunchInVehicle(newVehicle);
+                    // Re-focus based on new vehicle state
+                    setTimeout(() => {
+                      if (newVehicle && newVehicle !== "__none__") {
+                        punchInTimeRef.current?.focus();
+                        punchInTimeRef.current?.select();
+                      } else {
+                        punchInVehicleRef.current?.focus();
+                      }
+                    }, 0);
                   }
                 }}
               >
-                <SelectTrigger id="punch-in-driver" ref={punchInSelectRef}>
+                <SelectTrigger id="punch-in-driver" tabIndex={-1}>
                   <SelectValue placeholder="Select driver" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2279,10 +2312,18 @@ const Drivers = () => {
               </Label>
               <Select 
                 value={punchInVehicle} 
-                onValueChange={setPunchInVehicle}
+                onValueChange={(val) => {
+                  setPunchInVehicle(val);
+                  // After vehicle selection, move focus to time
+                  setTimeout(() => {
+                    punchInTimeRef.current?.focus();
+                    punchInTimeRef.current?.select();
+                  }, 0);
+                }}
               >
                 <SelectTrigger 
                   id="punch-in-vehicle"
+                  ref={punchInVehicleRef}
                   className={
                     punchInDriver && drivers.find(d => d.id === punchInDriver.id)?.status === "unassigned" && (punchInVehicle === "__none__" || !punchInVehicle)
                       ? "ring-2 ring-amber-400 border-amber-400"
@@ -2307,8 +2348,11 @@ const Drivers = () => {
               <Label htmlFor="punch-in-time">Time</Label>
               <TimeInput
                 id="punch-in-time"
+                ref={punchInTimeRef}
                 value={punchInTime}
                 onChange={setPunchInTime}
+                onEnterSubmit={handleConfirmPunchIn}
+                placeholder="e.g. 930, 9:30am, 21:30"
               />
             </div>
           </div>
@@ -2316,7 +2360,7 @@ const Drivers = () => {
             <Button variant="outline" onClick={() => setShowPunchInDialog(false)} tabIndex={-1}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmPunchIn} disabled={!punchInDriver}>
+            <Button ref={punchInButtonRef} onClick={handleConfirmPunchIn} disabled={!punchInDriver}>
               Punch In
             </Button>
           </DialogFooter>
