@@ -41,28 +41,11 @@ const QUICK_KEY_MAP: Record<string, string[]> = {
   m: ["sprinter"],
 };
 
-// Function to expand quick key searches
-function expandQuickKeySearch(search: string): string {
-  const lowerSearch = search.toLowerCase().trim();
-  
-  // Check if search starts with a quick key followed by numbers
-  // e.g., "v49" -> search for "van" vehicles with "49"
-  const match = lowerSearch.match(/^([a-z])(\d+)$/);
-  if (match) {
-    const [, letter, number] = match;
-    const keywords = QUICK_KEY_MAP[letter];
-    if (keywords) {
-      // Return the number to filter by - we'll check vehicle type separately
-      return number;
-    }
-  }
-  
-  return lowerSearch;
-}
-
 // Function to check if a vehicle matches the quick key search
 function matchesQuickKeySearch(vehicle: Vehicle, search: string): boolean {
   const lowerSearch = search.toLowerCase().trim();
+  if (!lowerSearch) return true;
+  
   const lowerUnit = vehicle.unit.toLowerCase();
   const lowerType = (vehicle.vehicle_type || "").toLowerCase();
   
@@ -71,7 +54,7 @@ function matchesQuickKeySearch(vehicle: Vehicle, search: string): boolean {
     return true;
   }
   
-  // Check for quick key pattern (e.g., "v49", "b37")
+  // Check for quick key pattern (e.g., "v49", "b37", "c23")
   const match = lowerSearch.match(/^([a-z])(\d+)$/);
   if (match) {
     const [, letter, number] = match;
@@ -113,7 +96,7 @@ export function VehicleCombobox({
 }: VehicleComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
-  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const [highlightedIndex, setHighlightedIndex] = React.useState(0);
 
   const selectedLabel = value === "__none__" 
     ? "No vehicle" 
@@ -125,13 +108,64 @@ export function VehicleCombobox({
     return vehicles.filter(v => matchesQuickKeySearch(v, search));
   }, [vehicles, search]);
 
-  // Handle Enter to select first match
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && search && filteredVehicles.length > 0) {
-      e.preventDefault();
-      onValueChange(filteredVehicles[0].unit);
-      setOpen(false);
+  // Build items list for keyboard navigation
+  const allItems = React.useMemo(() => {
+    const items: { value: string; label: string }[] = [];
+    // Only include "No vehicle" when there's no search query
+    if (includeNone && !search) {
+      items.push({ value: "__none__", label: "No vehicle" });
+    }
+    filteredVehicles.forEach(v => {
+      items.push({ value: v.unit, label: v.unit });
+    });
+    return items;
+  }, [includeNone, search, filteredVehicles]);
+
+  // Reset highlight when search changes or dropdown opens
+  React.useEffect(() => {
+    setHighlightedIndex(0);
+  }, [search, open]);
+
+  // Reset search when dropdown closes
+  React.useEffect(() => {
+    if (!open) {
       setSearch("");
+    }
+  }, [open]);
+
+  const selectItem = (itemValue: string) => {
+    onValueChange(itemValue);
+    setOpen(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (allItems.length === 0) return;
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setHighlightedIndex(prev => 
+          prev < allItems.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setHighlightedIndex(prev => prev > 0 ? prev - 1 : 0);
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (allItems[highlightedIndex]) {
+          selectItem(allItems[highlightedIndex].value);
+        }
+        break;
+      case "Escape":
+        e.preventDefault();
+        setOpen(false);
+        break;
+      case "Tab":
+        // Allow natural tab behavior - close dropdown and move focus
+        setOpen(false);
+        break;
     }
   };
 
@@ -139,7 +173,6 @@ export function VehicleCombobox({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          ref={triggerRef}
           variant="outline"
           role="combobox"
           aria-expanded={open}
@@ -149,55 +182,44 @@ export function VehicleCombobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      <PopoverContent 
+        className="w-[var(--radix-popover-trigger-width)] p-0 z-50" 
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder="Search... (v49, b37, s12)" 
+            placeholder="Search... (v49, b37, c23)" 
             value={search}
             onValueChange={setSearch}
             onKeyDown={handleKeyDown}
           />
           <CommandList>
-            <CommandEmpty>No vehicle found.</CommandEmpty>
-            <CommandGroup>
-              {includeNone && (
-                <CommandItem
-                  value="__none__"
-                  onSelect={() => {
-                    onValueChange("__none__");
-                    setOpen(false);
-                    setSearch("");
-                  }}
-                >
-                  <Check
+            {allItems.length === 0 ? (
+              <CommandEmpty>No vehicle found.</CommandEmpty>
+            ) : (
+              <CommandGroup>
+                {allItems.map((item, index) => (
+                  <CommandItem
+                    key={item.value}
+                    value={item.value}
+                    onSelect={() => selectItem(item.value)}
                     className={cn(
-                      "mr-2 h-4 w-4",
-                      value === "__none__" ? "opacity-100" : "opacity-0"
+                      index === highlightedIndex && "bg-accent text-accent-foreground"
                     )}
-                  />
-                  No vehicle
-                </CommandItem>
-              )}
-              {filteredVehicles.map((vehicle) => (
-                <CommandItem
-                  key={vehicle.id}
-                  value={vehicle.unit}
-                  onSelect={() => {
-                    onValueChange(vehicle.unit);
-                    setOpen(false);
-                    setSearch("");
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === vehicle.unit ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {vehicle.unit}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === item.value ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {item.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>
