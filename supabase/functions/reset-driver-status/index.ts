@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+mport { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +14,6 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log("Starting daily driver status reset and shift cleanup...");
@@ -27,7 +26,6 @@ Deno.serve(async (req) => {
     twoDaysAgo.setHours(23, 59, 59, 999);
     const twoDaysAgoStr = twoDaysAgo.toISOString();
 
-    // Find open shifts from 2+ days ago
     const { data: staleShifts, error: staleShiftsError } = await supabase
       .from("shifts")
       .select("id, driver_id, driver_name, punch_in_at, workday_date, exception_flags")
@@ -40,13 +38,12 @@ Deno.serve(async (req) => {
       console.log(`Found ${staleShifts.length} stale open shift(s) from 2+ days ago`);
 
       for (const shift of staleShifts) {
-        // Calculate midnight of the day after the shift's workday as the close time
+        // Close at midnight of the day after the shift's workday_date
         const shiftDate = new Date(shift.workday_date);
         shiftDate.setDate(shiftDate.getDate() + 1);
         shiftDate.setHours(0, 0, 0, 0);
         const closeTime = shiftDate.toISOString();
 
-        // Update the shift with auto-close exception flag
         const { error: updateError } = await supabase
           .from("shifts")
           .update({
@@ -66,14 +63,12 @@ Deno.serve(async (req) => {
         } else {
           console.log(`Auto-closed stale shift for ${shift.driver_name} (${shift.workday_date})`);
 
-          // Close any open vehicle segments for this shift
           await supabase
             .from("shift_vehicle_segments")
             .update({ segment_out_at: closeTime })
             .eq("shift_id", shift.id)
             .is("segment_out_at", null);
 
-          // Log to status_history
           await supabase.from("status_history").insert({
             entity_type: "driver",
             entity_id: shift.driver_id,
@@ -89,145 +84,191 @@ Deno.serve(async (req) => {
     }
 
     // ============================================
-    // PHASE 2: Reset driver statuses (existing logic)
+    // PHASE 1B: Identify currently OPEN (active) shifts
+    // Exclude these drivers from reset so you don't break live shifts
+    // ============================================
+    const { data: openShiftsNow, error: openShiftsNowError } = await supabase
+      .from("shifts")
+      .select("driver_id, driver_name, punch_in_at, workday_date")
+      .is("punch_out_at", null);
+
+    if (openShiftsNowError) {
+      console.error("Error fetching currently open shifts:", openShiftsNowError);
+    }
+
+    const activeShiftDriverIds = new Set<string>();
+    (openShiftsNow || []).forEach((s) => {
+      if (s.driver_id) activeShiftDriverIds.add(s.driver_id);
+    });
+
+    if (activeShiftDriverIds.size > 0) {
+      console.log(`Excluding ${activeShiftDriverIds.size} driver(s) with open shifts from reset`);
+    }
+
+    // ============================================
+    // PHASE 2: Reset driver statuses (fixed logic)
     // ============================================
 
-    // Get today's day of week (0 = Sunday, 6 = Saturday)
     const todayDayOfWeek = new Date().getDay();
     console.log(`Today is day of week: ${todayDayOfWeek}`);
 
-    // Get all vehicles to identify take-home drivers
-    const { data: vehicles } = await supabase.from("vehicles").select("unit, classification");
+    // 1) Pull take-home vehicle units (so we can detect take-home owners by default_vehicle)
+    const { data: vehicles, error: vehiclesError } = await supabase
+      .from("vehicles")
+      .select("unit, classification")
+      .eq("classification", "take_home");
 
-    const takeHomeVehicles = new Set(
-      vehicles?.filter((v) => v.classification === "take_home").map((v) => v.unit) || [],
-    );
+    if (vehiclesError) {
+      console.error("Error fetching vehicles:", vehiclesError);
+      throw vehiclesError;
+    }
 
-    // Get driver schedules for today to check who is working
-    const { data: todaySchedules } = await supabase
+    const takeHomeVehicleUnits = new Set<string>((vehicles || []).map((v) => v.unit).filter(Boolean));
+
+    // 2) Pull today's schedules: IMPORTANT change — missing schedule => NOT scheduled (OFF)
+    const { data: todaySchedules, error: schedulesError } = await supabase
       .from("driver_schedules")
       .select("driver_id, is_off")
       .eq("day_of_week", todayDayOfWeek);
 
-    // Build a map of driver_id -> is_off for today
-    const driverScheduleMap = new Map<string, boolean>();
-    todaySchedules?.forEach((s) => {
-      driverScheduleMap.set(s.driver_id, s.is_off);
-    });
-
-    // Reset regular drivers (no default vehicle or not take-home) to 'unassigned'
-    const { data: regularDrivers, error: regularError } = await supabase
-      .from("drivers")
-      .update({ status: "unassigned" })
-      .neq("status", "off")
-      .or("default_vehicle.is.null,default_vehicle.eq.")
-      .select("id, name");
-
-    if (regularError) {
-      console.error("Error resetting regular driver statuses:", regularError);
-      throw regularError;
+    if (schedulesError) {
+      console.error("Error fetching today schedules:", schedulesError);
+      throw schedulesError;
     }
 
-    // Get drivers with default vehicles
-    const { data: driversWithVehicles } = await supabase
+    // driver_id -> workingToday boolean
+    // workingToday = schedule exists AND is_off !== true
+    const workingTodayMap = new Map<string, boolean>();
+    (todaySchedules || []).forEach((s) => {
+      workingTodayMap.set(s.driver_id, s.is_off === true ? false : true);
+    });
+
+    // 3) Get all drivers that are not status=off (and we will exclude active-shift drivers)
+    const { data: allDrivers, error: allDriversError } = await supabase
       .from("drivers")
-      .select("id, name, default_vehicle")
-      .neq("status", "off")
-      .not("default_vehicle", "is", null)
-      .neq("default_vehicle", "");
+      .select("id, name, status, default_vehicle, vehicle")
+      .neq("status", "off");
 
-    // Separate take-home drivers from others, and check if they're scheduled to work today
-    const takeHomeDriversWorking: typeof driversWithVehicles = [];
-    const takeHomeDriversOff: typeof driversWithVehicles = [];
-    const otherDriversWithVehicles: typeof driversWithVehicles = [];
+    if (allDriversError) {
+      console.error("Error fetching drivers:", allDriversError);
+      throw allDriversError;
+    }
 
-    driversWithVehicles?.forEach((d) => {
-      if (d.default_vehicle && takeHomeVehicles.has(d.default_vehicle)) {
-        // This is a take-home driver - check if they're scheduled to work today
-        const isOff = driverScheduleMap.get(d.id);
-        if (isOff === true) {
-          // Explicitly marked as off today
-          takeHomeDriversOff.push(d);
-          console.log(`Take-home driver ${d.name} is OFF today`);
-        } else {
-          // Working today (either has schedule with is_off=false, or no schedule entry means working)
-          takeHomeDriversWorking.push(d);
-          console.log(`Take-home driver ${d.name} is WORKING today`);
-        }
+    const eligibleDrivers = (allDrivers || []).filter((d) => !activeShiftDriverIds.has(d.id));
+
+    // 4) Split drivers into buckets
+    const takeHomeWorkingIds: string[] = [];
+    const takeHomeWorkingVehicleById = new Map<string, string>();
+
+    const toUnassignIds: string[] = [];
+
+    for (const d of eligibleDrivers) {
+      const dv = (d.default_vehicle || "").trim();
+      const isTakeHomeOwner = dv !== "" && takeHomeVehicleUnits.has(dv);
+
+      const workingToday = workingTodayMap.get(d.id) === true; // missing => false
+
+      if (isTakeHomeOwner && workingToday) {
+        takeHomeWorkingIds.push(d.id);
+        takeHomeWorkingVehicleById.set(d.id, dv);
       } else {
-        otherDriversWithVehicles.push(d);
+        // Everyone else starts unassigned (including take-home owners who are NOT scheduled today)
+        toUnassignIds.push(d.id);
       }
-    });
-
-    // Reset non-take-home drivers with vehicles to unassigned
-    if (otherDriversWithVehicles && otherDriversWithVehicles.length > 0) {
-      const otherIds = otherDriversWithVehicles.map((d) => d.id);
-      await supabase.from("drivers").update({ status: "unassigned" }).in("id", otherIds);
     }
 
-    // Reset take-home drivers who are OFF today to unassigned
-    if (takeHomeDriversOff && takeHomeDriversOff.length > 0) {
-      const offIds = takeHomeDriversOff.map((d) => d.id);
-      await supabase.from("drivers").update({ status: "unassigned", vehicle: null }).in("id", offIds);
-    }
+    // 5) Bulk updates
+    let totalUnassigned = 0;
+    let totalAssigned = 0;
 
-    // Set take-home drivers who are WORKING today to 'assigned' with their vehicle
-    for (const driver of takeHomeDriversWorking || []) {
-      await supabase
+    if (toUnassignIds.length > 0) {
+      const { data: unassignedDrivers, error: unassignError } = await supabase
         .from("drivers")
-        .update({ status: "assigned", vehicle: driver.default_vehicle })
-        .eq("id", driver.id);
-    }
+        .update({ status: "unassigned", vehicle: null })
+        .in("id", toUnassignIds)
+        .select("id, name");
 
-    const totalReset =
-      (regularDrivers?.length || 0) + (otherDriversWithVehicles?.length || 0) + (takeHomeDriversOff?.length || 0);
-    const totalAssigned = takeHomeDriversWorking?.length || 0;
-    const totalStaleClosed = staleShifts?.length || 0;
-    console.log(
-      `Reset ${totalReset} drivers to unassigned, ${totalAssigned} take-home drivers to assigned, ${totalStaleClosed} stale shifts auto-closed`,
-    );
+      if (unassignError) {
+        console.error("Error resetting drivers to unassigned:", unassignError);
+        throw unassignError;
+      }
 
-    // Log the reset to status_history for auditing
-    const allResetDrivers = [
-      ...(regularDrivers || []),
-      ...(otherDriversWithVehicles || []),
-      ...(takeHomeDriversOff || []),
-    ];
-    if (allResetDrivers.length > 0) {
-      const historyEntries = allResetDrivers.map((driver: { id: string; name: string }) => ({
-        entity_type: "driver",
-        entity_id: driver.id,
-        entity_name: driver.name,
-        field_changed: "status",
-        old_value: "various",
-        new_value: "unassigned",
-      }));
+      totalUnassigned = unassignedDrivers?.length || 0;
 
-      const { error: historyError } = await supabase.from("status_history").insert(historyEntries);
-
-      if (historyError) {
-        console.error("Error logging status history:", historyError);
+      // status_history entries
+      if (unassignedDrivers && unassignedDrivers.length > 0) {
+        await supabase.from("status_history").insert(
+          unassignedDrivers.map((driver: { id: string; name: string }) => ({
+            entity_type: "driver",
+            entity_id: driver.id,
+            entity_name: driver.name,
+            field_changed: "status",
+            old_value: "various",
+            new_value: "unassigned",
+          })),
+        );
       }
     }
 
-    // Log take-home drivers being set to assigned
-    if (takeHomeDriversWorking && takeHomeDriversWorking.length > 0) {
-      const takeHomeHistoryEntries = takeHomeDriversWorking.map((driver: { id: string; name: string }) => ({
-        entity_type: "driver",
-        entity_id: driver.id,
-        entity_name: driver.name,
-        field_changed: "status",
-        old_value: "various",
-        new_value: "assigned",
-      }));
+    // For take-home working drivers we need to set status=assigned and vehicle=their default_vehicle.
+    // Supabase update can't set vehicle per-row with different values in a single update,
+    // so we do 2-step: set assigned for all, then set vehicle for each (still much smaller than your original loop).
+    // If you want, we can replace this with an RPC later for a true single statement.
 
-      await supabase.from("status_history").insert(takeHomeHistoryEntries);
+    if (takeHomeWorkingIds.length > 0) {
+      const { data: assignedDrivers, error: assignedError } = await supabase
+        .from("drivers")
+        .update({ status: "assigned" })
+        .in("id", takeHomeWorkingIds)
+        .select("id, name, default_vehicle");
+
+      if (assignedError) {
+        console.error("Error setting take-home drivers to assigned:", assignedError);
+        throw assignedError;
+      }
+
+      totalAssigned = assignedDrivers?.length || 0;
+
+      // Set vehicle per driver to match their default_vehicle
+      // (service role key, so this is safe server-side)
+      for (const d of assignedDrivers || []) {
+        const dv = (d.default_vehicle || "").trim();
+        if (!dv) continue;
+
+        await supabase.from("drivers").update({ vehicle: dv }).eq("id", d.id);
+      }
+
+      // status_history entries
+      if (assignedDrivers && assignedDrivers.length > 0) {
+        await supabase.from("status_history").insert(
+          assignedDrivers.map((driver: { id: string; name: string }) => ({
+            entity_type: "driver",
+            entity_id: driver.id,
+            entity_name: driver.name,
+            field_changed: "status",
+            old_value: "various",
+            new_value: "assigned",
+          })),
+        );
+      }
     }
+
+    const totalStaleClosed = staleShifts?.length || 0;
+
+    console.log(
+      `Reset complete: ${totalUnassigned} → unassigned, ${totalAssigned} take-home working → assigned, ${totalStaleClosed} stale shifts auto-closed`,
+    );
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Reset ${totalReset} drivers to unassigned, ${totalAssigned} take-home drivers to assigned, ${totalStaleClosed} stale shifts auto-closed`,
+        message: `Reset complete: ${totalUnassigned} → unassigned, ${totalAssigned} take-home working → assigned, ${totalStaleClosed} stale shifts auto-closed`,
+        totals: {
+          unassigned: totalUnassigned,
+          assigned_take_home_working: totalAssigned,
+          stale_shifts_closed: totalStaleClosed,
+          excluded_active_shift_drivers: activeShiftDriverIds.size,
+        },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
