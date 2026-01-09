@@ -381,6 +381,122 @@ export type Database = {
         }
         Relationships: []
       }
+      shift_vehicle_segments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          segment_in_at: string
+          segment_out_at: string | null
+          shift_id: string
+          vehicle_id: string | null
+          vehicle_unit: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          segment_in_at?: string
+          segment_out_at?: string | null
+          shift_id: string
+          vehicle_id?: string | null
+          vehicle_unit: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          segment_in_at?: string
+          segment_out_at?: string | null
+          shift_id?: string
+          vehicle_id?: string | null
+          vehicle_unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_vehicle_segments_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_vehicle_segments_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shifts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          driver_id: string
+          driver_name: string
+          exception_flags: Json | null
+          id: string
+          notes: string | null
+          punch_in_at: string
+          punch_out_at: string | null
+          updated_at: string
+          updated_by: string | null
+          vehicle_unit: string | null
+          workday_date: string
+          workday_override: boolean
+          workday_override_at: string | null
+          workday_override_by: string | null
+          workday_override_reason: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          driver_id: string
+          driver_name: string
+          exception_flags?: Json | null
+          id?: string
+          notes?: string | null
+          punch_in_at?: string
+          punch_out_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          vehicle_unit?: string | null
+          workday_date?: string
+          workday_override?: boolean
+          workday_override_at?: string | null
+          workday_override_by?: string | null
+          workday_override_reason?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          driver_id?: string
+          driver_name?: string
+          exception_flags?: Json | null
+          id?: string
+          notes?: string | null
+          punch_in_at?: string
+          punch_out_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          vehicle_unit?: string | null
+          workday_date?: string
+          workday_override?: boolean
+          workday_override_at?: string | null
+          workday_override_by?: string | null
+          workday_override_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shifts_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shuttle_schedules: {
         Row: {
           created_at: string
@@ -842,6 +958,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      workdays: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          notes: string | null
+          status: string
+          workday_date: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          notes?: string | null
+          status?: string
+          workday_date: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          notes?: string | null
+          status?: string
+          workday_date?: string
+        }
+        Relationships: []
       }
     }
     Views: {
