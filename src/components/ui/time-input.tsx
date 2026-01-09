@@ -10,16 +10,21 @@ interface TimeInputProps {
   disabled?: boolean;
   autoFocus?: boolean;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onEnterSubmit?: () => void;
 }
 
 /**
- * TimeInput component with HH:MM format
- * - User types hours only, Tab auto-fills :00 for minutes
- * - Tab exits the control entirely (no internal tab stops)
- * - Validates hours (0-23) and minutes (0-59)
- * - Single-digit hours padded to two digits (e.g., 7 → 07:00)
+ * TimeInput component with flexible 12/24 hour parsing
+ * Supported formats:
+ * - "930" → 09:30
+ * - "9:30" → 09:30
+ * - "930p" / "9:30pm" → 21:30
+ * - "2130" / "21:30" → 21:30
+ * - "12a" → 00:00
+ * - "12p" → 12:00
+ * - "7" → 07:00
  */
-export function TimeInput({
+export const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(({
   value,
   onChange,
   id,
@@ -28,8 +33,8 @@ export function TimeInput({
   disabled = false,
   autoFocus = false,
   onKeyDown,
-}: TimeInputProps) {
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  onEnterSubmit,
+}, ref) => {
   const [inputValue, setInputValue] = React.useState(value || "");
 
   // Sync external value changes
@@ -37,89 +42,119 @@ export function TimeInput({
     setInputValue(value || "");
   }, [value]);
 
-  const normalizeTime = (val: string): string => {
-    const trimmed = val.trim();
+  const parseFlexibleTime = (val: string): string => {
+    const trimmed = val.trim().toLowerCase();
     
     if (!trimmed) return "";
 
-    // If already in HH:MM format, validate and return
-    if (/^\d{1,2}:\d{2}$/.test(trimmed)) {
-      const [h, m] = trimmed.split(":").map(Number);
-      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
-        return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+    // Check for AM/PM suffix
+    const hasAM = /a$|am$/.test(trimmed);
+    const hasPM = /p$|pm$/.test(trimmed);
+    const is12Hour = hasAM || hasPM;
+    
+    // Strip AM/PM suffix for parsing
+    let numPart = trimmed.replace(/[ap]m?$/i, "").trim();
+    
+    let hours = 0;
+    let minutes = 0;
+
+    // Case: Already in HH:MM format (e.g., "9:30", "21:30", "12:00")
+    if (/^\d{1,2}:\d{1,2}$/.test(numPart)) {
+      const [h, m] = numPart.split(":").map(Number);
+      hours = h;
+      minutes = m;
+    }
+    // Case: 3-4 digits without colon (e.g., "930", "2130", "130")
+    else if (/^\d{3,4}$/.test(numPart)) {
+      if (numPart.length === 3) {
+        // "930" → 9:30, "130" → 1:30
+        hours = parseInt(numPart.slice(0, 1), 10);
+        minutes = parseInt(numPart.slice(1), 10);
+      } else {
+        // "2130" → 21:30, "0930" → 09:30
+        hours = parseInt(numPart.slice(0, 2), 10);
+        minutes = parseInt(numPart.slice(2), 10);
       }
+    }
+    // Case: 1-2 digits only (e.g., "9", "21", "12")
+    else if (/^\d{1,2}$/.test(numPart)) {
+      hours = parseInt(numPart, 10);
+      minutes = 0;
+    }
+    // Case: Partial with colon like "7:" or "21:"
+    else if (/^\d{1,2}:$/.test(numPart)) {
+      hours = parseInt(numPart.slice(0, -1), 10);
+      minutes = 0;
+    }
+    // Case: Partial like "7:3" → 7:30
+    else if (/^\d{1,2}:\d{1}$/.test(numPart)) {
+      const [hStr, mStr] = numPart.split(":");
+      hours = parseInt(hStr, 10);
+      minutes = parseInt(mStr, 10) * 10; // Single digit minute is tens place
+    }
+    else {
+      return ""; // Invalid format
+    }
+
+    // Handle 12-hour conversion
+    if (is12Hour) {
+      if (hours === 12) {
+        // 12am = 00:00, 12pm = 12:00
+        hours = hasAM ? 0 : 12;
+      } else if (hasPM && hours < 12) {
+        hours += 12;
+      }
+      // AM with hours < 12 stays as-is
+    }
+
+    // Validate ranges
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
       return "";
     }
 
-    // If just digits (hours only), add :00
-    if (/^\d{1,2}$/.test(trimmed)) {
-      const h = parseInt(trimmed, 10);
-      if (h >= 0 && h <= 23) {
-        return `${h.toString().padStart(2, "0")}:00`;
-      }
-      return "";
-    }
-
-    // If partial format like "7:" or "07:"
-    if (/^\d{1,2}:$/.test(trimmed)) {
-      const h = parseInt(trimmed.slice(0, -1), 10);
-      if (h >= 0 && h <= 23) {
-        return `${h.toString().padStart(2, "0")}:00`;
-      }
-      return "";
-    }
-
-    // If partial format like "7:3" or "07:3"
-    if (/^\d{1,2}:\d{1}$/.test(trimmed)) {
-      const [hStr, mStr] = trimmed.split(":");
-      const h = parseInt(hStr, 10);
-      const m = parseInt(mStr, 10);
-      if (h >= 0 && h <= 23 && m >= 0 && m <= 5) {
-        // Single digit minute means it's the tens place (e.g., 3 → 30)
-        return `${h.toString().padStart(2, "0")}:${m}0`;
-      }
-      return "";
-    }
-
-    return "";
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value;
     
-    // Remove non-digit and non-colon characters
-    val = val.replace(/[^\d:]/g, "");
+    // Allow digits, colon, and a/p/m characters for flexible input
+    val = val.replace(/[^\d:apmAPM]/g, "");
     
-    // Auto-insert colon after 2 digits if not present
-    if (val.length === 2 && !val.includes(":") && inputValue.length < val.length) {
-      val = val + ":";
-    }
-    
-    // Limit to 5 characters (HH:MM)
-    if (val.length > 5) {
-      val = val.slice(0, 5);
+    // Limit reasonable length
+    if (val.length > 7) {
+      val = val.slice(0, 7);
     }
 
     setInputValue(val);
   };
 
+  const normalizeAndUpdate = () => {
+    const normalized = parseFlexibleTime(inputValue);
+    if (normalized) {
+      setInputValue(normalized);
+      onChange(normalized);
+    } else if (inputValue.trim()) {
+      // Invalid input - keep focus, don't update
+      return false;
+    }
+    return true;
+  };
+
   const handleBlur = () => {
-    const normalized = normalizeTime(inputValue);
-    setInputValue(normalized);
-    onChange(normalized);
+    normalizeAndUpdate();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Tab" || e.key === "Enter") {
-      // Normalize on Tab/Enter
-      const normalized = normalizeTime(inputValue);
-      setInputValue(normalized);
-      onChange(normalized);
-      
-      // If Enter, prevent default and let parent handle it
-      if (e.key === "Enter") {
-        e.preventDefault();
-        onKeyDown?.(e);
+    if (e.key === "Tab") {
+      // Normalize on Tab
+      normalizeAndUpdate();
+      // Let tab continue naturally
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const valid = normalizeAndUpdate();
+      if (valid && onEnterSubmit) {
+        onEnterSubmit();
       }
     } else {
       onKeyDown?.(e);
@@ -128,10 +163,10 @@ export function TimeInput({
 
   return (
     <input
-      ref={inputRef}
+      ref={ref}
       id={id}
       type="text"
-      inputMode="numeric"
+      inputMode="text"
       value={inputValue}
       onChange={handleInputChange}
       onBlur={handleBlur}
@@ -146,4 +181,6 @@ export function TimeInput({
       autoComplete="off"
     />
   );
-}
+});
+
+TimeInput.displayName = "TimeInput";
