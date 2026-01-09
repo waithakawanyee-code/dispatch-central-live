@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { User, Phone, Clock, Truck, Pencil, Trash2, Check, X, Plus, Award, Home } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
+import { AssignDriverDialog } from "./AssignDriverDialog";
 import { cn } from "@/lib/utils";
 import {
   ContextMenu,
@@ -257,15 +258,19 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
     }
   };
 
+  // Get initial vehicle for assign dialog
+  const getInitialVehicle = () => {
+    const takeHomeVehicle = availableVehicles.find(
+      v => (v as any).assigned_driver_id === driver.id && (v as any).classification === 'take_home'
+    );
+    const defaultVehicle = (driver as any).default_vehicle;
+    return takeHomeVehicle?.unit || defaultVehicle || driver.vehicle || "__none__";
+  };
+
   const handleStatusSelect = (status: DriverStatus) => {
     if (status === "assigned") {
       setReportTime(driver.report_time?.slice(0, 5) || "");
-      // Check for take-home vehicle first (vehicle assigned to this driver), then default_vehicle, then current
-      const takeHomeVehicle = availableVehicles.find(
-        v => (v as any).assigned_driver_id === driver.id && (v as any).classification === 'take_home'
-      );
-      const defaultVehicle = (driver as any).default_vehicle;
-      setSelectedVehicle(takeHomeVehicle?.unit || defaultVehicle || driver.vehicle || "__none__");
+      setSelectedVehicle(getInitialVehicle());
       setShowAssignDialog(true);
     } else if (status === "off") {
       setIsCallOut(false);
@@ -282,13 +287,8 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
     }
   };
 
-  const vehicleValue = selectedVehicle === "__none__" ? undefined : selectedVehicle;
-  const canAssign = reportTime.trim() !== "" || vehicleValue !== undefined;
-
-  const handleAssign = () => {
-    if (!canAssign) return;
-    onStatusChange?.("assigned", reportTime || undefined, vehicleValue);
-    setShowAssignDialog(false);
+  const handleAssign = (assignReportTime: string | undefined, assignVehicle: string | undefined) => {
+    onStatusChange?.("assigned", assignReportTime, assignVehicle);
   };
 
   const handleConfirmOff = async () => {
@@ -407,53 +407,15 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
             </ContextMenuContent>
           </ContextMenu>
 
-          <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
-            <DialogContent className="sm:max-w-[350px]">
-              <DialogHeader>
-                <DialogTitle>Assign {driver.name}</DialogTitle>
-              </DialogHeader>
-              <p className="text-xs text-muted-foreground">
-                Either report time or vehicle is required.
-              </p>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="report-time-mini">Report Time</Label>
-                  <Input
-                    id="report-time-mini"
-                    type="time"
-                    value={reportTime}
-                    onChange={(e) => setReportTime(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="vehicle-mini">Vehicle</Label>
-                  <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select vehicle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">No vehicle</SelectItem>
-                      {availableVehicles
-                        .filter((v) => v.status === "active")
-                        .map((vehicle) => (
-                          <SelectItem key={vehicle.id} value={vehicle.unit}>
-                            {vehicle.unit} {vehicle.driver && vehicle.driver !== driver.name ? `(${vehicle.driver})` : ""}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleAssign} disabled={!canAssign}>
-                  Assign
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <AssignDriverDialog
+            open={showAssignDialog}
+            onOpenChange={setShowAssignDialog}
+            driverName={driver.name}
+            initialReportTime={reportTime}
+            initialVehicle={selectedVehicle}
+            vehicles={availableVehicles}
+            onConfirm={handleAssign}
+          />
 
           <Dialog open={showOffDialog} onOpenChange={setShowOffDialog}>
             <DialogContent className="sm:max-w-[350px]">
@@ -773,53 +735,15 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
             </ContextMenuContent>
           </ContextMenu>
 
-          <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
-            <DialogContent className="sm:max-w-[350px]">
-              <DialogHeader>
-                <DialogTitle>Assign {driver.name}</DialogTitle>
-              </DialogHeader>
-              <p className="text-xs text-muted-foreground">
-                Either report time or vehicle is required.
-              </p>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="report-time-compact">Report Time</Label>
-                  <Input
-                    id="report-time-compact"
-                    type="time"
-                    value={reportTime}
-                    onChange={(e) => setReportTime(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="vehicle-compact">Vehicle</Label>
-                  <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select vehicle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">No vehicle</SelectItem>
-                      {availableVehicles
-                        .filter((v) => v.status === "active")
-                        .map((vehicle) => (
-                          <SelectItem key={vehicle.id} value={vehicle.unit}>
-                            {vehicle.unit} {vehicle.driver && vehicle.driver !== driver.name ? `(${vehicle.driver})` : ""}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleAssign} disabled={!canAssign}>
-                  Assign
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <AssignDriverDialog
+            open={showAssignDialog}
+            onOpenChange={setShowAssignDialog}
+            driverName={driver.name}
+            initialReportTime={reportTime}
+            initialVehicle={selectedVehicle}
+            vehicles={availableVehicles}
+            onConfirm={handleAssign}
+          />
 
           <Dialog open={showOffDialog} onOpenChange={setShowOffDialog}>
             <DialogContent className="sm:max-w-[350px]">
@@ -1119,53 +1043,15 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
         )}
       </div>
 
-      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
-        <DialogContent className="sm:max-w-[350px]">
-          <DialogHeader>
-            <DialogTitle>Assign {driver.name}</DialogTitle>
-          </DialogHeader>
-          <p className="text-xs text-muted-foreground">
-            Either report time or vehicle is required.
-          </p>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="report-time-full">Report Time</Label>
-              <Input
-                id="report-time-full"
-                type="time"
-                value={reportTime}
-                onChange={(e) => setReportTime(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="vehicle-full">Vehicle</Label>
-              <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select vehicle" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">No vehicle</SelectItem>
-                  {availableVehicles
-                    .filter((v) => v.status === "active")
-                    .map((vehicle) => (
-                      <SelectItem key={vehicle.id} value={vehicle.unit}>
-                        {vehicle.unit} {vehicle.driver && vehicle.driver !== driver.name ? `(${vehicle.driver})` : ""}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAssign} disabled={!canAssign}>
-              Assign
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AssignDriverDialog
+        open={showAssignDialog}
+        onOpenChange={setShowAssignDialog}
+        driverName={driver.name}
+        initialReportTime={reportTime}
+        initialVehicle={selectedVehicle}
+        vehicles={availableVehicles}
+        onConfirm={handleAssign}
+      />
 
       <Dialog open={showOffDialog} onOpenChange={setShowOffDialog}>
         <DialogContent className="sm:max-w-[350px]">
