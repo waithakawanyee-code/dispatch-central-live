@@ -966,6 +966,37 @@ const Drivers = () => {
       description: `${driver.name} reset to unassigned`,
     });
   }, [drivers, updateDriverStatus, toast]);
+
+  // Reset all drivers to unassigned (testing utility)
+  const executeResetAll = useCallback(async () => {
+    const activeDrivers = drivers.filter(d => d.is_active && d.status !== "unassigned");
+    
+    if (activeDrivers.length === 0) {
+      toast({
+        title: "Nothing to reset",
+        description: "All drivers are already unassigned",
+      });
+      return;
+    }
+    
+    // Reset all drivers to unassigned
+    for (const driver of activeDrivers) {
+      await supabase
+        .from("drivers")
+        .update({ 
+          status: "unassigned", 
+          vehicle: null, 
+          report_time: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", driver.id);
+    }
+    
+    toast({
+      title: "All drivers reset",
+      description: `Reset ${activeDrivers.length} drivers to unassigned`,
+    });
+  }, [drivers, toast]);
   
   // Undo last action
   const executeUndo = useCallback(() => {
@@ -1394,6 +1425,8 @@ const Drivers = () => {
                   onMarkOff={() => executeOff(selectedDriverId)}
                   onUnassign={() => executeUnassign(selectedDriverId)}
                   onReset={() => executeReset(selectedDriverId)}
+                  onResetAll={executeResetAll}
+                  showTestingTools={true}
                 />
               );
             })()}

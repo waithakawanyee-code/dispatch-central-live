@@ -1,4 +1,4 @@
-import { UserPlus, Clock, LogOut, Power, Undo2 } from "lucide-react";
+import { UserPlus, Clock, LogOut, Power, Undo2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
@@ -14,6 +14,8 @@ interface DriverActionToolbarProps {
   onMarkOff: () => void;
   onUnassign: () => void;
   onReset: () => void;
+  onResetAll?: () => void;
+  showTestingTools?: boolean;
   className?: string;
 }
 
@@ -34,6 +36,8 @@ export function DriverActionToolbar({
   onMarkOff,
   onUnassign,
   onReset,
+  onResetAll,
+  showTestingTools = false,
   className,
 }: DriverActionToolbarProps) {
   // Determine which actions to show based on status
@@ -73,8 +77,6 @@ export function DriverActionToolbar({
 
   const actions = getActions();
 
-  if (actions.length === 0) return null;
-
   return (
     <div
       className={cn(
@@ -103,6 +105,36 @@ export function DriverActionToolbar({
           )}
         </Button>
       ))}
+
+      {/* Testing Tools Separator */}
+      {showTestingTools && (
+        <>
+          <div className="h-5 w-px bg-border mx-1" />
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Test:</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onReset}
+            className="h-7 gap-1 text-xs text-orange-500 hover:text-orange-600 hover:bg-orange-500/10"
+            title="Reset selected driver to unassigned"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span>Reset</span>
+          </Button>
+          {onResetAll && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onResetAll}
+              className="h-7 gap-1 text-xs text-red-500 hover:text-red-600 hover:bg-red-500/10"
+              title="Reset ALL drivers to unassigned"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>Reset All</span>
+            </Button>
+          )}
+        </>
+      )}
     </div>
   );
 }
