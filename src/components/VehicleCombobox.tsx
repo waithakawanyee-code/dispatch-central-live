@@ -113,6 +113,7 @@ export function VehicleCombobox({
 }: VehicleComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
 
   const selectedLabel = value === "__none__" 
     ? "No vehicle" 
@@ -124,18 +125,21 @@ export function VehicleCombobox({
     return vehicles.filter(v => matchesQuickKeySearch(v, search));
   }, [vehicles, search]);
 
-  // When searching, auto-select the first matching vehicle
-  const commandValue = React.useMemo(() => {
-    if (search && filteredVehicles.length > 0) {
-      return filteredVehicles[0].unit;
+  // Handle Enter to select first match
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && search && filteredVehicles.length > 0) {
+      e.preventDefault();
+      onValueChange(filteredVehicles[0].unit);
+      setOpen(false);
+      setSearch("");
     }
-    return undefined;
-  }, [search, filteredVehicles]);
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          ref={triggerRef}
           variant="outline"
           role="combobox"
           aria-expanded={open}
@@ -146,11 +150,12 @@ export function VehicleCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-        <Command shouldFilter={false} value={commandValue}>
+        <Command shouldFilter={false}>
           <CommandInput
             placeholder="Search... (v49, b37, s12)" 
             value={search}
             onValueChange={setSearch}
+            onKeyDown={handleKeyDown}
           />
           <CommandList>
             <CommandEmpty>No vehicle found.</CommandEmpty>

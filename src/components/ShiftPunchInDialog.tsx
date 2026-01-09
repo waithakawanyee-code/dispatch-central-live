@@ -3,9 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { TimeInput } from "@/components/ui/time-input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { VehicleCombobox } from "@/components/VehicleCombobox";
 import { Switch } from "@/components/ui/switch";
-import { AlertTriangle, Moon } from "lucide-react";
+import { Moon } from "lucide-react";
 import { format, addDays } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -35,7 +35,7 @@ export function ShiftPunchInDialog({
   const [punchTime, setPunchTime] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState<string>("__none__");
   const [nextDayOverride, setNextDayOverride] = useState(false);
-  const selectRef = useRef<HTMLButtonElement>(null);
+  const timeInputRef = useRef<HTMLInputElement>(null);
 
   // Check if time is after 10pm
   const isAfter10PM = punchTime && parseInt(punchTime.split(":")[0]) >= 22;
@@ -48,11 +48,12 @@ export function ShiftPunchInDialog({
       setPunchTime(format(now, "HH:mm"));
       setSelectedVehicle(currentVehicle || defaultVehicle || "__none__");
       setNextDayOverride(false);
-      
-      // Focus vehicle select after a brief delay
+
+      // Focus time input after dialog animation
       setTimeout(() => {
-        selectRef.current?.focus();
-      }, 100);
+        timeInputRef.current?.focus();
+        timeInputRef.current?.select();
+      }, 50);
     }
   }, [open, currentVehicle, defaultVehicle]);
 
@@ -61,7 +62,7 @@ export function ShiftPunchInDialog({
     onConfirm(punchTime, vehicle, nextDayOverride);
   };
 
-  const availableVehicles = vehicles.filter(v => v.status === "active");
+  const activeVehicles = vehicles.filter(v => v.status === "active");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,10 +79,12 @@ export function ShiftPunchInDialog({
           <div className="grid gap-2">
             <Label htmlFor="punch-time">Punch In Time</Label>
             <TimeInput
+              ref={timeInputRef}
               id="punch-time"
               value={punchTime}
               onChange={setPunchTime}
-              className="w-full"
+              placeholder="e.g. 730, 9:00a, 14:30"
+              onEnterSubmit={handleConfirm}
             />
           </div>
 
@@ -111,28 +114,21 @@ export function ShiftPunchInDialog({
             </div>
           )}
 
-          {/* Vehicle selection */}
+          {/* Vehicle selection using VehicleCombobox */}
           <div className="grid gap-2">
-            <Label htmlFor="vehicle">Vehicle</Label>
-            <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
-              <SelectTrigger ref={selectRef}>
-                <SelectValue placeholder="Select vehicle" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">No vehicle</SelectItem>
-                {availableVehicles.map(vehicle => (
-                  <SelectItem key={vehicle.id} value={vehicle.unit}>
-                    {vehicle.unit}
-                    {vehicle.driver && ` (${vehicle.driver})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Vehicle</Label>
+            <VehicleCombobox
+              vehicles={activeVehicles}
+              value={selectedVehicle}
+              onValueChange={setSelectedVehicle}
+              placeholder="Select vehicle"
+              includeNone
+            />
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} tabIndex={-1}>
             Cancel
           </Button>
           <Button onClick={handleConfirm}>
