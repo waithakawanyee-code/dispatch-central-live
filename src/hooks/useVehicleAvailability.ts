@@ -75,8 +75,8 @@ export function useVehicleAvailability(
     // Specialty vehicles: always available (different business rules)
     if (vehicle.primary_category === "specialty") return true;
 
-    // Fleet vehicles (Above All + house classification): always available
-    if (vehicle.classification === "house") return true;
+    // Fleet vehicles (Above All + fleet classification): always available
+    if (vehicle.classification === "fleet") return true;
 
     // Take Home vehicles have special rules
     if (vehicle.classification === "take_home") {
