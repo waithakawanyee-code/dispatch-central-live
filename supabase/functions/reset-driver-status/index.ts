@@ -112,26 +112,18 @@ Deno.serve(async (req) => {
     const todayDayOfWeek = new Date().getDay();
     console.log(`Today is day of week: ${todayDayOfWeek}`);
 
-    // 1) Pull take-home vehicle OWNERS (so we can detect take-home drivers by vehicles.assigned_driver_id)
-    const { data: takeHomeVehicles, error: takeHomeVehiclesError } = await supabase
+    // 1) Pull take-home vehicle units (so we can detect take-home owners by default_vehicle)
+    const { data: vehicles, error: vehiclesError } = await supabase
       .from("vehicles")
-      .select("unit, assigned_driver_id")
+      .select("unit, classification")
       .eq("classification", "take_home");
 
-    if (takeHomeVehiclesError) {
-      console.error("Error fetching take-home vehicles:", takeHomeVehiclesError);
-      throw takeHomeVehiclesError;
+    if (vehiclesError) {
+      console.error("Error fetching vehicles:", vehiclesError);
+      throw vehiclesError;
     }
 
-    // Map: driver_id -> take-home unit (Car-xx)
-    const takeHomeOwnerToUnit = new Map<string, string>();
-    (takeHomeVehicles || []).forEach((v) => {
-      if (v.assigned_driver_id && v.unit) {
-        takeHomeOwnerToUnit.set(v.assigned_driver_id, v.unit);
-      }
-    });
-
-    console.log("Take-home owners found:", takeHomeOwnerToUnit.size);
+    const takeHomeVehicleUnits = new Set<string>((vehicles || []).map((v) => v.unit).filter(Boolean));
 
     // 2) Pull today's schedules: IMPORTANT change — missing schedule => NOT scheduled (OFF)
     const { data: todaySchedules, error: schedulesError } = await supabase
@@ -167,18 +159,20 @@ Deno.serve(async (req) => {
     // 4) Split drivers into buckets
     const takeHomeWorkingIds: string[] = [];
     const takeHomeWorkingVehicleById = new Map<string, string>();
+
     const toUnassignIds: string[] = [];
 
     for (const d of eligibleDrivers) {
-      const takeHomeUnit = takeHomeOwnerToUnit.get(d.id); // source of truth: vehicles.assigned_driver_id
-      const isTakeHomeOwner = !!takeHomeUnit;
+      const dv = (d.default_vehicle || "").trim();
+      const isTakeHomeOwner = dv !== "" && takeHomeVehicleUnits.has(dv);
 
-      const workingToday = workingTodayMap.get(d.id) !== false; // missing schedule => working
+      const workingToday = workingTodayMap.get(d.id) === true; // missing => false
 
       if (isTakeHomeOwner && workingToday) {
         takeHomeWorkingIds.push(d.id);
-        takeHomeWorkingVehicleById.set(d.id, takeHomeUnit!);
+        takeHomeWorkingVehicleById.set(d.id, dv);
       } else {
+        // Everyone else starts unassigned (including take-home owners who are NOT scheduled today)
         toUnassignIds.push(d.id);
       }
     }
@@ -238,10 +232,9 @@ Deno.serve(async (req) => {
       // Set vehicle per driver to match their default_vehicle
       // (service role key, so this is safe server-side)
       for (const d of assignedDrivers || []) {
-        const dv = (d.default_vehicle || "").trim();
-        if (!dv) continue;
-
-        await supabase.from("drivers").update({ vehicle: dv }).eq("id", d.id);
+        const unit = takeHomeWorkingVehicleById.get(d.id);
+      if (unit) {
+        await supabase.from("drivers").update({ vehicle: unit }).eq
       }
 
       // status_history entries
