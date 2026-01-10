@@ -191,60 +191,52 @@ Deno.serve(async (req) => {
     // 5) Bulk updates
     let totalUnassigned = 0;
     let totalAssigned = 0;
-
+    
     if (toUnassignIds.length > 0) {
       const { data: unassignedDrivers, error: unassignError } = await supabase
         .from("drivers")
         .update({ status: "unassigned", vehicle: null })
         .in("id", toUnassignIds)
         .select("id, name");
-
+    
       if (unassignError) {
         console.error("Error resetting drivers to unassigned:", unassignError);
         throw unassignError;
       }
-
+    
       totalUnassigned = unassignedDrivers?.length || 0;
-
-      // status_history entries
-      if (unassignedDrivers && unassignedDrivers.length > 0) {
-        await supabase.from("status_history").insert(
-          unassignedDrivers.map((driver: { id: string; name: string }) => ({
-            entity_type: "driver",
-            entity_id: driver.id,
-            entity_name: driver.name,
-            field_changed: "status",
-            old_value: "various",
-            new_value: "unassigned",
-          })),
-        );
-      }
     }
-
-    // For take-home working drivers we need to set status=assigned and vehicle=their default_vehicle.
-    // Supabase update can't set vehicle per-row with different values in a single update,
-    // so we do 2-step: set assigned for all, then set vehicle for each (still much smaller than your original loop).
-    // If you want, we can replace this with an RPC later for a true single statement.
-
+    
+    // Set take-home working drivers to assigned (bulk)
     if (takeHomeWorkingIds.length > 0) {
       const { data: assignedDrivers, error: assignedError } = await supabase
         .from("drivers")
         .update({ status: "assigned" })
         .in("id", takeHomeWorkingIds)
-        .select("id, name, default_vehicle");
-
+        .select("id, name");
+    
       if (assignedError) {
         console.error("Error setting take-home drivers to assigned:", assignedError);
         throw assignedError;
       }
-
+    
       totalAssigned = assignedDrivers?.length || 0;
-
-      // Set vehicle per driver to match their default_vehicle
-      // (service role key, so this is safe server-side)
+    
+      // Set vehicle per driver from the takeHomeWorkingVehicleById map
       for (const d of assignedDrivers || []) {
-        const dv = (d.default_vehicle || "").trim();
-        if (!dv) continue;
+        const unit = takeHomeWorkingVehicleById.get(d.id);
+        if (!unit) continue;
+    
+        const { error: vehErr } = await supabase
+          .from("drivers")
+          .update({ vehicle: unit })
+          .eq("id", d.id);
+    
+        if (vehErr) {
+          console.error(`Error setting vehicle for driver ${d.id} -> ${unit}:`, vehErr);
+        }
+      }
+    }
 
         await supabase.from("drivers").update({ vehicle: dv }).eq("id", d.id);
       }
@@ -267,8 +259,10 @@ Deno.serve(async (req) => {
     const totalStaleClosed = staleShifts?.length || 0;
 
     console.log(
-      `Reset complete: ${totalUnassigned} → unassigned, ${totalAssigned} take-home working → assigned, ${totalStaleClosed} stale shifts auto-closed`,
-    );
+      `Reset complete: ${totalUnassigned} → unassigned, ${totalAssigned} take-home working → assigned, ${totalStaleClosed} stale sifts auto-closed`,
+      console.log("Sample take-home assignments:", Array.from(takeHomeWorkingVehicleById.entries()).slice(0, 5));
+
+    );h
 
     return new Response(
       JSON.stringify({
