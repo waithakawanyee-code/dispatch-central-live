@@ -159,21 +159,25 @@ Deno.serve(async (req) => {
     // 4) Split drivers into buckets
     const takeHomeWorkingIds: string[] = [];
     const takeHomeWorkingVehicleById = new Map<string, string>();
+
     const toUnassignIds: string[] = [];
 
     for (const d of eligibleDrivers) {
-      const takeHomeUnit = takeHomeOwnerToUnit.get(d.id); // source of truth: vehicles.assigned_driver_id
-      const isTakeHomeOwner = !!takeHomeUnit;
+      const dv = (d.default_vehicle || "").trim();
+      const isTakeHomeOwner = dv !== "" && takeHomeVehicleUnits.has(dv);
 
-      const workingToday = workingTodayMap.get(d.id) !== false; // missing schedule => working
+      const workingToday = workingTodayMap.get(d.id) === true; // missing => false
 
       if (isTakeHomeOwner && workingToday) {
         takeHomeWorkingIds.push(d.id);
-        takeHomeWorkingVehicleById.set(d.id, takeHomeUnit!);
+        takeHomeWorkingVehicleById.set(d.id, dv);
       } else {
+        // Everyone else starts unassigned (including take-home owners who are NOT scheduled today)
         toUnassignIds.push(d.id);
       }
     }
+    console.log("takeHomeWorkingIds:", takeHomeWorkingIds.length);
+    console.log("toUnassignIds:", toUnassignIds.length);
 
     // 5) Bulk updates
     let totalUnassigned = 0;
@@ -230,10 +234,10 @@ Deno.serve(async (req) => {
       // Set vehicle per driver to match their default_vehicle
       // (service role key, so this is safe server-side)
       for (const d of assignedDrivers || []) {
-        const dv = (d.default_vehicle || "").trim();
-        if (!dv) continue;
+        const unit = takeHomeWorkingVehicleById.get(d.id);
+        if (!unit) continue;
 
-        await supabase.from("drivers").update({ vehicle: dv }).eq("id", d.id);
+        await supabase.from("drivers").update({ vehicle: unit }).eq("id", d.id);
       }
 
       // status_history entries
