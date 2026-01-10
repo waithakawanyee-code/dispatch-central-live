@@ -997,7 +997,89 @@ const Drivers = () => {
       description: `Reset ${activeDrivers.length} drivers to unassigned`,
     });
   }, [drivers, toast]);
-  
+
+  // Simulate full workflow: unassigned → assigned → working → punched-out (testing utility)
+  const executeSimulateWorkflow = useCallback(async (driverId: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver) return;
+    
+    if (driver.status !== "unassigned") {
+      toast({
+        title: "Cannot simulate",
+        description: "Driver must be unassigned to simulate workflow",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Find first available active vehicle
+    const availableVehicle = vehicles.find(v => v.status === "active" && !v.driver);
+    if (!availableVehicle) {
+      toast({
+        title: "Cannot simulate",
+        description: "No available vehicles for simulation",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const reportTime = "08:00";
+    const punchInTime = "08:00";
+    const punchOutTime = "16:00";
+    
+    toast({
+      title: "Simulating workflow...",
+      description: `${driver.name}: Starting simulation`,
+    });
+    
+    // Step 1: Assign driver to vehicle
+    await new Promise(resolve => setTimeout(resolve, 400));
+    await updateDriverStatus(driverId, "assigned", availableVehicle.unit, reportTime);
+    toast({
+      title: "Step 1: Assigned",
+      description: `${driver.name} → ${availableVehicle.unit} at ${reportTime}`,
+    });
+    
+    // Step 2: Punch in (creates shift record)
+    await new Promise(resolve => setTimeout(resolve, 400));
+    const punchInResult = await punchIn(driverId, punchInTime, availableVehicle.unit);
+    if (!punchInResult.success) {
+      toast({
+        title: "Simulation failed",
+        description: `Punch in failed: ${punchInResult.error}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({
+      title: "Step 2: Punched In",
+      description: `${driver.name} punched in at ${punchInTime}`,
+    });
+    
+    // Step 3: Punch out (closes shift)
+    await new Promise(resolve => setTimeout(resolve, 400));
+    const punchOutResult = await punchOut(driverId, punchOutTime);
+    if (!punchOutResult.success) {
+      toast({
+        title: "Simulation failed", 
+        description: `Punch out failed: ${punchOutResult.error}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({
+      title: "Step 3: Punched Out",
+      description: `${driver.name} punched out at ${punchOutTime}`,
+    });
+    
+    // Final success
+    await new Promise(resolve => setTimeout(resolve, 300));
+    toast({
+      title: "✓ Simulation complete",
+      description: `${driver.name} is now punched-out. Reset button is available!`,
+    });
+  }, [drivers, vehicles, updateDriverStatus, punchIn, punchOut, toast]);
+
   // Undo last action
   const executeUndo = useCallback(() => {
     if (!lastAction) {
@@ -1426,6 +1508,7 @@ const Drivers = () => {
                   onUnassign={() => executeUnassign(selectedDriverId)}
                   onReset={() => executeReset(selectedDriverId)}
                   onResetAll={executeResetAll}
+                  onSimulateWorkflow={() => executeSimulateWorkflow(selectedDriverId)}
                   showTestingTools={true}
                 />
               );
