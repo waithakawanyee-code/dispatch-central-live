@@ -1,4 +1,4 @@
-import { UserPlus, Clock, LogOut, Power, Undo2, RotateCcw } from "lucide-react";
+import { UserPlus, Clock, LogOut, Power, Undo2, RotateCcw, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
@@ -15,6 +15,7 @@ interface DriverActionToolbarProps {
   onUnassign: () => void;
   onReset: () => void;
   onResetAll?: () => void;
+  onSimulateWorkflow?: () => void;
   showTestingTools?: boolean;
   className?: string;
 }
@@ -37,6 +38,7 @@ export function DriverActionToolbar({
   onUnassign,
   onReset,
   onResetAll,
+  onSimulateWorkflow,
   showTestingTools = false,
   className,
 }: DriverActionToolbarProps) {
@@ -131,6 +133,18 @@ export function DriverActionToolbar({
             >
               <RotateCcw className="h-3.5 w-3.5" />
               <span>Reset All</span>
+            </Button>
+          )}
+          {onSimulateWorkflow && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onSimulateWorkflow}
+              className="h-7 gap-1 text-xs text-violet-500 hover:text-violet-600 hover:bg-violet-500/10"
+              title="Simulate full workflow: unassigned → assigned → working → punched-out"
+            >
+              <Play className="h-3.5 w-3.5" />
+              <span>Simulate</span>
             </Button>
           )}
         </>
