@@ -112,20 +112,28 @@ Deno.serve(async (req) => {
     const todayDayOfWeek = new Date().getDay();
     console.log(`Today is day of week: ${todayDayOfWeek}`);
 
-    // 1) Pull take-home vehicle units (so we can detect take-home owners by default_vehicle)
-    const { data: vehicles, error: vehiclesError } = await supabase
+    // 1) Pull take-home vehicle OWNERS (source of truth)
+    const { data: takeHomeVehicles, error: takeHomeVehiclesError } = await supabase
       .from("vehicles")
-      .select("unit, classification")
+      .select("unit, assigned_driver_id")
       .eq("classification", "take_home");
 
-    if (vehiclesError) {
-      console.error("Error fetching vehicles:", vehiclesError);
-      throw vehiclesError;
+    if (takeHomeVehiclesError) {
+      console.error("Error fetching take-home vehicles:", takeHomeVehiclesError);
+      throw takeHomeVehiclesError;
     }
 
-    const takeHomeVehicleUnits = new Set<string>((vehicles || []).map((v) => v.unit).filter(Boolean));
+    // Map: driver_id -> take-home unit
+    const takeHomeOwnerToUnit = new Map<string, string>();
+    (takeHomeVehicles || []).forEach((v) => {
+      if (v.assigned_driver_id && v.unit) {
+        takeHomeOwnerToUnit.set(v.assigned_driver_id, v.unit);
+      }
+    });
 
-    // 2) Pull today's schedules: IMPORTANT change — missing schedule => NOT scheduled (OFF)
+    console.log("Take-home owners found:", takeHomeOwnerToUnit.size);
+
+    // 2) Pull today's schedules
     const { data: todaySchedules, error: schedulesError } = await supabase
       .from("driver_schedules")
       .select("driver_id, is_off")
@@ -137,7 +145,8 @@ Deno.serve(async (req) => {
     }
 
     // driver_id -> workingToday boolean
-    // workingToday = schedule exists AND is_off !== true
+    // We store true when scheduled & not off; false when explicitly off.
+    // Later we treat missing schedule row as WORKING by using !== false.
     const workingTodayMap = new Map<string, boolean>();
     (todaySchedules || []).forEach((s) => {
       workingTodayMap.set(s.driver_id, s.is_off === true ? false : true);
@@ -159,25 +168,25 @@ Deno.serve(async (req) => {
     // 4) Split drivers into buckets
     const takeHomeWorkingIds: string[] = [];
     const takeHomeWorkingVehicleById = new Map<string, string>();
-
     const toUnassignIds: string[] = [];
 
     for (const d of eligibleDrivers) {
-      const dv = (d.default_vehicle || "").trim();
-      const isTakeHomeOwner = dv !== "" && takeHomeVehicleUnits.has(dv);
+      const takeHomeUnit = takeHomeOwnerToUnit.get(d.id); // vehicles.assigned_driver_id -> unit
+      const isTakeHomeOwner = !!takeHomeUnit;
 
-      const workingToday = workingTodayMap.get(d.id) === true; // missing => false
+      // missing schedule row => working; only explicit false means off
+      const workingToday = workingTodayMap.get(d.id) !== false;
 
       if (isTakeHomeOwner && workingToday) {
         takeHomeWorkingIds.push(d.id);
-        takeHomeWorkingVehicleById.set(d.id, dv);
+        takeHomeWorkingVehicleById.set(d.id, takeHomeUnit!);
       } else {
-        // Everyone else starts unassigned (including take-home owners who are NOT scheduled today)
         toUnassignIds.push(d.id);
       }
     }
-    console.log("takeHomeWorkingIds:", takeHomeWorkingIds.length);
-    console.log("toUnassignIds:", toUnassignIds.length);
+
+    console.log("Take-home working (scheduled today):", takeHomeWorkingIds.length);
+    console.log("Drivers to unassign:", toUnassignIds.length);
 
     // 5) Bulk updates
     let totalUnassigned = 0;
@@ -234,10 +243,10 @@ Deno.serve(async (req) => {
       // Set vehicle per driver to match their default_vehicle
       // (service role key, so this is safe server-side)
       for (const d of assignedDrivers || []) {
-        const unit = takeHomeWorkingVehicleById.get(d.id);
-        if (!unit) continue;
+        const dv = (d.default_vehicle || "").trim();
+        if (!dv) continue;
 
-        await supabase.from("drivers").update({ vehicle: unit }).eq("id", d.id);
+        await supabase.from("drivers").update({ vehicle: dv }).eq("id", d.id);
       }
 
       // status_history entries
