@@ -191,58 +191,68 @@ Deno.serve(async (req) => {
     // 5) Bulk updates
     let totalUnassigned = 0;
     let totalAssigned = 0;
-    
+
     if (toUnassignIds.length > 0) {
       const { data: unassignedDrivers, error: unassignError } = await supabase
         .from("drivers")
         .update({ status: "unassigned", vehicle: null })
         .in("id", toUnassignIds)
         .select("id, name");
-    
+
       if (unassignError) {
         console.error("Error resetting drivers to unassigned:", unassignError);
         throw unassignError;
       }
-    
+
       totalUnassigned = unassignedDrivers?.length || 0;
+
+      // status_history entries (unassigned)
+      if (unassignedDrivers && unassignedDrivers.length > 0) {
+        await supabase.from("status_history").insert(
+          unassignedDrivers.map((driver: { id: string; name: string }) => ({
+            entity_type: "driver",
+            entity_id: driver.id,
+            entity_name: driver.name,
+            field_changed: "status",
+            old_value: "various",
+            new_value: "unassigned",
+          })),
+        );
+      }
     }
-    
+
     // Set take-home working drivers to assigned (bulk)
+    let assignedDrivers: { id: string; name: string }[] = [];
+
     if (takeHomeWorkingIds.length > 0) {
-      const { data: assignedDrivers, error: assignedError } = await supabase
+      const { data, error: assignedError } = await supabase
         .from("drivers")
         .update({ status: "assigned" })
         .in("id", takeHomeWorkingIds)
         .select("id, name");
-    
+
       if (assignedError) {
         console.error("Error setting take-home drivers to assigned:", assignedError);
         throw assignedError;
       }
-    
-      totalAssigned = assignedDrivers?.length || 0;
-    
+
+      assignedDrivers = data || [];
+      totalAssigned = assignedDrivers.length;
+
       // Set vehicle per driver from the takeHomeWorkingVehicleById map
-      for (const d of assignedDrivers || []) {
+      for (const d of assignedDrivers) {
         const unit = takeHomeWorkingVehicleById.get(d.id);
         if (!unit) continue;
-    
-        const { error: vehErr } = await supabase
-          .from("drivers")
-          .update({ vehicle: unit })
-          .eq("id", d.id);
-    
+
+        const { error: vehErr } = await supabase.from("drivers").update({ vehicle: unit }).eq("id", d.id);
+
         if (vehErr) {
           console.error(`Error setting vehicle for driver ${d.id} -> ${unit}:`, vehErr);
         }
       }
-    }
 
-        await supabase.from("drivers").update({ vehicle: dv }).eq("id", d.id);
-      }
-
-      // status_history entries
-      if (assignedDrivers && assignedDrivers.length > 0) {
+      // status_history entries (assigned)
+      if (assignedDrivers.length > 0) {
         await supabase.from("status_history").insert(
           assignedDrivers.map((driver: { id: string; name: string }) => ({
             entity_type: "driver",
@@ -259,10 +269,10 @@ Deno.serve(async (req) => {
     const totalStaleClosed = staleShifts?.length || 0;
 
     console.log(
-      `Reset complete: ${totalUnassigned} → unassigned, ${totalAssigned} take-home working → assigned, ${totalStaleClosed} stale sifts auto-closed`,
-      console.log("Sample take-home assignments:", Array.from(takeHomeWorkingVehicleById.entries()).slice(0, 5));
+      `Reset complete: ${totalUnassigned} → unassigned, ${totalAssigned} take-home working → assigned, ${totalStaleClosed} stale shifts auto-closed`,
+    );
 
-    );h
+    console.log("Sample take-home assignments:", Array.from(takeHomeWorkingVehicleById.entries()).slice(0, 5));
 
     return new Response(
       JSON.stringify({
