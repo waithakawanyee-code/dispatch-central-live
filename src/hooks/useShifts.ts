@@ -362,19 +362,20 @@ export function useShifts(selectedWorkday: Date = new Date()) {
     const { data: { user } } = await supabase.auth.getUser();
     
     // Always resolve the shift from DB to avoid stale UI state
-    const { data: shift, error: shiftLookupError } = await supabase
-      .from("shifts")
-      .select("id, driver_id, driver_name, punch_in_at, punch_out_at, workday_date, exception_flags")
-      .eq("id", shiftId)
-      .maybeSingle();
-    
-    if (shiftLookupError) {
-      return { success: false, error: shiftLookupError.message };
-    }
-    
-    if (!shift || shift.punch_out_at) {
-      return { success: false, error: "Driver needs to be punched in first" };
-    }
+  const { data: shift, error: shiftLookupError } = await supabase
+    .from("shifts")
+    .select("id, driver_id, driver_name, punch_in_at, punch_out_at, workday_date, exception_flags")
+    .eq("id", shiftId)
+    .maybeSingle();
+  
+  if (shiftLookupError) {
+    return { success: false, error: shiftLookupError.message };
+  }
+
+if (!shift || shift.punch_out_at) {
+  return { success: false, error: "Driver needs to be punched in first" };
+}
+
 
     // Build punch out timestamp
     let punchOutAt: string;
