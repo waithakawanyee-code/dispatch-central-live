@@ -355,39 +355,28 @@ export function useShifts(selectedWorkday: Date = new Date()) {
   }, [punchIn, selectedWorkday]);
 
   // Punch out a driver
-const punchOut = useCallback(async (
-  shiftId: string,
-  punchOutTime?: string // ISO string or HH:MM
-): Promise<{ success: boolean; error?: string }> => {
-  const { data: { user } } = await supabase.auth.getUser();
+  const punchOut = useCallback(async (
+    shiftId: string,
+    punchOutTime?: string // ISO string or HH:MM
+  ): Promise<{ success: boolean; error?: string }> => {
+    const { data: { user } } = await supabase.auth.getUser();
+  
+    // Always resolve the shift from DB to avoid stale UI state
+    const { data: shift, error: shiftLookupError } = await supabase
+      .from("shifts")
+      .select("id, driver_id, driver_name, punch_in_at, punch_out_at, workday_date, exception_flags")
+      .eq("id", shiftId)
+      .maybeSingle();
+  
+    if (shiftLookupError) {
+      return { success: false, error: shiftLookupError.message };
+    }
+  
+    if (!shift || shift.punch_out_at) {
+      return { success: false, error: "Driver needs to be punched in first" };
+    }
 
-  // Always resolve the shift from DB to avoid stale UI state
-  const { data: shift, error: shiftLookupError } = await supabase
-    .from("shifts")
-    .select("id, driver_id, driver_name, punch_in_at, punch_out_at, workday_date, exception_flags")
-    .eq("id", shiftId)
-    .maybeSingle();
-
-  if (shiftLookupError) {
-    return { success: false, error: shiftLookupError.message };
-  }
-
-  if (!shift || shift.punch_out_at) {
-    return { success: false, error: "Driver needs to be punched in first" };
-  }
-
-  // --- keep the rest of your existing punchOut logic here ---
-  // Build punch out timestamp
-  // validate punchOutAt > shift.punch_in_at
-  // update shifts
-  // close vehicle segments
-  // log status_history
-  // return { success: true }
-}, [/* keep your existing deps here */]);
-
-
-
-    // Build punch out timestamp
+     // Build punch out timestamp
     let punchOutAt: string;
     if (punchOutTime && /^\d{2}:\d{2}$/.test(punchOutTime)) {
       const shiftDate = parseISO(shift.punch_in_at);
