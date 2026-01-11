@@ -230,6 +230,19 @@ export function useShifts(selectedWorkday: Date = new Date()) {
 
     if (error) {
       return { success: false, error: error.message };
+      // ✅ Keep drivers table in sync for UI + status chips
+    const { error: driverUpdateError } = await supabase
+      .from("drivers")
+      .update({
+        status: "working",
+        vehicle: vehicle || null,
+      })
+      .eq("id", driverId);
+    
+    if (driverUpdateError) {
+      console.error("Error updating driver row on punch in:", driverUpdateError);
+      // Don't fail the punch-in shift creation — but log it so we know
+    
     }
 
     // Create initial vehicle segment if vehicle assigned
