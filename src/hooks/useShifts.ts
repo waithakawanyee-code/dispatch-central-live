@@ -230,7 +230,9 @@ export function useShifts(selectedWorkday: Date = new Date()) {
 
     if (error) {
       return { success: false, error: error.message };
-      // ✅ Keep drivers table in sync for UI + status chips
+    }
+
+    // ✅ Keep drivers table in sync for UI + status chips
     const { error: driverUpdateError } = await supabase
       .from("drivers")
       .update({
