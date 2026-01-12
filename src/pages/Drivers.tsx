@@ -1042,7 +1042,7 @@ const Drivers = () => {
     
     // Step 2: Punch in (creates shift record)
     await new Promise(resolve => setTimeout(resolve, 400));
-    const punchInResult = await punchIn(driverId, punchInTime, availableVehicle.unit);
+    const punchInResult = await punchIn(driverId, driver.name, punchInTime, availableVehicle.unit);
     if (!punchInResult.success) {
       toast({
         title: "Simulation failed",
