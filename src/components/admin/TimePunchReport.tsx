@@ -47,14 +47,28 @@ import { Badge } from "@/components/ui/badge";
 // 40 hours = 2400 minutes
 const OVERTIME_THRESHOLD_MINUTES = 40 * 60;
 
-interface TimePunch {
+interface Shift {
   id: string;
   driver_id: string;
   driver_name: string;
-  punch_type: string;
-  punch_time: string;
+  punch_in_at: string;
+  punch_out_at: string | null;
+  workday_date: string;
+  vehicle_unit: string | null;
   notes: string | null;
   created_at: string;
+}
+
+// Virtual punch record for display purposes
+interface VirtualPunch {
+  id: string; // shift_id + _in or _out
+  shift_id: string;
+  driver_id: string;
+  driver_name: string;
+  punch_type: "in" | "out";
+  punch_time: string;
+  notes: string | null;
+  vehicle_unit: string | null;
 }
 
 interface Driver {
@@ -71,7 +85,7 @@ interface DriverHours {
 
 export function TimePunchReport() {
   const { formatDate, dateFormat } = useDateFormat();
-  const [punches, setPunches] = useState<TimePunch[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState(() => {
@@ -87,7 +101,7 @@ export function TimePunchReport() {
 
   // Weekly view state
   const [weekOffset, setWeekOffset] = useState(0);
-  const [weeklyPunches, setWeeklyPunches] = useState<TimePunch[]>([]);
+  const [weeklyShifts, setWeeklyShifts] = useState<Shift[]>([]);
   const [weeklyLoading, setWeeklyLoading] = useState(true);
 
   // Get current week dates (Monday-Sunday)
@@ -107,28 +121,63 @@ export function TimePunchReport() {
 
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingPunch, setEditingPunch] = useState<TimePunch | null>(null);
-  const [editDate, setEditDate] = useState("");
-  const [editTime, setEditTime] = useState("");
-  const [editType, setEditType] = useState<string>("in");
+  const [editingShift, setEditingShift] = useState<Shift | null>(null);
+  const [editPunchInDate, setEditPunchInDate] = useState("");
+  const [editPunchInTime, setEditPunchInTime] = useState("");
+  const [editPunchOutDate, setEditPunchOutDate] = useState("");
+  const [editPunchOutTime, setEditPunchOutTime] = useState("");
   const [editNotes, setEditNotes] = useState("");
 
   // Add dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addDriverId, setAddDriverId] = useState("");
-  const [addDate, setAddDate] = useState("");
-  const [addTime, setAddTime] = useState("");
-  const [addType, setAddType] = useState<string>("in");
+  const [addPunchInDate, setAddPunchInDate] = useState("");
+  const [addPunchInTime, setAddPunchInTime] = useState("");
+  const [addPunchOutDate, setAddPunchOutDate] = useState("");
+  const [addPunchOutTime, setAddPunchOutTime] = useState("");
   const [addNotes, setAddNotes] = useState("");
 
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deletingPunch, setDeletingPunch] = useState<TimePunch | null>(null);
+  const [deletingShift, setDeletingShift] = useState<Shift | null>(null);
 
   // Payroll filter state
   const [payrollDriverFilter, setPayrollDriverFilter] = useState("");
 
-  const fetchPunches = async () => {
+  // Convert shifts to virtual punches for display
+  const punches = useMemo((): VirtualPunch[] => {
+    const result: VirtualPunch[] = [];
+    shifts.forEach((shift) => {
+      // Add punch in
+      result.push({
+        id: `${shift.id}_in`,
+        shift_id: shift.id,
+        driver_id: shift.driver_id,
+        driver_name: shift.driver_name,
+        punch_type: "in",
+        punch_time: shift.punch_in_at,
+        notes: shift.notes,
+        vehicle_unit: shift.vehicle_unit,
+      });
+      // Add punch out if exists
+      if (shift.punch_out_at) {
+        result.push({
+          id: `${shift.id}_out`,
+          shift_id: shift.id,
+          driver_id: shift.driver_id,
+          driver_name: shift.driver_name,
+          punch_type: "out",
+          punch_time: shift.punch_out_at,
+          notes: shift.notes,
+          vehicle_unit: shift.vehicle_unit,
+        });
+      }
+    });
+    // Sort by punch time descending
+    return result.sort((a, b) => new Date(b.punch_time).getTime() - new Date(a.punch_time).getTime());
+  }, [shifts]);
+
+  const fetchShifts = async () => {
     setLoading(true);
     const startDateTime = new Date(startDate);
     startDateTime.setHours(0, 0, 0, 0);
@@ -137,16 +186,16 @@ export function TimePunchReport() {
     endDateTime.setHours(23, 59, 59, 999);
 
     const { data, error } = await supabase
-      .from("time_punches")
+      .from("shifts")
       .select("*")
-      .gte("punch_time", startDateTime.toISOString())
-      .lte("punch_time", endDateTime.toISOString())
-      .order("punch_time", { ascending: false });
+      .gte("punch_in_at", startDateTime.toISOString())
+      .lte("punch_in_at", endDateTime.toISOString())
+      .order("punch_in_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching punches:", error);
+      console.error("Error fetching shifts:", error);
     } else {
-      setPunches(data || []);
+      setShifts(data || []);
     }
     setLoading(false);
   };
@@ -156,8 +205,8 @@ export function TimePunchReport() {
     if (data) setDrivers(data);
   };
 
-  // Fetch weekly punches
-  const fetchWeeklyPunches = async () => {
+  // Fetch weekly shifts
+  const fetchWeeklyShifts = async () => {
     setWeeklyLoading(true);
     const startDateTime = new Date(currentWeekStart);
     startDateTime.setHours(0, 0, 0, 0);
@@ -166,64 +215,47 @@ export function TimePunchReport() {
     endDateTime.setHours(23, 59, 59, 999);
 
     const { data, error } = await supabase
-      .from("time_punches")
+      .from("shifts")
       .select("*")
-      .gte("punch_time", startDateTime.toISOString())
-      .lte("punch_time", endDateTime.toISOString())
-      .order("punch_time", { ascending: true });
+      .gte("punch_in_at", startDateTime.toISOString())
+      .lte("punch_in_at", endDateTime.toISOString())
+      .order("punch_in_at", { ascending: true });
 
     if (!error && data) {
-      setWeeklyPunches(data || []);
+      setWeeklyShifts(data || []);
     }
     setWeeklyLoading(false);
   };
 
   useEffect(() => {
-    fetchPunches();
+    fetchShifts();
     fetchDrivers();
   }, [startDate, endDate]);
 
   useEffect(() => {
-    fetchWeeklyPunches();
+    fetchWeeklyShifts();
   }, [currentWeekStart]);
 
-  // Calculate weekly hours per driver per day
+  // Calculate weekly hours per driver per day from shifts
   const weeklyDriverHours = useMemo(() => {
-    // Create a map: driverId -> { name, dayHours: { [dateStr]: minutes } }
     const driverMap = new Map<string, { name: string; dayHours: Map<string, number> }>();
     
-    // Also track all drivers who have punches
-    const sortedPunches = [...weeklyPunches].sort(
-      (a, b) => new Date(a.punch_time).getTime() - new Date(b.punch_time).getTime()
-    );
-
-    // Track open sessions
-    const openSessions = new Map<string, { inTime: Date; inDateStr: string }>();
-
-    sortedPunches.forEach((punch) => {
-      if (!driverMap.has(punch.driver_id)) {
-        driverMap.set(punch.driver_id, { name: punch.driver_name, dayHours: new Map() });
+    weeklyShifts.forEach((shift) => {
+      if (!driverMap.has(shift.driver_id)) {
+        driverMap.set(shift.driver_id, { name: shift.driver_name, dayHours: new Map() });
       }
       
-      if (punch.punch_type === "in") {
-        openSessions.set(punch.driver_id, { 
-          inTime: new Date(punch.punch_time),
-          inDateStr: format(new Date(punch.punch_time), "yyyy-MM-dd")
-        });
-      } else if (punch.punch_type === "out") {
-        const session = openSessions.get(punch.driver_id);
-        if (session) {
-          const outTime = new Date(punch.punch_time);
-          const minutes = (outTime.getTime() - session.inTime.getTime()) / (1000 * 60);
-          const outDateStr = format(outTime, "yyyy-MM-dd");
-          
-          // Add minutes to the punch out day
-          const driverData = driverMap.get(punch.driver_id)!;
-          const currentMinutes = driverData.dayHours.get(outDateStr) || 0;
-          driverData.dayHours.set(outDateStr, currentMinutes + minutes);
-          
-          openSessions.delete(punch.driver_id);
-        }
+      const driverData = driverMap.get(shift.driver_id)!;
+      
+      if (shift.punch_out_at) {
+        const inTime = new Date(shift.punch_in_at);
+        const outTime = new Date(shift.punch_out_at);
+        const minutes = (outTime.getTime() - inTime.getTime()) / (1000 * 60);
+        
+        // Use the workday_date or the punch_out date
+        const dateStr = shift.workday_date || format(outTime, "yyyy-MM-dd");
+        const currentMinutes = driverData.dayHours.get(dateStr) || 0;
+        driverData.dayHours.set(dateStr, currentMinutes + minutes);
       }
     });
 
@@ -249,7 +281,7 @@ export function TimePunchReport() {
 
     // Sort by week total descending
     return result.sort((a, b) => b.weekTotal - a.weekTotal);
-  }, [weeklyPunches]);
+  }, [weeklyShifts]);
 
   // Build payroll data with detailed punch in/out times per day per driver
   const buildPayrollData = (filterName: string = "") => {
@@ -270,54 +302,50 @@ export function TimePunchReport() {
       overtime: string;
     }
 
-    // Group punches by driver
-    const driverPunches = new Map<string, { name: string; punches: TimePunch[] }>();
-    weeklyPunches.forEach((punch) => {
-      if (!driverPunches.has(punch.driver_id)) {
-        driverPunches.set(punch.driver_id, { name: punch.driver_name, punches: [] });
+    // Group shifts by driver
+    const driverShifts = new Map<string, { name: string; shifts: Shift[] }>();
+    weeklyShifts.forEach((shift) => {
+      if (!driverShifts.has(shift.driver_id)) {
+        driverShifts.set(shift.driver_id, { name: shift.driver_name, shifts: [] });
       }
-      driverPunches.get(punch.driver_id)!.punches.push(punch);
+      driverShifts.get(shift.driver_id)!.shifts.push(shift);
     });
 
     const result: DriverPayroll[] = [];
 
-    driverPunches.forEach((data, driverId) => {
-      // Sort punches by time
-      const sortedPunches = [...data.punches].sort(
-        (a, b) => new Date(a.punch_time).getTime() - new Date(b.punch_time).getTime()
+    driverShifts.forEach((data, driverId) => {
+      // Sort shifts by punch_in_at
+      const sortedShifts = [...data.shifts].sort(
+        (a, b) => new Date(a.punch_in_at).getTime() - new Date(b.punch_in_at).getTime()
       );
 
-      // Group by date and pair punches
-      const dateGroups = new Map<string, { ins: Date[]; outs: Date[] }>();
+      // Group by date
+      const dateGroups = new Map<string, { ins: Date[]; outs: (Date | null)[] }>();
       
-      sortedPunches.forEach((punch) => {
-        const dateStr = format(new Date(punch.punch_time), "MM/dd/yyyy");
+      sortedShifts.forEach((shift) => {
+        const inTime = new Date(shift.punch_in_at);
+        const dateStr = format(inTime, "MM/dd/yyyy");
         if (!dateGroups.has(dateStr)) {
           dateGroups.set(dateStr, { ins: [], outs: [] });
         }
-        if (punch.punch_type === "in") {
-          dateGroups.get(dateStr)!.ins.push(new Date(punch.punch_time));
-        } else {
-          dateGroups.get(dateStr)!.outs.push(new Date(punch.punch_time));
-        }
+        dateGroups.get(dateStr)!.ins.push(inTime);
+        dateGroups.get(dateStr)!.outs.push(shift.punch_out_at ? new Date(shift.punch_out_at) : null);
       });
 
       const dailyRecords: DailyRecord[] = [];
       let weekTotalMinutes = 0;
 
-      // Process each day in the week that has punches
+      // Process each day in the week that has shifts
       weekDays.forEach((day) => {
         const dateStr = format(day, "MM/dd/yyyy");
         const group = dateGroups.get(dateStr);
         
-        if (group && (group.ins.length > 0 || group.outs.length > 0)) {
-          // Pair up ins and outs
-          const maxPairs = Math.max(group.ins.length, group.outs.length);
+        if (group && group.ins.length > 0) {
           let dailyMinutes = 0;
           
-          for (let i = 0; i < maxPairs; i++) {
-            const punchIn = group.ins[i] || null;
-            const punchOut = group.outs[i] || null;
+          for (let i = 0; i < group.ins.length; i++) {
+            const punchIn = group.ins[i];
+            const punchOut = group.outs[i];
             
             if (punchIn && punchOut) {
               dailyMinutes += (punchOut.getTime() - punchIn.getTime()) / (1000 * 60);
@@ -327,8 +355,8 @@ export function TimePunchReport() {
               date: i === 0 ? dateStr : "",
               punchIn: punchIn ? format(punchIn, "h:mm a") : null,
               punchOut: punchOut ? format(punchOut, "h:mm a") : null,
-              dailyTotalMinutes: i === maxPairs - 1 ? dailyMinutes : 0,
-              dailyTotal: i === maxPairs - 1 ? formatHoursMinutes(dailyMinutes) : "",
+              dailyTotalMinutes: i === group.ins.length - 1 ? dailyMinutes : 0,
+              dailyTotal: i === group.ins.length - 1 ? formatHoursMinutes(dailyMinutes) : "",
             });
           }
           
@@ -357,45 +385,34 @@ export function TimePunchReport() {
   };
 
   // Calculate total hours per driver
-  const driverHours: DriverHours[] = (() => {
-    const driverMap = new Map<string, { name: string; punches: TimePunch[] }>();
+  const driverHours: DriverHours[] = useMemo(() => {
+    const driverMap = new Map<string, { name: string; shifts: Shift[] }>();
     
-    // Group punches by driver
-    punches.forEach((punch) => {
-      if (!driverMap.has(punch.driver_id)) {
-        driverMap.set(punch.driver_id, { name: punch.driver_name, punches: [] });
+    // Group shifts by driver
+    shifts.forEach((shift) => {
+      if (!driverMap.has(shift.driver_id)) {
+        driverMap.set(shift.driver_id, { name: shift.driver_name, shifts: [] });
       }
-      driverMap.get(punch.driver_id)!.punches.push(punch);
+      driverMap.get(shift.driver_id)!.shifts.push(shift);
     });
 
     const results: DriverHours[] = [];
 
     driverMap.forEach((data, driverId) => {
-      // Sort punches by time ascending
-      const sortedPunches = [...data.punches].sort(
-        (a, b) => new Date(a.punch_time).getTime() - new Date(b.punch_time).getTime()
-      );
-
       let totalMinutes = 0;
       const sessions: { inTime: Date; outTime: Date | null }[] = [];
-      let currentIn: Date | null = null;
 
-      sortedPunches.forEach((punch) => {
-        if (punch.punch_type === "in") {
-          currentIn = new Date(punch.punch_time);
-        } else if (punch.punch_type === "out" && currentIn) {
-          const outTime = new Date(punch.punch_time);
-          const minutes = (outTime.getTime() - currentIn.getTime()) / (1000 * 60);
+      data.shifts.forEach((shift) => {
+        const inTime = new Date(shift.punch_in_at);
+        const outTime = shift.punch_out_at ? new Date(shift.punch_out_at) : null;
+        
+        if (outTime) {
+          const minutes = (outTime.getTime() - inTime.getTime()) / (1000 * 60);
           totalMinutes += minutes;
-          sessions.push({ inTime: currentIn, outTime });
-          currentIn = null;
         }
+        
+        sessions.push({ inTime, outTime });
       });
-
-      // If still clocked in, mark as open session
-      if (currentIn) {
-        sessions.push({ inTime: currentIn, outTime: null });
-      }
 
       results.push({
         driverId,
@@ -406,55 +423,33 @@ export function TimePunchReport() {
     });
 
     return results.sort((a, b) => b.totalMinutes - a.totalMinutes);
-  })();
+  }, [shifts]);
 
   // Calculate daily breakdown
-  const dailyBreakdown = (() => {
+  const dailyBreakdown = useMemo(() => {
     const dayMap = new Map<string, Map<string, { name: string; minutes: number; hasOpenSession: boolean }>>();
     
-    // Sort all punches by time
-    const sortedPunches = [...punches].sort(
-      (a, b) => new Date(a.punch_time).getTime() - new Date(b.punch_time).getTime()
-    );
-
-    // Track open sessions per driver
-    const openSessions = new Map<string, Date>();
-
-    sortedPunches.forEach((punch) => {
-      const punchDate = format(new Date(punch.punch_time), "yyyy-MM-dd");
+    shifts.forEach((shift) => {
+      const punchDate = format(new Date(shift.punch_in_at), "yyyy-MM-dd");
       
       if (!dayMap.has(punchDate)) {
         dayMap.set(punchDate, new Map());
       }
       const dayDrivers = dayMap.get(punchDate)!;
       
-      if (!dayDrivers.has(punch.driver_id)) {
-        dayDrivers.set(punch.driver_id, { name: punch.driver_name, minutes: 0, hasOpenSession: false });
+      if (!dayDrivers.has(shift.driver_id)) {
+        dayDrivers.set(shift.driver_id, { name: shift.driver_name, minutes: 0, hasOpenSession: false });
       }
       
-      if (punch.punch_type === "in") {
-        openSessions.set(punch.driver_id, new Date(punch.punch_time));
-      } else if (punch.punch_type === "out") {
-        const inTime = openSessions.get(punch.driver_id);
-        if (inTime) {
-          const outTime = new Date(punch.punch_time);
-          const minutes = (outTime.getTime() - inTime.getTime()) / (1000 * 60);
-          
-          // Add minutes to the day of punch out
-          const driverData = dayDrivers.get(punch.driver_id)!;
-          driverData.minutes += minutes;
-          
-          openSessions.delete(punch.driver_id);
-        }
-      }
-    });
-
-    // Mark drivers with open sessions
-    openSessions.forEach((inTime, driverId) => {
-      const dayKey = format(inTime, "yyyy-MM-dd");
-      const dayDrivers = dayMap.get(dayKey);
-      if (dayDrivers?.has(driverId)) {
-        dayDrivers.get(driverId)!.hasOpenSession = true;
+      const driverData = dayDrivers.get(shift.driver_id)!;
+      
+      if (shift.punch_out_at) {
+        const inTime = new Date(shift.punch_in_at);
+        const outTime = new Date(shift.punch_out_at);
+        const minutes = (outTime.getTime() - inTime.getTime()) / (1000 * 60);
+        driverData.minutes += minutes;
+      } else {
+        driverData.hasOpenSession = true;
       }
     });
 
@@ -471,7 +466,7 @@ export function TimePunchReport() {
     });
 
     return result.sort((a, b) => b.date.localeCompare(a.date));
-  })();
+  }, [shifts]);
 
   const formatHoursMinutes = (totalMinutes: number) => {
     const hours = Math.floor(totalMinutes / 60);
@@ -480,11 +475,12 @@ export function TimePunchReport() {
   };
 
   const exportToCSV = () => {
-    const headers = ["Driver Name", "Punch Type", "Punch Time", "Notes"];
+    const headers = ["Driver Name", "Punch Type", "Punch Time", "Vehicle", "Notes"];
     const rows = punches.map((p) => [
       p.driver_name,
       p.punch_type === "in" ? "Punch In" : "Punch Out",
       format(new Date(p.punch_time), "yyyy-MM-dd HH:mm:ss"),
+      p.vehicle_unit || "",
       p.notes || "",
     ]);
 
@@ -602,45 +598,58 @@ export function TimePunchReport() {
     printWindow.document.close();
   };
 
-  const openEditDialog = (punch: TimePunch) => {
-    setEditingPunch(punch);
-    const punchDate = new Date(punch.punch_time);
-    setEditDate(format(punchDate, "yyyy-MM-dd"));
-    setEditTime(format(punchDate, "HH:mm"));
-    setEditType(punch.punch_type);
-    setEditNotes(punch.notes || "");
+  const openEditDialog = (shift: Shift) => {
+    setEditingShift(shift);
+    const punchInDate = new Date(shift.punch_in_at);
+    setEditPunchInDate(format(punchInDate, "yyyy-MM-dd"));
+    setEditPunchInTime(format(punchInDate, "HH:mm"));
+    
+    if (shift.punch_out_at) {
+      const punchOutDate = new Date(shift.punch_out_at);
+      setEditPunchOutDate(format(punchOutDate, "yyyy-MM-dd"));
+      setEditPunchOutTime(format(punchOutDate, "HH:mm"));
+    } else {
+      setEditPunchOutDate("");
+      setEditPunchOutTime("");
+    }
+    setEditNotes(shift.notes || "");
     setEditDialogOpen(true);
   };
 
   const handleEditSave = async () => {
-    if (!editingPunch) return;
+    if (!editingShift) return;
 
-    const newPunchTime = new Date(`${editDate}T${editTime}`);
+    const newPunchInAt = new Date(`${editPunchInDate}T${editPunchInTime}`);
+    const newPunchOutAt = editPunchOutDate && editPunchOutTime 
+      ? new Date(`${editPunchOutDate}T${editPunchOutTime}`)
+      : null;
     
     const { error } = await supabase
-      .from("time_punches")
+      .from("shifts")
       .update({
-        punch_time: newPunchTime.toISOString(),
-        punch_type: editType,
+        punch_in_at: newPunchInAt.toISOString(),
+        punch_out_at: newPunchOutAt?.toISOString() || null,
         notes: editNotes || null,
       })
-      .eq("id", editingPunch.id);
+      .eq("id", editingShift.id);
 
     if (error) {
-      toast({ title: "Error", description: "Failed to update punch record", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to update shift record", variant: "destructive" });
     } else {
-      toast({ title: "Success", description: "Punch record updated" });
+      toast({ title: "Success", description: "Shift record updated" });
       setEditDialogOpen(false);
-      fetchPunches();
+      fetchShifts();
+      fetchWeeklyShifts();
     }
   };
 
   const openAddDialog = () => {
     const now = new Date();
     setAddDriverId("");
-    setAddDate(format(now, "yyyy-MM-dd"));
-    setAddTime(format(now, "HH:mm"));
-    setAddType("in");
+    setAddPunchInDate(format(now, "yyyy-MM-dd"));
+    setAddPunchInTime(format(now, "HH:mm"));
+    setAddPunchOutDate("");
+    setAddPunchOutTime("");
     setAddNotes("");
     setAddDialogOpen(true);
   };
@@ -654,44 +663,50 @@ export function TimePunchReport() {
     const driver = drivers.find((d) => d.id === addDriverId);
     if (!driver) return;
 
-    const punchTime = new Date(`${addDate}T${addTime}`);
+    const punchInAt = new Date(`${addPunchInDate}T${addPunchInTime}`);
+    const punchOutAt = addPunchOutDate && addPunchOutTime 
+      ? new Date(`${addPunchOutDate}T${addPunchOutTime}`)
+      : null;
     
-    const { error } = await supabase.from("time_punches").insert({
+    const { error } = await supabase.from("shifts").insert({
       driver_id: addDriverId,
       driver_name: driver.name,
-      punch_type: addType,
-      punch_time: punchTime.toISOString(),
+      punch_in_at: punchInAt.toISOString(),
+      punch_out_at: punchOutAt?.toISOString() || null,
+      workday_date: format(punchInAt, "yyyy-MM-dd"),
       notes: addNotes || null,
     });
 
     if (error) {
-      toast({ title: "Error", description: "Failed to add punch record", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to add shift record", variant: "destructive" });
     } else {
-      toast({ title: "Success", description: "Punch record added" });
+      toast({ title: "Success", description: "Shift record added" });
       setAddDialogOpen(false);
-      fetchPunches();
+      fetchShifts();
+      fetchWeeklyShifts();
     }
   };
 
-  const openDeleteDialog = (punch: TimePunch) => {
-    setDeletingPunch(punch);
+  const openDeleteDialog = (shift: Shift) => {
+    setDeletingShift(shift);
     setDeleteDialogOpen(true);
   };
 
   const handleDelete = async () => {
-    if (!deletingPunch) return;
+    if (!deletingShift) return;
 
     const { error } = await supabase
-      .from("time_punches")
+      .from("shifts")
       .delete()
-      .eq("id", deletingPunch.id);
+      .eq("id", deletingShift.id);
 
     if (error) {
-      toast({ title: "Error", description: "Failed to delete punch record", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to delete shift record", variant: "destructive" });
     } else {
-      toast({ title: "Success", description: "Punch record deleted" });
+      toast({ title: "Success", description: "Shift record deleted" });
       setDeleteDialogOpen(false);
-      fetchPunches();
+      fetchShifts();
+      fetchWeeklyShifts();
     }
   };
 
@@ -705,7 +720,7 @@ export function TimePunchReport() {
         <div className="flex gap-2">
           <Button onClick={openAddDialog} variant="default" size="sm">
             <Plus className="h-4 w-4 mr-2" />
-            Add Punch
+            Add Shift
           </Button>
           <Button onClick={exportToCSV} variant="outline" size="sm" disabled={punches.length === 0}>
             <Download className="h-4 w-4 mr-2" />
@@ -917,7 +932,7 @@ export function TimePunchReport() {
             <div className="text-center py-8 text-muted-foreground">Loading...</div>
           ) : weeklyDriverHours.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No time punches found for this week.
+              No shifts found for this week.
             </div>
           ) : (
             <Card>
@@ -941,7 +956,7 @@ export function TimePunchReport() {
                     <TableBody>
                       {(() => {
                         const payrollData = buildPayrollData(payrollDriverFilter);
-                        return payrollData.map((driver, driverIdx) => {
+                        return payrollData.map((driver) => {
                           const isOvertime = driver.weekTotalMinutes > OVERTIME_THRESHOLD_MINUTES;
                           return driver.dailyRecords.map((record, recordIdx) => (
                             <TableRow 
@@ -1054,7 +1069,7 @@ export function TimePunchReport() {
             <div className="text-center py-8 text-muted-foreground">Loading...</div>
           ) : weeklyDriverHours.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No time punches found for this week.
+              No shifts found for this week.
             </div>
           ) : (
             <Card>
@@ -1169,16 +1184,16 @@ export function TimePunchReport() {
                 onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
-            <Button onClick={fetchPunches} variant="secondary">
+            <Button onClick={fetchShifts} variant="secondary">
               Refresh
             </Button>
           </div>
 
       {loading ? (
         <div className="text-center py-8 text-muted-foreground">Loading...</div>
-      ) : punches.length === 0 ? (
+      ) : shifts.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          No time punches found for the selected date range.
+          No shifts found for the selected date range.
         </div>
       ) : (
         <>
@@ -1249,44 +1264,54 @@ export function TimePunchReport() {
               ))}
             </CardContent>
           </Card>
+
+          {/* Shifts Table */}
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Driver</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Time</TableHead>
-                <TableHead>Notes</TableHead>
+                <TableHead>Punch In</TableHead>
+                <TableHead>Punch Out</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead>Vehicle</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {punches.map((punch) => (
-                <TableRow key={punch.id}>
+              {shifts.map((shift) => {
+                const inTime = new Date(shift.punch_in_at);
+                const outTime = shift.punch_out_at ? new Date(shift.punch_out_at) : null;
+                const duration = outTime 
+                  ? formatHoursMinutes((outTime.getTime() - inTime.getTime()) / (1000 * 60))
+                  : null;
+                
+                return (
+                <TableRow key={shift.id}>
                   <TableCell className="font-mono font-medium">
-                    {punch.driver_name}
+                    {shift.driver_name}
                   </TableCell>
                   <TableCell>
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                        punch.punch_type === "in"
-                          ? "bg-emerald-500/20 text-emerald-600"
-                          : "bg-red-500/20 text-red-600"
-                      }`}
-                    >
-                      {punch.punch_type === "in" ? (
-                        <ArrowUpCircle className="h-3 w-3" />
-                      ) : (
-                        <ArrowDownCircle className="h-3 w-3" />
-                      )}
-                      {punch.punch_type === "in" ? "Punch In" : "Punch Out"}
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/20 text-emerald-600">
+                      <ArrowUpCircle className="h-3 w-3" />
+                      {format(inTime, "MMM d, h:mm a")}
                     </span>
                   </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {format(new Date(punch.punch_time), "MMM d, yyyy h:mm a")}
+                  <TableCell>
+                    {outTime ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-600">
+                        <ArrowDownCircle className="h-3 w-3" />
+                        {format(outTime, "MMM d, h:mm a")}
+                      </span>
+                    ) : (
+                      <span className="text-amber-600 text-xs">Open shift</span>
+                    )}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
-                    {punch.notes || "-"}
+                  <TableCell className="font-mono text-sm">
+                    {duration || "-"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {shift.vehicle_unit || "-"}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -1294,7 +1319,7 @@ export function TimePunchReport() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => openEditDialog(punch)}
+                        onClick={() => openEditDialog(shift)}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -1302,14 +1327,15 @@ export function TimePunchReport() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => openDeleteDialog(punch)}
+                        onClick={() => openDeleteDialog(shift)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </div>
@@ -1317,7 +1343,7 @@ export function TimePunchReport() {
       )}
 
       <div className="text-xs text-muted-foreground">
-        Total records: {punches.length}
+        Total shifts: {shifts.length}
       </div>
         </TabsContent>
       </Tabs>
@@ -1326,44 +1352,58 @@ export function TimePunchReport() {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Punch Record</DialogTitle>
+            <DialogTitle>Edit Shift Record</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>Driver</Label>
-              <Input value={editingPunch?.driver_name || ""} disabled />
+              <Input value={editingShift?.driver_name || ""} disabled />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit-date">Date</Label>
-                <Input
-                  id="edit-date"
-                  type="date"
-                  value={editDate}
-                  onChange={(e) => setEditDate(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-time">Time</Label>
-                <Input
-                  id="edit-time"
-                  type="time"
-                  value={editTime}
-                  onChange={(e) => setEditTime(e.target.value)}
-                />
+            <div className="space-y-2">
+              <Label>Punch In</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-in-date" className="text-xs text-muted-foreground">Date</Label>
+                  <Input
+                    id="edit-in-date"
+                    type="date"
+                    value={editPunchInDate}
+                    onChange={(e) => setEditPunchInDate(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-in-time" className="text-xs text-muted-foreground">Time</Label>
+                  <Input
+                    id="edit-in-time"
+                    type="time"
+                    value={editPunchInTime}
+                    onChange={(e) => setEditPunchInTime(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-type">Punch Type</Label>
-              <Select value={editType} onValueChange={setEditType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="in">Punch In</SelectItem>
-                  <SelectItem value="out">Punch Out</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="space-y-2">
+              <Label>Punch Out</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-out-date" className="text-xs text-muted-foreground">Date</Label>
+                  <Input
+                    id="edit-out-date"
+                    type="date"
+                    value={editPunchOutDate}
+                    onChange={(e) => setEditPunchOutDate(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-out-time" className="text-xs text-muted-foreground">Time</Label>
+                  <Input
+                    id="edit-out-time"
+                    type="time"
+                    value={editPunchOutTime}
+                    onChange={(e) => setEditPunchOutTime(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-notes">Notes</Label>
@@ -1388,7 +1428,7 @@ export function TimePunchReport() {
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Manual Punch</DialogTitle>
+            <DialogTitle>Add Manual Shift</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -1406,37 +1446,51 @@ export function TimePunchReport() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="add-date">Date</Label>
-                <Input
-                  id="add-date"
-                  type="date"
-                  value={addDate}
-                  onChange={(e) => setAddDate(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="add-time">Time</Label>
-                <Input
-                  id="add-time"
-                  type="time"
-                  value={addTime}
-                  onChange={(e) => setAddTime(e.target.value)}
-                />
+            <div className="space-y-2">
+              <Label>Punch In</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="add-in-date" className="text-xs text-muted-foreground">Date</Label>
+                  <Input
+                    id="add-in-date"
+                    type="date"
+                    value={addPunchInDate}
+                    onChange={(e) => setAddPunchInDate(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="add-in-time" className="text-xs text-muted-foreground">Time</Label>
+                  <Input
+                    id="add-in-time"
+                    type="time"
+                    value={addPunchInTime}
+                    onChange={(e) => setAddPunchInTime(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="add-type">Punch Type</Label>
-              <Select value={addType} onValueChange={setAddType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="in">Punch In</SelectItem>
-                  <SelectItem value="out">Punch Out</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="space-y-2">
+              <Label>Punch Out (optional)</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="add-out-date" className="text-xs text-muted-foreground">Date</Label>
+                  <Input
+                    id="add-out-date"
+                    type="date"
+                    value={addPunchOutDate}
+                    onChange={(e) => setAddPunchOutDate(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="add-out-time" className="text-xs text-muted-foreground">Time</Label>
+                  <Input
+                    id="add-out-time"
+                    type="time"
+                    value={addPunchOutTime}
+                    onChange={(e) => setAddPunchOutTime(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="add-notes">Notes</Label>
@@ -1452,7 +1506,7 @@ export function TimePunchReport() {
             <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddSave}>Add Punch</Button>
+            <Button onClick={handleAddSave}>Add Shift</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1461,9 +1515,9 @@ export function TimePunchReport() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Punch Record</AlertDialogTitle>
+            <AlertDialogTitle>Delete Shift Record</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this punch record for {deletingPunch?.driver_name}? This action cannot be undone.
+              Are you sure you want to delete this shift record for {deletingShift?.driver_name}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
