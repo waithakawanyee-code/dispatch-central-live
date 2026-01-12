@@ -1059,9 +1059,9 @@ const Drivers = () => {
       description: `${driver.name} punched in at ${punchInTime}`,
     });
     
-    // Step 3: Punch out (closes shift)
+    // Step 3: Punch out (closes shift) - use the shiftId from punchIn result
     await new Promise(resolve => setTimeout(resolve, 400));
-    const punchOutResult = await punchOut(driverId, punchOutTime);
+    const punchOutResult = await punchOut(punchInResult.shiftId!, punchOutTime);
     if (!punchOutResult.success) {
       toast({
         title: "Simulation failed", 
