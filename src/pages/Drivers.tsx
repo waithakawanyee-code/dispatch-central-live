@@ -1,5 +1,19 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock, PhoneOff, Truck, X, Undo2, Search, UserPlus } from "lucide-react";
+import {
+  Users,
+  BarChart3,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CalendarIcon,
+  Clock,
+  PhoneOff,
+  Truck,
+  X,
+  Undo2,
+  Search,
+  UserPlus,
+} from "lucide-react";
 import { format, addDays, isSameDay, startOfDay, getDay } from "date-fns";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
@@ -14,7 +28,14 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { TimeInput } from "@/components/ui/time-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -48,17 +69,11 @@ interface FutureAssignment {
 
 const Drivers = () => {
   const { toast } = useToast();
-  const {
-    drivers,
-    vehicles,
-    loading,
-    recentlyUpdatedDrivers,
-    updateDriverStatus,
-  } = useDispatchData();
+  const { drivers, vehicles, loading, recentlyUpdatedDrivers, updateDriverStatus } = useDispatchData();
   const { isAdmin } = useUserRole();
   const [statsOpen, setStatsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
-  
+
   // Use shifts hook for selected workday
   const { shifts, getDriverStatusForWorkday, punchIn, punchOut, getOpenShiftForDriver } = useShifts(selectedDate);
   const [schedules, setSchedules] = useState<DriverSchedule[]>([]);
@@ -70,11 +85,11 @@ const Drivers = () => {
   const [offDriverSearch, setOffDriverSearch] = useState("");
   const [futureAssignments, setFutureAssignments] = useState<FutureAssignment[]>();
   const [globalCdlFilter, setGlobalCdlFilter] = useState<"all" | "cdl" | "non-cdl">("all");
-  
+
   // Selected driver state
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [showDetailsPanel, setShowDetailsPanel] = useState(false);
-  
+
   // Assign dialog state
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [assigningDriver, setAssigningDriver] = useState<{ id: string; name: string } | null>(null);
@@ -84,14 +99,14 @@ const Drivers = () => {
   const assignReportTimeRef = useRef<HTMLInputElement>(null);
   const assignDriverSelectRef = useRef<HTMLButtonElement>(null);
   const driverListRef = useRef<HTMLDivElement>(null);
-  
+
   // OFF dialog state
   const [showOffDialog, setShowOffDialog] = useState(false);
   const [offDriver, setOffDriver] = useState<{ id: string; name: string } | null>(null);
   const [isCallOutChecked, setIsCallOutChecked] = useState(false);
   const [callOutNote, setCallOutNote] = useState("");
   const [offDates, setOffDates] = useState<Date[]>([]);
-  
+
   // Punch In dialog state
   const [showPunchInDialog, setShowPunchInDialog] = useState(false);
   const [punchInDriver, setPunchInDriver] = useState<{ id: string; name: string } | null>(null);
@@ -102,7 +117,7 @@ const Drivers = () => {
   const punchInVehicleRef = useRef<HTMLButtonElement>(null);
   const punchInTimeRef = useRef<HTMLInputElement>(null);
   const punchInButtonRef = useRef<HTMLButtonElement>(null);
-  
+
   // Punch Out dialog state
   const [showPunchOutDialog, setShowPunchOutDialog] = useState(false);
   const [punchOutDriver, setPunchOutDriver] = useState<{ id: string; name: string } | null>(null);
@@ -111,15 +126,15 @@ const Drivers = () => {
   const punchOutDriverRef = useRef<HTMLButtonElement>(null);
   const punchOutTimeRef = useRef<HTMLInputElement>(null);
   const punchOutButtonRef = useRef<HTMLButtonElement>(null);
-  
+
   // Driver picker state (for keyboard shortcuts when no driver selected)
   const [showDriverPicker, setShowDriverPicker] = useState(false);
   const [pendingAction, setPendingAction] = useState<"assign" | "off" | null>(null);
-  
+
   // Off driver assignment confirmation state
   const [showOffDriverConfirm, setShowOffDriverConfirm] = useState(false);
   const [pendingOffDriver, setPendingOffDriver] = useState<{ id: string; name: string } | null>(null);
-  
+
   // Undo last action state
   const [lastAction, setLastAction] = useState<{
     driverId: string;
@@ -144,23 +159,20 @@ const Drivers = () => {
   useEffect(() => {
     const fetchData = async () => {
       setSchedulesLoading(true);
-      
+
       const [schedulesRes, callOutsRes] = await Promise.all([
         supabase.from("driver_schedules").select("*"),
-        supabase
-          .from("call_outs")
-          .select("*")
-          .eq("call_out_date", format(today, "yyyy-MM-dd")),
+        supabase.from("call_outs").select("*").eq("call_out_date", format(today, "yyyy-MM-dd")),
       ]);
-      
+
       if (!schedulesRes.error && schedulesRes.data) {
         setSchedules(schedulesRes.data);
       }
-      
+
       if (!callOutsRes.error && callOutsRes.data) {
         setTodayCallOuts(callOutsRes.data as CallOut[]);
       }
-      
+
       setSchedulesLoading(false);
     };
     fetchData();
@@ -173,30 +185,24 @@ const Drivers = () => {
       setSelectedDateCallOuts([]);
       return;
     }
-    
+
     const fetchFutureData = async () => {
       const dateStr = format(selectedDate, "yyyy-MM-dd");
-      
+
       const [assignmentsRes, callOutsRes] = await Promise.all([
-        supabase
-          .from("future_assignments")
-          .select("*")
-          .eq("assignment_date", dateStr),
-        supabase
-          .from("call_outs")
-          .select("*")
-          .eq("call_out_date", dateStr),
+        supabase.from("future_assignments").select("*").eq("assignment_date", dateStr),
+        supabase.from("call_outs").select("*").eq("call_out_date", dateStr),
       ]);
-      
+
       if (!assignmentsRes.error && assignmentsRes.data) {
         setFutureAssignments(assignmentsRes.data as FutureAssignment[]);
       }
-      
+
       if (!callOutsRes.error && callOutsRes.data) {
         setSelectedDateCallOuts(callOutsRes.data as CallOut[]);
       }
     };
-    
+
     fetchFutureData();
   }, [selectedDate, isFutureDate]);
 
@@ -208,10 +214,13 @@ const Drivers = () => {
 
     // day_of_week: 0 = Sunday, 1 = Monday, etc.
     const dayOfWeek = getDay(selectedDate);
-    
+
     // Find schedules for this day that are NOT marked as off
-    const scheduleMap = new Map<string, { start_time: string | null; end_time: string | null; is_any_hours: boolean }>();
-    
+    const scheduleMap = new Map<
+      string,
+      { start_time: string | null; end_time: string | null; is_any_hours: boolean }
+    >();
+
     schedules.forEach((schedule) => {
       if (schedule.day_of_week === dayOfWeek && !schedule.is_off) {
         scheduleMap.set(schedule.driver_id, {
@@ -236,18 +245,20 @@ const Drivers = () => {
     if (isToday) {
       // Get the day of week for today to filter by schedule
       const dayOfWeek = getDay(today);
-      
+
       // Get driver IDs that ARE scheduled for today (not marked as off) with their start times and is_any_hours
       const scheduledDriverMap = new Map<string, { is_any_hours: boolean; start_time: string | null }>();
       schedules
         .filter((s) => s.day_of_week === dayOfWeek && !s.is_off)
-        .forEach((s) => scheduledDriverMap.set(s.driver_id, {
-          is_any_hours: (s as any).is_any_hours || false,
-          start_time: s.start_time,
-        }));
-      
+        .forEach((s) =>
+          scheduledDriverMap.set(s.driver_id, {
+            is_any_hours: (s as any).is_any_hours || false,
+            start_time: s.start_time,
+          }),
+        );
+
       // Build a map of driver shift status from shifts table
-      const driverShiftStatusMap = new Map<string, { status: "working" | "punched-out"; shift: typeof shifts[0] }>();
+      const driverShiftStatusMap = new Map<string, { status: "working" | "punched-out"; shift: (typeof shifts)[0] }>();
       shifts.forEach((shift) => {
         // Prioritize open shifts (working) over closed shifts
         const existing = driverShiftStatusMap.get(shift.driver_id);
@@ -259,7 +270,7 @@ const Drivers = () => {
           driverShiftStatusMap.set(shift.driver_id, { status: "punched-out", shift });
         }
       });
-      
+
       // Include drivers who are scheduled for today OR who have shift activity for today
       // Also include drivers with base status of assigned
       const todayDrivers = drivers
@@ -274,7 +285,7 @@ const Drivers = () => {
           const shiftData = driverShiftStatusMap.get(d.id);
           let derivedStatus = d.status;
           let vehicleFromShift = d.vehicle;
-          
+
           if (shiftData) {
             derivedStatus = shiftData.status;
             // Use vehicle from shift if available
@@ -282,9 +293,9 @@ const Drivers = () => {
               vehicleFromShift = shiftData.shift.vehicle_unit;
             }
           }
-          
-          return { 
-            ...d, 
+
+          return {
+            ...d,
             status: derivedStatus,
             vehicle: vehicleFromShift,
             schedule: null as { start_time: string | null; end_time: string | null; is_any_hours: boolean } | null,
@@ -293,15 +304,15 @@ const Drivers = () => {
             shiftData: shiftData?.shift || null,
           };
         });
-      
+
       // Define status priority order
       const statusOrder: Record<string, number> = {
-        "assigned": 1,
-        "working": 2,
+        assigned: 1,
+        working: 2,
         "punched-out": 3,
-        "unassigned": 4,
+        unassigned: 4,
       };
-      
+
       // Sort by status first, then by start time within each status group
       return todayDrivers.sort((a, b) => {
         const aStatusOrder = statusOrder[a.status] ?? 99;
@@ -314,13 +325,13 @@ const Drivers = () => {
         return aTime.localeCompare(bTime);
       });
     }
-    
+
     // Create a map of assigned driver IDs
-    const assignedMap = new Map(futureAssignments.map(a => [a.driver_id, a]));
-    
+    const assignedMap = new Map(futureAssignments.map((a) => [a.driver_id, a]));
+
     // Create a set of driver IDs who are marked OFF for this date
-    const offDriverIds = new Set(selectedDateCallOuts.map(c => c.driver_id));
-    
+    const offDriverIds = new Set(selectedDateCallOuts.map((c) => c.driver_id));
+
     // For future dates, return available drivers with their assignment status
     // Exclude drivers who are marked OFF
     const futureDrivers = (getAvailableDriversWithSchedule || [])
@@ -347,8 +358,8 @@ const Drivers = () => {
 
     // Define status priority order for future dates
     const statusOrder: Record<string, number> = {
-      "assigned": 1,
-      "unassigned": 2,
+      assigned: 1,
+      unassigned: 2,
     };
 
     // Sort by status first, then by start time within each status group
@@ -367,9 +378,9 @@ const Drivers = () => {
   // Handler for assigning a driver
   const handleAssignDriver = async () => {
     if (!assigningDriver) return;
-    
+
     // Store previous state for undo
-    const driver = drivers.find(d => d.id === assigningDriver.id);
+    const driver = drivers.find((d) => d.id === assigningDriver.id);
     if (driver) {
       setLastAction({
         driverId: driver.id,
@@ -380,12 +391,14 @@ const Drivers = () => {
         actionType: "assign",
       });
     }
-    
+
     if (isFutureDate) {
       // Future date: insert into future_assignments table
       const dateStr = format(selectedDate, "yyyy-MM-dd");
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       const { data, error } = await supabase
         .from("future_assignments")
         .insert({
@@ -398,7 +411,7 @@ const Drivers = () => {
         })
         .select()
         .single();
-      
+
       if (error) {
         toast({
           title: "Error assigning driver",
@@ -422,7 +435,7 @@ const Drivers = () => {
         description: `${assigningDriver.name} has been assigned`,
       });
     }
-    
+
     setShowAssignDialog(false);
     setAssigningDriver(null);
     setAssignReportTime("");
@@ -432,15 +445,15 @@ const Drivers = () => {
   // Handler for unassigning a driver for future date
   const handleUnassignFutureDriver = async (driverId: string, driverName: string) => {
     if (!isFutureDate) return;
-    
+
     const dateStr = format(selectedDate, "yyyy-MM-dd");
-    
+
     const { error } = await supabase
       .from("future_assignments")
       .delete()
       .eq("driver_id", driverId)
       .eq("assignment_date", dateStr);
-    
+
     if (error) {
       toast({
         title: "Error unassigning driver",
@@ -452,24 +465,22 @@ const Drivers = () => {
         title: "Driver unassigned",
         description: `${driverName} unassigned from ${format(selectedDate, "EEEE, MMM d")}`,
       });
-      setFutureAssignments(futureAssignments.filter(a => a.driver_id !== driverId));
+      setFutureAssignments(futureAssignments.filter((a) => a.driver_id !== driverId));
     }
   };
 
   // Handler for marking a driver OFF for a future date
   const handleMarkOffFutureDriver = async (driverId: string, driverName: string) => {
     if (!isFutureDate) return;
-    
+
     const dateStr = format(selectedDate, "yyyy-MM-dd");
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     // First, remove any future assignment for this driver on this date
-    await supabase
-      .from("future_assignments")
-      .delete()
-      .eq("driver_id", driverId)
-      .eq("assignment_date", dateStr);
-    
+    await supabase.from("future_assignments").delete().eq("driver_id", driverId).eq("assignment_date", dateStr);
+
     // Then, create a call_out record
     const { error } = await supabase.from("call_outs").insert({
       driver_id: driverId,
@@ -478,7 +489,7 @@ const Drivers = () => {
       created_by: user?.id || null,
       note: null,
     });
-    
+
     if (error) {
       toast({
         title: "Error marking driver OFF",
@@ -491,29 +502,28 @@ const Drivers = () => {
         description: `${driverName} marked OFF for ${format(selectedDate, "EEEE, MMM d")}`,
       });
       // Update local state
-      setFutureAssignments(futureAssignments.filter(a => a.driver_id !== driverId));
-      setSelectedDateCallOuts([...selectedDateCallOuts, {
-        id: crypto.randomUUID(),
-        driver_id: driverId,
-        driver_name: driverName,
-        call_out_date: dateStr,
-        note: null,
-      }]);
+      setFutureAssignments(futureAssignments.filter((a) => a.driver_id !== driverId));
+      setSelectedDateCallOuts([
+        ...selectedDateCallOuts,
+        {
+          id: crypto.randomUUID(),
+          driver_id: driverId,
+          driver_name: driverName,
+          call_out_date: dateStr,
+          note: null,
+        },
+      ]);
     }
   };
 
   // Handler for removing OFF status from a driver for a future date
   const handleRemoveOffFutureDriver = async (driverId: string, driverName: string) => {
     if (!isFutureDate) return;
-    
+
     const dateStr = format(selectedDate, "yyyy-MM-dd");
-    
-    const { error } = await supabase
-      .from("call_outs")
-      .delete()
-      .eq("driver_id", driverId)
-      .eq("call_out_date", dateStr);
-    
+
+    const { error } = await supabase.from("call_outs").delete().eq("driver_id", driverId).eq("call_out_date", dateStr);
+
     if (error) {
       toast({
         title: "Error removing OFF status",
@@ -525,21 +535,21 @@ const Drivers = () => {
         title: "OFF status removed",
         description: `${driverName} is now scheduled for ${format(selectedDate, "EEEE, MMM d")}`,
       });
-      setSelectedDateCallOuts(selectedDateCallOuts.filter(c => c.driver_id !== driverId));
+      setSelectedDateCallOuts(selectedDateCallOuts.filter((c) => c.driver_id !== driverId));
     }
   };
 
   const openAssignDialog = (driverId: string, driverName: string) => {
-    const driver = drivers.find(d => d.id === driverId);
+    const driver = drivers.find((d) => d.id === driverId);
     const defaultVehicle = (driver as any)?.default_vehicle;
-    
+
     // Check if driver is marked off - show confirmation first
     if (driver?.status === "off") {
       setPendingOffDriver({ id: driverId, name: driverName });
       setShowOffDriverConfirm(true);
       return;
     }
-    
+
     setAssigningDriver({ id: driverId, name: driverName });
     setAssignReportTime("");
     // Pre-fill with driver's default/take-home vehicle if set
@@ -550,12 +560,12 @@ const Drivers = () => {
       assignReportTimeRef.current?.focus();
     }, 50);
   };
-  
+
   const confirmOffDriverAssign = () => {
     if (!pendingOffDriver) return;
-    const driver = drivers.find(d => d.id === pendingOffDriver.id);
+    const driver = drivers.find((d) => d.id === pendingOffDriver.id);
     const defaultVehicle = (driver as any)?.default_vehicle;
-    
+
     setAssigningDriver({ id: pendingOffDriver.id, name: pendingOffDriver.name });
     setAssignReportTime("");
     setAssignVehicle(defaultVehicle || "__none__");
@@ -594,13 +604,13 @@ const Drivers = () => {
 
   const handleConfirmOff = async () => {
     if (!offDriver) return;
-    
+
     const hasFutureDates = offDates.length > 0;
-    const includestoday = offDates.some(d => isSameDay(d, today));
-    
+    const includestoday = offDates.some((d) => isSameDay(d, today));
+
     // Store previous state for undo (only if marking off for today)
     if (!hasFutureDates || includestoday) {
-      const driver = drivers.find(d => d.id === offDriver.id);
+      const driver = drivers.find((d) => d.id === offDriver.id);
       if (driver) {
         setLastAction({
           driverId: driver.id,
@@ -612,22 +622,24 @@ const Drivers = () => {
         });
       }
     }
-    
+
     // Determine which dates to mark off
     const datesToMarkOff = hasFutureDates ? offDates : [today];
-    
+
     // If it's a call out, record it for all selected dates
     if (isCallOutChecked) {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      const insertData = datesToMarkOff.map(date => ({
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      const insertData = datesToMarkOff.map((date) => ({
         driver_id: offDriver.id,
         driver_name: offDriver.name,
         note: callOutNote.trim() || null,
         created_by: user?.id || null,
         call_out_date: format(date, "yyyy-MM-dd"),
       }));
-      
+
       const { error } = await supabase.from("call_outs").insert(insertData);
 
       if (error) {
@@ -659,13 +671,13 @@ const Drivers = () => {
     if (!hasFutureDates || includestoday) {
       updateDriverStatus(offDriver.id, "off");
     } else {
-      const futureDatesStr = offDates.map(d => format(d, "EEE, MMM d")).join(", ");
+      const futureDatesStr = offDates.map((d) => format(d, "EEE, MMM d")).join(", ");
       toast({
         title: "Scheduled OFF",
         description: `${offDriver.name} will be marked OFF on: ${futureDatesStr}`,
       });
     }
-    
+
     setShowOffDialog(false);
     setOffDriver(null);
     setIsCallOutChecked(false);
@@ -674,97 +686,109 @@ const Drivers = () => {
   };
 
   // Shortcut action handlers with guardrails
-  const executeAssign = useCallback((driverId: string) => {
-    const driver = drivers.find(d => d.id === driverId);
-    if (!driver) return;
-    
-    // Allow from unassigned, scheduled, or assigned
-    if (["unassigned", "scheduled", "assigned"].includes(driver.status)) {
-      openAssignDialog(driver.id, driver.name);
-    } else if (["working", "on-route"].includes(driver.status)) {
-      toast({
-        title: "Driver is working",
-        description: "Punch out first before reassigning",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Cannot assign",
-        description: `Driver is currently ${driver.status}`,
-        variant: "destructive",
-      });
-    }
-  }, [drivers, toast]);
+  const executeAssign = useCallback(
+    (driverId: string) => {
+      const driver = drivers.find((d) => d.id === driverId);
+      if (!driver) return;
+
+      // Allow from unassigned, scheduled, or assigned
+      if (["unassigned", "scheduled", "assigned"].includes(driver.status)) {
+        openAssignDialog(driver.id, driver.name);
+      } else if (["working", "on-route"].includes(driver.status)) {
+        toast({
+          title: "Driver is working",
+          description: "Punch out first before reassigning",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Cannot assign",
+          description: `Driver is currently ${driver.status}`,
+          variant: "destructive",
+        });
+      }
+    },
+    [drivers, toast],
+  );
 
   // Helper to get auto-populated vehicle for a driver
-  const getDriverDefaultVehicle = useCallback((driverId: string): string => {
-    const driver = drivers.find(d => d.id === driverId);
-    if (!driver) return "__none__";
-    
-    // First check if driver has an assigned vehicle already
-    if (driver.vehicle) {
-      return driver.vehicle;
-    }
-    
-    // Check if driver is a take-home driver (has a vehicle assigned to them)
-    const takeHomeVehicle = vehicles.find(
-      v => v.assigned_driver_id === driverId && v.classification === "take_home"
-    );
-    if (takeHomeVehicle) {
-      return takeHomeVehicle.unit;
-    }
-    
-    // Check default_vehicle field
-    if (driver.default_vehicle) {
-      return driver.default_vehicle;
-    }
-    
-    return "__none__";
-  }, [drivers, vehicles]);
+  const getDriverDefaultVehicle = useCallback(
+    (driverId: string): string => {
+      const driver = drivers.find((d) => d.id === driverId);
+      if (!driver) return "__none__";
+
+      // First check if driver has an assigned vehicle already
+      if (driver.vehicle) {
+        return driver.vehicle;
+      }
+
+      // Check if driver is a take-home driver (has a vehicle assigned to them)
+      const takeHomeVehicle = vehicles.find(
+        (v) => v.assigned_driver_id === driverId && v.classification === "take_home",
+      );
+      if (takeHomeVehicle) {
+        return takeHomeVehicle.unit;
+      }
+
+      // Check default_vehicle field
+      if (driver.default_vehicle) {
+        return driver.default_vehicle;
+      }
+
+      return "__none__";
+    },
+    [drivers, vehicles],
+  );
 
   // Always open the modal - validation happens on submit
-  const executePunchIn = useCallback((driverId?: string) => {
-    const currentTime = (() => {
-      const now = new Date();
-      return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
-    })();
-    
-    if (driverId) {
-      const driver = drivers.find(d => d.id === driverId);
-      if (driver) {
-        setPunchInDriver({ id: driver.id, name: driver.name });
-        setPunchInVehicle(getDriverDefaultVehicle(driver.id));
+  const executePunchIn = useCallback(
+    (driverId?: string) => {
+      const currentTime = (() => {
+        const now = new Date();
+        return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+      })();
+
+      if (driverId) {
+        const driver = drivers.find((d) => d.id === driverId);
+        if (driver) {
+          setPunchInDriver({ id: driver.id, name: driver.name });
+          setPunchInVehicle(getDriverDefaultVehicle(driver.id));
+        }
+      } else {
+        setPunchInVehicle("__none__");
       }
-    } else {
-      setPunchInVehicle("__none__");
-    }
-    setPunchInTime(currentTime);
-    setShowPunchInDialog(true);
-  }, [drivers, getDriverDefaultVehicle]);
+      setPunchInTime(currentTime);
+      setShowPunchInDialog(true);
+    },
+    [drivers, getDriverDefaultVehicle],
+  );
 
   // Always open the modal - validation happens on submit
-  const executePunchOut = useCallback((driverId?: string) => {
-    const currentTime = (() => {
-      const now = new Date();
-      return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
-    })();
-    
-    if (driverId) {
-      const driver = drivers.find(d => d.id === driverId);
-      if (driver) {
-        setPunchOutDriver({ id: driver.id, name: driver.name });
+  const executePunchOut = useCallback(
+    (driverId?: string) => {
+      const currentTime = (() => {
+        const now = new Date();
+        return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+      })();
+
+      if (driverId) {
+        const driver = drivers.find((d) => d.id === driverId);
+        if (driver) {
+          setPunchOutDriver({ id: driver.id, name: driver.name });
+        }
       }
-    }
-    setPunchOutTime(currentTime);
-    setShowPunchOutDialog(true);
-  }, [drivers]);
+      setPunchOutTime(currentTime);
+      setShowPunchOutDialog(true);
+    },
+    [drivers],
+  );
 
   const handleConfirmPunchIn = async () => {
     if (!punchInDriver) return;
-    
-    const driver = drivers.find(d => d.id === punchInDriver.id);
+
+    const driver = drivers.find((d) => d.id === punchInDriver.id);
     if (!driver) return;
-    
+
     // Check if driver already has an open shift for today
     const existingShift = await getOpenShiftForDriver(punchInDriver.id);
     if (existingShift) {
@@ -776,7 +800,7 @@ const Drivers = () => {
       setPunchInDriver(null);
       return;
     }
-    
+
     // Require vehicle selection for unassigned drivers
     if (driver.status === "unassigned" && (punchInVehicle === "__none__" || !punchInVehicle)) {
       toast({
@@ -786,7 +810,7 @@ const Drivers = () => {
       });
       return;
     }
-    
+
     // Store previous state for undo
     setLastAction({
       driverId: driver.id,
@@ -796,15 +820,16 @@ const Drivers = () => {
       previousReportTime: driver.report_time,
       actionType: "punch-in",
     });
-    
+
     const vehicleToAssign = punchInVehicle === "__none__" ? null : punchInVehicle;
+
     const result = await punchIn(
       punchInDriver.id,
       punchInDriver.name,
-      punchInTime,
-      vehicleToAssign
+      punchInTime, // time ONLY
+      vehicleToAssign, // vehicle ONLY
     );
-    
+
     if (result.success) {
       toast({
         title: "Punched In",
@@ -817,7 +842,7 @@ const Drivers = () => {
         variant: "destructive",
       });
     }
-    
+
     setShowPunchInDialog(false);
     setPunchInDriver(null);
     setPunchInTime("");
@@ -826,10 +851,10 @@ const Drivers = () => {
 
   const handleConfirmPunchOut = async () => {
     if (!punchOutDriver) return;
-    
+
     // Find the open shift for this driver
     const openShift = await getOpenShiftForDriver(punchOutDriver.id);
-    
+
     if (!openShift) {
       toast({
         title: "Cannot punch out",
@@ -838,14 +863,14 @@ const Drivers = () => {
       });
       return; // Keep dialog open so user can select a different driver
     }
-    
+
     // Validate punch-out time is after punch-in time
     const punchInDate = new Date(openShift.punch_in_at);
     const punchInMinutes = punchInDate.getHours() * 60 + punchInDate.getMinutes();
-    
+
     const [outHours, outMinutes] = punchOutTime.split(":").map(Number);
     const punchOutMinutes = outHours * 60 + outMinutes;
-    
+
     if (punchOutMinutes <= punchInMinutes) {
       const punchInTimeStr = `${punchInDate.getHours().toString().padStart(2, "0")}:${punchInDate.getMinutes().toString().padStart(2, "0")}`;
       toast({
@@ -855,9 +880,9 @@ const Drivers = () => {
       });
       return;
     }
-    
-    const driver = drivers.find(d => d.id === punchOutDriver.id);
-    
+
+    const driver = drivers.find((d) => d.id === punchOutDriver.id);
+
     // Store previous state for undo
     if (driver) {
       setLastAction({
@@ -869,9 +894,9 @@ const Drivers = () => {
         actionType: "punch-out",
       });
     }
-    
+
     const result = await punchOut(openShift.id, punchOutTime);
-    
+
     if (result.success) {
       toast({
         title: "Punched Out",
@@ -884,93 +909,102 @@ const Drivers = () => {
         variant: "destructive",
       });
     }
-    
+
     setShowPunchOutDialog(false);
     setPunchOutDriver(null);
     setPunchOutTime("");
   };
 
-  const executeOff = useCallback((driverId: string) => {
-    const driver = drivers.find(d => d.id === driverId);
-    if (!driver) return;
-    
-    if (driver.status === "off") {
-      toast({
-        title: "Already OFF",
-        description: `${driver.name} is already marked OFF`,
-      });
-      return;
-    }
-    
-    if (["working", "on-route"].includes(driver.status)) {
-      toast({
-        title: "Driver is working",
-        description: "Punch out first before marking OFF",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    openOffDialog(driver.id, driver.name);
-  }, [drivers, toast]);
+  const executeOff = useCallback(
+    (driverId: string) => {
+      const driver = drivers.find((d) => d.id === driverId);
+      if (!driver) return;
+
+      if (driver.status === "off") {
+        toast({
+          title: "Already OFF",
+          description: `${driver.name} is already marked OFF`,
+        });
+        return;
+      }
+
+      if (["working", "on-route"].includes(driver.status)) {
+        toast({
+          title: "Driver is working",
+          description: "Punch out first before marking OFF",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      openOffDialog(driver.id, driver.name);
+    },
+    [drivers, toast],
+  );
 
   // Unassign - reset to unassigned
-  const executeUnassign = useCallback((driverId: string) => {
-    const driver = drivers.find(d => d.id === driverId);
-    if (!driver) return;
-    
-    if (driver.status !== "assigned") {
-      toast({
-        title: "Cannot unassign",
-        description: `Driver is not currently assigned`,
-        variant: "destructive",
+  const executeUnassign = useCallback(
+    (driverId: string) => {
+      const driver = drivers.find((d) => d.id === driverId);
+      if (!driver) return;
+
+      if (driver.status !== "assigned") {
+        toast({
+          title: "Cannot unassign",
+          description: `Driver is not currently assigned`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Store previous state for undo
+      setLastAction({
+        driverId: driver.id,
+        driverName: driver.name,
+        previousStatus: driver.status,
+        previousVehicle: driver.vehicle,
+        previousReportTime: driver.report_time,
+        actionType: "unassign",
       });
-      return;
-    }
-    
-    // Store previous state for undo
-    setLastAction({
-      driverId: driver.id,
-      driverName: driver.name,
-      previousStatus: driver.status,
-      previousVehicle: driver.vehicle,
-      previousReportTime: driver.report_time,
-      actionType: "unassign",
-    });
-    
-    updateDriverStatus(driverId, "unassigned");
-    toast({
-      title: "Driver unassigned",
-      description: `${driver.name} has been unassigned`,
-    });
-  }, [drivers, updateDriverStatus, toast]);
+
+      updateDriverStatus(driverId, "unassigned");
+      toast({
+        title: "Driver unassigned",
+        description: `${driver.name} has been unassigned`,
+      });
+    },
+    [drivers, updateDriverStatus, toast],
+  );
 
   // Reset - set back to unassigned from punched-out/off
-  const executeReset = useCallback((driverId: string) => {
-    const driver = drivers.find(d => d.id === driverId);
-    if (!driver) return;
-    
-    // Store previous state for undo
-    setLastAction({
-      driverId: driver.id,
-      driverName: driver.name,
-      previousStatus: driver.status,
-      previousVehicle: driver.vehicle,
-      previousReportTime: driver.report_time,
-      actionType: "reset",
-    });
-    
-    updateDriverStatus(driverId, "unassigned");
-    toast({
-      title: "Driver reset",
-      description: `${driver.name} reset to unassigned`,
-    });
-  }, [drivers, updateDriverStatus, toast]);
+  const executeReset = useCallback(
+    (driverId: string) => {
+      const driver = drivers.find((d) => d.id === driverId);
+      if (!driver) return;
+
+      // Store previous state for undo
+      setLastAction({
+        driverId: driver.id,
+        driverName: driver.name,
+        previousStatus: driver.status,
+        previousVehicle: driver.vehicle,
+        previousReportTime: driver.report_time,
+        actionType: "reset",
+      });
+
+      updateDriverStatus(driverId, "unassigned");
+      toast({
+        title: "Driver reset",
+        description: `${driver.name} reset to unassigned`,
+      });
+    },
+    [drivers, updateDriverStatus, toast],
+  );
 
   // Reset all drivers to unassigned (testing utility)
   const executeResetAll = useCallback(async () => {
-    const activeDrivers = drivers.filter(d => d.is_active && d.status !== "unassigned");
-    
+    const activeDrivers = drivers.filter((d) => d.is_active && d.status !== "unassigned");
+
     if (activeDrivers.length === 0) {
       toast({
         title: "Nothing to reset",
@@ -978,20 +1012,20 @@ const Drivers = () => {
       });
       return;
     }
-    
+
     // Reset all drivers to unassigned
     for (const driver of activeDrivers) {
       await supabase
         .from("drivers")
-        .update({ 
-          status: "unassigned", 
-          vehicle: null, 
+        .update({
+          status: "unassigned",
+          vehicle: null,
           report_time: null,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq("id", driver.id);
     }
-    
+
     toast({
       title: "All drivers reset",
       description: `Reset ${activeDrivers.length} drivers to unassigned`,
@@ -999,86 +1033,89 @@ const Drivers = () => {
   }, [drivers, toast]);
 
   // Simulate full workflow: unassigned → assigned → working → punched-out (testing utility)
-  const executeSimulateWorkflow = useCallback(async (driverId: string) => {
-    const driver = drivers.find(d => d.id === driverId);
-    if (!driver) return;
-    
-    if (driver.status !== "unassigned") {
+  const executeSimulateWorkflow = useCallback(
+    async (driverId: string) => {
+      const driver = drivers.find((d) => d.id === driverId);
+      if (!driver) return;
+
+      if (driver.status !== "unassigned") {
+        toast({
+          title: "Cannot simulate",
+          description: "Driver must be unassigned to simulate workflow",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Find first available active vehicle
+      const availableVehicle = vehicles.find((v) => v.status === "active" && !v.driver);
+      if (!availableVehicle) {
+        toast({
+          title: "Cannot simulate",
+          description: "No available vehicles for simulation",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const reportTime = "08:00";
+      const punchInTime = "08:00";
+      const punchOutTime = "16:00";
+
       toast({
-        title: "Cannot simulate",
-        description: "Driver must be unassigned to simulate workflow",
-        variant: "destructive",
+        title: "Simulating workflow...",
+        description: `${driver.name}: Starting simulation`,
       });
-      return;
-    }
-    
-    // Find first available active vehicle
-    const availableVehicle = vehicles.find(v => v.status === "active" && !v.driver);
-    if (!availableVehicle) {
+
+      // Step 1: Assign driver to vehicle
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      await updateDriverStatus(driverId, "assigned", availableVehicle.unit, reportTime);
       toast({
-        title: "Cannot simulate",
-        description: "No available vehicles for simulation",
-        variant: "destructive",
+        title: "Step 1: Assigned",
+        description: `${driver.name} → ${availableVehicle.unit} at ${reportTime}`,
       });
-      return;
-    }
-    
-    const reportTime = "08:00";
-    const punchInTime = "08:00";
-    const punchOutTime = "16:00";
-    
-    toast({
-      title: "Simulating workflow...",
-      description: `${driver.name}: Starting simulation`,
-    });
-    
-    // Step 1: Assign driver to vehicle
-    await new Promise(resolve => setTimeout(resolve, 400));
-    await updateDriverStatus(driverId, "assigned", availableVehicle.unit, reportTime);
-    toast({
-      title: "Step 1: Assigned",
-      description: `${driver.name} → ${availableVehicle.unit} at ${reportTime}`,
-    });
-    
-    // Step 2: Punch in (creates shift record)
-    await new Promise(resolve => setTimeout(resolve, 400));
-    const punchInResult = await punchIn(driverId, punchInTime, availableVehicle.unit);
-    if (!punchInResult.success) {
+
+      // Step 2: Punch in (creates shift record)
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      const punchInResult = await punchIn(driverId, punchInTime, availableVehicle.unit);
+      if (!punchInResult.success) {
+        toast({
+          title: "Simulation failed",
+          description: `Punch in failed: ${punchInResult.error}`,
+          variant: "destructive",
+        });
+        return;
+      }
       toast({
-        title: "Simulation failed",
-        description: `Punch in failed: ${punchInResult.error}`,
-        variant: "destructive",
+        title: "Step 2: Punched In",
+        description: `${driver.name} punched in at ${punchInTime}`,
       });
-      return;
-    }
-    toast({
-      title: "Step 2: Punched In",
-      description: `${driver.name} punched in at ${punchInTime}`,
-    });
-    
-    // Step 3: Punch out (closes shift)
-    await new Promise(resolve => setTimeout(resolve, 400));
-    const punchOutResult = await punchOut(driverId, punchOutTime);
-    if (!punchOutResult.success) {
+
+      // Step 3: Punch out (closes shift)
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      const punchOutResult = await punchOut(driverId, punchOutTime);
+      if (!punchOutResult.success) {
+        toast({
+          title: "Simulation failed",
+          description: `Punch out failed: ${punchOutResult.error}`,
+          variant: "destructive",
+        });
+        return;
+      }
       toast({
-        title: "Simulation failed", 
-        description: `Punch out failed: ${punchOutResult.error}`,
-        variant: "destructive",
+        title: "Step 3: Punched Out",
+        description: `${driver.name} punched out at ${punchOutTime}`,
       });
-      return;
-    }
-    toast({
-      title: "Step 3: Punched Out",
-      description: `${driver.name} punched out at ${punchOutTime}`,
-    });
-    
-    // Final success
-    await new Promise(resolve => setTimeout(resolve, 300));
-    toast({
-      title: "✓ Simulation complete",
-      description: `${driver.name} is now punched-out. Reset button is available!`,
-    });
-  }, [drivers, vehicles, updateDriverStatus, punchIn, punchOut, toast]);
+
+      // Final success
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      toast({
+        title: "✓ Simulation complete",
+        description: `${driver.name} is now punched-out. Reset button is available!`,
+      });
+    },
+    [drivers, vehicles, updateDriverStatus, punchIn, punchOut, toast],
+  );
 
   // Undo last action
   const executeUndo = useCallback(() => {
@@ -1089,73 +1126,65 @@ const Drivers = () => {
       });
       return;
     }
-    
+
     const { driverId, driverName, previousStatus, previousVehicle, previousReportTime, actionType } = lastAction;
-    
+
     // Restore the previous state
-    updateDriverStatus(
-      driverId, 
-      previousStatus as any, 
-      previousReportTime || undefined, 
-      previousVehicle || undefined
-    );
-    
+    updateDriverStatus(driverId, previousStatus as any, previousReportTime || undefined, previousVehicle || undefined);
+
     toast({
       title: "Action undone",
       description: `Reverted ${driverName} to ${previousStatus}`,
     });
-    
+
     setLastAction(null);
   }, [lastAction, updateDriverStatus, toast]);
 
   // Handle driver picker selection (only used for assign and off actions now)
-  const handleDriverPickerSelect = useCallback((driver: typeof drivers[0]) => {
-    setSelectedDriverId(driver.id);
-    setShowDriverPicker(false);
-    
-    // Execute the pending action
-    if (pendingAction) {
-      // Small delay to let selection settle
-      setTimeout(() => {
-        switch (pendingAction) {
-          case "assign":
-            executeAssign(driver.id);
-            break;
-          case "off":
-            executeOff(driver.id);
-            break;
-        }
-        setPendingAction(null);
-      }, 50);
-    }
-  }, [pendingAction, executeAssign, executeOff]);
+  const handleDriverPickerSelect = useCallback(
+    (driver: (typeof drivers)[0]) => {
+      setSelectedDriverId(driver.id);
+      setShowDriverPicker(false);
+
+      // Execute the pending action
+      if (pendingAction) {
+        // Small delay to let selection settle
+        setTimeout(() => {
+          switch (pendingAction) {
+            case "assign":
+              executeAssign(driver.id);
+              break;
+            case "off":
+              executeOff(driver.id);
+              break;
+          }
+          setPendingAction(null);
+        }, 50);
+      }
+    },
+    [pendingAction, executeAssign, executeOff],
+  );
 
   // Get drivers NOT scheduled for today (OFF drivers)
   const offDrivers = useMemo(() => {
     if (!isToday) return [];
-    
+
     const dayOfWeek = getDay(today);
-    
+
     // Get driver IDs that ARE scheduled for today (not marked as off)
     const scheduledDriverIds = new Set(
-      schedules
-        .filter((s) => s.day_of_week === dayOfWeek && !s.is_off)
-        .map((s) => s.driver_id)
+      schedules.filter((s) => s.day_of_week === dayOfWeek && !s.is_off).map((s) => s.driver_id),
     );
-    
+
     // Return drivers who are NOT scheduled for today OR have status "off"
-    return drivers.filter(
-      (driver) => !scheduledDriverIds.has(driver.id) || driver.status === "off"
-    );
+    return drivers.filter((driver) => !scheduledDriverIds.has(driver.id) || driver.status === "off");
   }, [drivers, schedules, isToday]);
-  
+
   // Filtered off drivers based on search
   const filteredOffDrivers = useMemo(() => {
     if (!offDriverSearch.trim()) return offDrivers;
     const search = offDriverSearch.toLowerCase().trim();
-    return offDrivers.filter(driver => 
-      driver.name.toLowerCase().includes(search)
-    );
+    return offDrivers.filter((driver) => driver.name.toLowerCase().includes(search));
   }, [offDrivers, offDriverSearch]);
 
   // Check if a driver called out today
@@ -1167,12 +1196,12 @@ const Drivers = () => {
     const callOut = todayCallOuts.find((co) => co.driver_id === driverId);
     return callOut?.note || null;
   };
-  
+
   // Add off driver to today's schedule
   const addOffDriverToSchedule = (driverId: string, driverName: string) => {
-    const driver = drivers.find(d => d.id === driverId);
+    const driver = drivers.find((d) => d.id === driverId);
     const defaultVehicle = (driver as any)?.default_vehicle;
-    
+
     setAssigningDriver({ id: driverId, name: driverName });
     setAssignReportTime("");
     setAssignVehicle(defaultVehicle || "__none__");
@@ -1203,8 +1232,8 @@ const Drivers = () => {
       };
     } else {
       return {
-        unassigned: displayDrivers.filter(d => d.status === "unassigned"),
-        assigned: displayDrivers.filter(d => d.status === "assigned"),
+        unassigned: displayDrivers.filter((d) => d.status === "unassigned"),
+        assigned: displayDrivers.filter((d) => d.status === "assigned"),
         working: [],
         punchedOut: [],
       };
@@ -1212,20 +1241,23 @@ const Drivers = () => {
   }, [displayDrivers, isToday]);
 
   // Section order for Tab navigation
-  const sectionOrder = isToday 
-    ? ["assigned", "unassigned", "working", "punchedOut"] as const
-    : ["unassigned", "assigned"] as const;
+  const sectionOrder = isToday
+    ? (["assigned", "unassigned", "working", "punchedOut"] as const)
+    : (["unassigned", "assigned"] as const);
 
   // Get current section for selected driver
-  const getCurrentSection = useCallback((driverId: string | null) => {
-    if (!driverId) return null;
-    for (const section of sectionOrder) {
-      if (driverSections[section]?.some(d => d.id === driverId)) {
-        return section;
+  const getCurrentSection = useCallback(
+    (driverId: string | null) => {
+      if (!driverId) return null;
+      for (const section of sectionOrder) {
+        if (driverSections[section]?.some((d) => d.id === driverId)) {
+          return section;
+        }
       }
-    }
-    return null;
-  }, [driverSections, sectionOrder]);
+      return null;
+    },
+    [driverSections, sectionOrder],
+  );
 
   // Create ordered list of all selectable drivers for keyboard navigation
   const selectableDrivers = useMemo(() => {
@@ -1240,8 +1272,8 @@ const Drivers = () => {
     } else {
       // Future: Unassigned -> Assigned
       return [
-        ...displayDrivers.filter(d => d.status === "unassigned"),
-        ...displayDrivers.filter(d => d.status === "assigned"),
+        ...displayDrivers.filter((d) => d.status === "unassigned"),
+        ...displayDrivers.filter((d) => d.status === "assigned"),
       ];
     }
   }, [displayDrivers, isToday]);
@@ -1250,7 +1282,7 @@ const Drivers = () => {
   useEffect(() => {
     if (!loading && !schedulesLoading && selectableDrivers.length > 0) {
       // Only auto-select if no driver is currently selected or selected driver no longer exists
-      if (!selectedDriverId || !selectableDrivers.find(d => d.id === selectedDriverId)) {
+      if (!selectedDriverId || !selectableDrivers.find((d) => d.id === selectedDriverId)) {
         // Prefer first unassigned driver
         const firstUnassigned = displayDrivers.find((d) => d.status === "unassigned" || d.status === "scheduled");
         if (firstUnassigned) {
@@ -1263,183 +1295,190 @@ const Drivers = () => {
   }, [loading, schedulesLoading, selectableDrivers, displayDrivers, selectedDriverId]);
 
   // Check if any modal/dialog is currently open
-  const isAnyDialogOpen = showAssignDialog || showOffDialog || showPunchInDialog || showPunchOutDialog || showDriverPicker || showDetailsPanel;
+  const isAnyDialogOpen =
+    showAssignDialog ||
+    showOffDialog ||
+    showPunchInDialog ||
+    showPunchOutDialog ||
+    showDriverPicker ||
+    showDetailsPanel;
 
   // Keyboard navigation handler
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Check if focus is in an input, textarea, select, or contenteditable
-    const activeElement = document.activeElement;
-    const isInputFocused = activeElement && (
-      activeElement.tagName === "INPUT" ||
-      activeElement.tagName === "TEXTAREA" ||
-      activeElement.tagName === "SELECT" ||
-      activeElement.getAttribute("contenteditable") === "true"
-    );
-    
-    // Don't run shortcuts if any dialog is open (except for escape)
-    const dialogOpen = showAssignDialog || showOffDialog || showPunchInDialog || showPunchOutDialog || showDriverPicker;
-    
-    // Escape closes any open panel/dialog
-    if (e.key === "Escape") {
-      if (showDetailsPanel) {
-        e.preventDefault();
-        setShowDetailsPanel(false);
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      // Check if focus is in an input, textarea, select, or contenteditable
+      const activeElement = document.activeElement;
+      const isInputFocused =
+        activeElement &&
+        (activeElement.tagName === "INPUT" ||
+          activeElement.tagName === "TEXTAREA" ||
+          activeElement.tagName === "SELECT" ||
+          activeElement.getAttribute("contenteditable") === "true");
+
+      // Don't run shortcuts if any dialog is open (except for escape)
+      const dialogOpen =
+        showAssignDialog || showOffDialog || showPunchInDialog || showPunchOutDialog || showDriverPicker;
+
+      // Escape closes any open panel/dialog
+      if (e.key === "Escape") {
+        if (showDetailsPanel) {
+          e.preventDefault();
+          setShowDetailsPanel(false);
+          return;
+        }
+        // Let dialogs handle their own escape
         return;
       }
-      // Let dialogs handle their own escape
-      return;
-    }
-    
-    // Don't process other shortcuts if dialog is open or input is focused
-    if (dialogOpen || isInputFocused) return;
-    
-    // Arrow keys navigate in 4 directions within current section
-    // Left/Right: move horizontally (prev/next in list)
-    // Up/Down: move vertically (estimate row based on ~4 items per row)
-    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
-      e.preventDefault();
-      
-      const currentSection = getCurrentSection(selectedDriverId);
-      if (!currentSection) return;
-      
-      const sectionDrivers = driverSections[currentSection] || [];
-      if (sectionDrivers.length === 0) return;
-      
-      const currentIndex = sectionDrivers.findIndex(d => d.id === selectedDriverId);
-      if (currentIndex === -1) return;
-      
-      let newIndex: number = currentIndex;
-      const itemsPerRow = 4; // Approximate number of items per row
-      
-      switch (e.key) {
-        case "ArrowLeft":
-          newIndex = currentIndex <= 0 ? sectionDrivers.length - 1 : currentIndex - 1;
-          break;
-        case "ArrowRight":
-          newIndex = currentIndex >= sectionDrivers.length - 1 ? 0 : currentIndex + 1;
-          break;
-        case "ArrowUp":
-          // Move up by one row (itemsPerRow items back)
-          newIndex = currentIndex - itemsPerRow;
-          if (newIndex < 0) {
-            // Wrap to last row, try to maintain column position
-            const totalRows = Math.ceil(sectionDrivers.length / itemsPerRow);
-            const currentCol = currentIndex % itemsPerRow;
-            const lastRowStart = (totalRows - 1) * itemsPerRow;
-            newIndex = Math.min(lastRowStart + currentCol, sectionDrivers.length - 1);
-          }
-          break;
-        case "ArrowDown":
-          // Move down by one row (itemsPerRow items forward)
-          newIndex = currentIndex + itemsPerRow;
-          if (newIndex >= sectionDrivers.length) {
-            // Wrap to first row, try to maintain column position
-            const currentCol = currentIndex % itemsPerRow;
-            newIndex = Math.min(currentCol, sectionDrivers.length - 1);
-          }
-          break;
-      }
-      
-      if (sectionDrivers[newIndex]) {
-        setSelectedDriverId(sectionDrivers[newIndex].id);
-        setShowDetailsPanel(false);
-      }
-    }
-    
-    // Tab/Shift+Tab switches between sections
-    if (e.key === "Tab" && !e.ctrlKey && !e.altKey && !e.metaKey) {
-      const currentSection = getCurrentSection(selectedDriverId);
-      const currentSectionIndex = currentSection ? sectionOrder.indexOf(currentSection as any) : -1;
-      
-      // Find next section with drivers
-      const direction = e.shiftKey ? -1 : 1;
-      let nextSectionIndex = currentSectionIndex;
-      let attempts = 0;
-      
-      do {
-        nextSectionIndex = (nextSectionIndex + direction + sectionOrder.length) % sectionOrder.length;
-        attempts++;
-      } while (
-        (driverSections[sectionOrder[nextSectionIndex]]?.length || 0) === 0 && 
-        attempts < sectionOrder.length
-      );
-      
-      const nextSection = sectionOrder[nextSectionIndex];
-      const nextSectionDrivers = driverSections[nextSection] || [];
-      
-      if (nextSectionDrivers.length > 0 && nextSection !== currentSection) {
+
+      // Don't process other shortcuts if dialog is open or input is focused
+      if (dialogOpen || isInputFocused) return;
+
+      // Arrow keys navigate in 4 directions within current section
+      // Left/Right: move horizontally (prev/next in list)
+      // Up/Down: move vertically (estimate row based on ~4 items per row)
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
         e.preventDefault();
-        setSelectedDriverId(nextSectionDrivers[0].id);
-        setShowDetailsPanel(false);
+
+        const currentSection = getCurrentSection(selectedDriverId);
+        if (!currentSection) return;
+
+        const sectionDrivers = driverSections[currentSection] || [];
+        if (sectionDrivers.length === 0) return;
+
+        const currentIndex = sectionDrivers.findIndex((d) => d.id === selectedDriverId);
+        if (currentIndex === -1) return;
+
+        let newIndex: number = currentIndex;
+        const itemsPerRow = 4; // Approximate number of items per row
+
+        switch (e.key) {
+          case "ArrowLeft":
+            newIndex = currentIndex <= 0 ? sectionDrivers.length - 1 : currentIndex - 1;
+            break;
+          case "ArrowRight":
+            newIndex = currentIndex >= sectionDrivers.length - 1 ? 0 : currentIndex + 1;
+            break;
+          case "ArrowUp":
+            // Move up by one row (itemsPerRow items back)
+            newIndex = currentIndex - itemsPerRow;
+            if (newIndex < 0) {
+              // Wrap to last row, try to maintain column position
+              const totalRows = Math.ceil(sectionDrivers.length / itemsPerRow);
+              const currentCol = currentIndex % itemsPerRow;
+              const lastRowStart = (totalRows - 1) * itemsPerRow;
+              newIndex = Math.min(lastRowStart + currentCol, sectionDrivers.length - 1);
+            }
+            break;
+          case "ArrowDown":
+            // Move down by one row (itemsPerRow items forward)
+            newIndex = currentIndex + itemsPerRow;
+            if (newIndex >= sectionDrivers.length) {
+              // Wrap to first row, try to maintain column position
+              const currentCol = currentIndex % itemsPerRow;
+              newIndex = Math.min(currentCol, sectionDrivers.length - 1);
+            }
+            break;
+        }
+
+        if (sectionDrivers[newIndex]) {
+          setSelectedDriverId(sectionDrivers[newIndex].id);
+          setShowDetailsPanel(false);
+        }
       }
-    }
-    
-    // "V" key toggles driver details panel
-    if ((e.key === "v" || e.key === "V") && selectedDriverId) {
-      e.preventDefault();
-      setShowDetailsPanel(prev => !prev);
-    }
-    
-    // === SHORTCUT KEYS (A, P, D, O) ===
-    // Only work when not in future date mode (today only)
-    if (!isToday) return;
-    
-    // Ctrl+Z or Cmd+Z → Undo last action
-    if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) {
-      e.preventDefault();
-      executeUndo();
-      return;
-    }
-    
-    // A → Assign
-    if (e.key === "a" || e.key === "A") {
-      e.preventDefault();
-      if (!selectedDriverId) {
-        setPendingAction("assign");
-        setShowDriverPicker(true);
-      } else {
-        executeAssign(selectedDriverId);
+
+      // Tab/Shift+Tab switches between sections
+      if (e.key === "Tab" && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        const currentSection = getCurrentSection(selectedDriverId);
+        const currentSectionIndex = currentSection ? sectionOrder.indexOf(currentSection as any) : -1;
+
+        // Find next section with drivers
+        const direction = e.shiftKey ? -1 : 1;
+        let nextSectionIndex = currentSectionIndex;
+        let attempts = 0;
+
+        do {
+          nextSectionIndex = (nextSectionIndex + direction + sectionOrder.length) % sectionOrder.length;
+          attempts++;
+        } while ((driverSections[sectionOrder[nextSectionIndex]]?.length || 0) === 0 && attempts < sectionOrder.length);
+
+        const nextSection = sectionOrder[nextSectionIndex];
+        const nextSectionDrivers = driverSections[nextSection] || [];
+
+        if (nextSectionDrivers.length > 0 && nextSection !== currentSection) {
+          e.preventDefault();
+          setSelectedDriverId(nextSectionDrivers[0].id);
+          setShowDetailsPanel(false);
+        }
       }
-    }
-    
-    // P → Punch In - always opens dialog, validates on submit
-    if (e.key === "p" || e.key === "P") {
-      e.preventDefault();
-      executePunchIn(selectedDriverId || undefined);
-    }
-    
-    // D → Punch Out - always opens dialog, validates on submit
-    if (e.key === "d" || e.key === "D") {
-      e.preventDefault();
-      executePunchOut(selectedDriverId || undefined);
-    }
-    
-    // O → Mark OFF
-    if (e.key === "o" || e.key === "O") {
-      e.preventDefault();
-      if (!selectedDriverId) {
-        setPendingAction("off");
-        setShowDriverPicker(true);
-      } else {
-        executeOff(selectedDriverId);
+
+      // "V" key toggles driver details panel
+      if ((e.key === "v" || e.key === "V") && selectedDriverId) {
+        e.preventDefault();
+        setShowDetailsPanel((prev) => !prev);
       }
-    }
-  }, [
-    selectedDriverId, 
-    showAssignDialog, 
-    showOffDialog, 
-    showDriverPicker, 
-    showDetailsPanel, 
-    getCurrentSection, 
-    driverSections, 
-    sectionOrder, 
-    isToday, 
-    executeAssign, 
-    executePunchIn, 
-    executePunchOut, 
-    executeOff,
-    executeUndo
-  ]);
+
+      // === SHORTCUT KEYS (A, P, D, O) ===
+      // Only work when not in future date mode (today only)
+      if (!isToday) return;
+
+      // Ctrl+Z or Cmd+Z → Undo last action
+      if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) {
+        e.preventDefault();
+        executeUndo();
+        return;
+      }
+
+      // A → Assign
+      if (e.key === "a" || e.key === "A") {
+        e.preventDefault();
+        if (!selectedDriverId) {
+          setPendingAction("assign");
+          setShowDriverPicker(true);
+        } else {
+          executeAssign(selectedDriverId);
+        }
+      }
+
+      // P → Punch In - always opens dialog, validates on submit
+      if (e.key === "p" || e.key === "P") {
+        e.preventDefault();
+        executePunchIn(selectedDriverId || undefined);
+      }
+
+      // D → Punch Out - always opens dialog, validates on submit
+      if (e.key === "d" || e.key === "D") {
+        e.preventDefault();
+        executePunchOut(selectedDriverId || undefined);
+      }
+
+      // O → Mark OFF
+      if (e.key === "o" || e.key === "O") {
+        e.preventDefault();
+        if (!selectedDriverId) {
+          setPendingAction("off");
+          setShowDriverPicker(true);
+        } else {
+          executeOff(selectedDriverId);
+        }
+      }
+    },
+    [
+      selectedDriverId,
+      showAssignDialog,
+      showOffDialog,
+      showDriverPicker,
+      showDetailsPanel,
+      getCurrentSection,
+      driverSections,
+      sectionOrder,
+      isToday,
+      executeAssign,
+      executePunchIn,
+      executePunchOut,
+      executeOff,
+      executeUndo,
+    ],
+  );
 
   // Handler for driver pill click - select and show details
   const handleDriverSelect = useCallback((driverId: string) => {
@@ -1477,7 +1516,7 @@ const Drivers = () => {
             </h1>
             <p className="text-sm text-muted-foreground">Manage driver status and assignments</p>
           </div>
-          
+
           {/* Quick Action Toolbar - shows when driver is selected and on today */}
           <div className="flex items-center gap-2">
             {/* Undo Button */}
@@ -1493,26 +1532,28 @@ const Drivers = () => {
                 <span className="hidden sm:inline">Undo</span>
               </Button>
             )}
-            
-            {isToday && selectedDriverId && (() => {
-              const selectedDriver = drivers.find(d => d.id === selectedDriverId);
-              if (!selectedDriver) return null;
-              return (
-                <DriverActionToolbar
-                  driverName={selectedDriver.name}
-                  status={selectedDriver.status}
-                  onAssign={() => executeAssign(selectedDriverId)}
-                  onPunchIn={() => executePunchIn(selectedDriverId)}
-                  onPunchOut={() => executePunchOut(selectedDriverId)}
-                  onMarkOff={() => executeOff(selectedDriverId)}
-                  onUnassign={() => executeUnassign(selectedDriverId)}
-                  onReset={() => executeReset(selectedDriverId)}
-                  onResetAll={executeResetAll}
-                  onSimulateWorkflow={() => executeSimulateWorkflow(selectedDriverId)}
-                  showTestingTools={true}
-                />
-              );
-            })()}
+
+            {isToday &&
+              selectedDriverId &&
+              (() => {
+                const selectedDriver = drivers.find((d) => d.id === selectedDriverId);
+                if (!selectedDriver) return null;
+                return (
+                  <DriverActionToolbar
+                    driverName={selectedDriver.name}
+                    status={selectedDriver.status}
+                    onAssign={() => executeAssign(selectedDriverId)}
+                    onPunchIn={() => executePunchIn(selectedDriverId)}
+                    onPunchOut={() => executePunchOut(selectedDriverId)}
+                    onMarkOff={() => executeOff(selectedDriverId)}
+                    onUnassign={() => executeUnassign(selectedDriverId)}
+                    onReset={() => executeReset(selectedDriverId)}
+                    onResetAll={executeResetAll}
+                    onSimulateWorkflow={() => executeSimulateWorkflow(selectedDriverId)}
+                    showTestingTools={true}
+                  />
+                );
+              })()}
           </div>
         </div>
 
@@ -1541,7 +1582,7 @@ const Drivers = () => {
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-            
+
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-7 gap-1">
@@ -1557,7 +1598,9 @@ const Drivers = () => {
                     if (date) {
                       setSelectedDate(startOfDay(date));
                       // Adjust week offset to show the selected date's week
-                      const daysDiff = Math.floor((startOfDay(date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                      const daysDiff = Math.floor(
+                        (startOfDay(date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+                      );
                       setWeekOffset(Math.floor(daysDiff / 7));
                     }
                   }}
@@ -1575,7 +1618,7 @@ const Drivers = () => {
               const isSelected = isSameDay(date, selectedDate);
               const isPast = date < today;
               const isCurrentDay = isSameDay(date, today);
-              
+
               return (
                 <Button
                   key={date.toISOString()}
@@ -1584,7 +1627,7 @@ const Drivers = () => {
                   className={cn(
                     "flex-1 flex flex-col h-auto py-1.5 px-1",
                     isPast && "opacity-50 cursor-not-allowed",
-                    isCurrentDay && !isSelected && "border-primary"
+                    isCurrentDay && !isSelected && "border-primary",
                   )}
                   onClick={() => !isPast && setSelectedDate(date)}
                   disabled={isPast}
@@ -1620,7 +1663,7 @@ const Drivers = () => {
               {displayDrivers.length} TOTAL
             </span>
           </div>
-          
+
           {/* Color Legend */}
           <div className="mb-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
@@ -1675,140 +1718,152 @@ const Drivers = () => {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-6">
-              {/* Left Column - Scheduled/Unassigned */}
-              <div className="space-y-2">
-                <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                  <span>Scheduled</span>
-                  <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                    {displayDrivers.filter(d => d.status === "unassigned").filter(d => {
-                      if (globalCdlFilter === "cdl") return (d as any).has_cdl;
-                      if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
-                      return true;
-                    }).length}
-                  </span>
-                </h3>
-                <div className="flex flex-col gap-1">
-                  {displayDrivers
-                    .filter(d => d.status === "unassigned")
-                    .filter(d => {
-                      if (globalCdlFilter === "cdl") return (d as any).has_cdl;
-                      if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
-                      return true;
-                    })
-                    .map((driver) => (
-                      <div
-                        key={driver.id}
-                        className={cn(
-                          "flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm transition-all duration-200 group",
-                          isAdmin && "cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-500/5",
-                          selectedDriverId === driver.id && "ring-2 ring-primary ring-offset-1 ring-offset-background border-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
-                        )}
-                        onClick={() => {
-                          handleDriverSelect(driver.id);
-                          if (isAdmin) openAssignDialog(driver.id, driver.name);
-                        }}
-                      >
-                        <span className="h-2 w-2 rounded-full bg-slate-500 shrink-0" />
-                        <span className="font-medium text-foreground flex-1">{driver.name}</span>
-                        {(driver as any).has_cdl && (
-                          <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
-                        )}
-                        {driver.schedule && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
-                            <Clock className="h-3 w-3" />
-                            <span>
-                              {driver.schedule.start_time?.slice(0, 5) || "--:--"}
+                {/* Left Column - Scheduled/Unassigned */}
+                <div className="space-y-2">
+                  <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
+                    <span>Scheduled</span>
+                    <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
+                      {
+                        displayDrivers
+                          .filter((d) => d.status === "unassigned")
+                          .filter((d) => {
+                            if (globalCdlFilter === "cdl") return (d as any).has_cdl;
+                            if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
+                            return true;
+                          }).length
+                      }
+                    </span>
+                  </h3>
+                  <div className="flex flex-col gap-1">
+                    {displayDrivers
+                      .filter((d) => d.status === "unassigned")
+                      .filter((d) => {
+                        if (globalCdlFilter === "cdl") return (d as any).has_cdl;
+                        if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
+                        return true;
+                      })
+                      .map((driver) => (
+                        <div
+                          key={driver.id}
+                          className={cn(
+                            "flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm transition-all duration-200 group",
+                            isAdmin && "cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-500/5",
+                            selectedDriverId === driver.id &&
+                              "ring-2 ring-primary ring-offset-1 ring-offset-background border-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]",
+                          )}
+                          onClick={() => {
+                            handleDriverSelect(driver.id);
+                            if (isAdmin) openAssignDialog(driver.id, driver.name);
+                          }}
+                        >
+                          <span className="h-2 w-2 rounded-full bg-slate-500 shrink-0" />
+                          <span className="font-medium text-foreground flex-1">{driver.name}</span>
+                          {(driver as any).has_cdl && (
+                            <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                              CDL
                             </span>
-                          </div>
-                        )}
-                        {isAdmin && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                            title="Mark OFF"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMarkOffFutureDriver(driver.id, driver.name);
-                            }}
-                          >
-                            <PhoneOff className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  {displayDrivers.filter(d => d.status === "unassigned").length === 0 && (
-                    <p className="text-xs text-muted-foreground italic py-2">No drivers scheduled for this day</p>
-                  )}
+                          )}
+                          {driver.schedule && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
+                              <Clock className="h-3 w-3" />
+                              <span>{driver.schedule.start_time?.slice(0, 5) || "--:--"}</span>
+                            </div>
+                          )}
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                              title="Mark OFF"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMarkOffFutureDriver(driver.id, driver.name);
+                              }}
+                            >
+                              <PhoneOff className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    {displayDrivers.filter((d) => d.status === "unassigned").length === 0 && (
+                      <p className="text-xs text-muted-foreground italic py-2">No drivers scheduled for this day</p>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {/* Right Column - Assigned */}
-              <div className="space-y-2">
-                <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                  <span>Assigned</span>
-                  <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                    {displayDrivers.filter(d => d.status === "assigned").filter(d => {
-                      if (globalCdlFilter === "cdl") return (d as any).has_cdl;
-                      if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
-                      return true;
-                    }).length}
-                  </span>
-                </h3>
-                <div className="flex flex-col gap-1">
-                  {displayDrivers
-                    .filter(d => d.status === "assigned")
-                    .filter(d => {
-                      if (globalCdlFilter === "cdl") return (d as any).has_cdl;
-                      if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
-                      return true;
-                    })
-                    .map((driver) => (
-                      <div
-                        key={driver.id}
-                        onClick={() => handleDriverSelect(driver.id)}
-                        className={cn(
-                          "flex items-center gap-3 rounded border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm group cursor-pointer transition-all duration-200",
-                          selectedDriverId === driver.id && "ring-2 ring-primary ring-offset-1 ring-offset-background border-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
-                        )}
-                      >
-                        <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                        <span className="font-medium text-foreground flex-1">{driver.name}</span>
-                        {(driver as any).has_cdl && (
-                          <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
-                        )}
-                        {driver.report_time && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
-                            <Clock className="h-3 w-3" />
-                            <span>{driver.report_time.slice(0, 5)}</span>
-                          </div>
-                        )}
-                        {driver.vehicle && (
-                          <div className="flex items-center gap-1 text-xs text-primary font-mono">
-                            <Truck className="h-3 w-3" />
-                            <span>{driver.vehicle}</span>
-                          </div>
-                        )}
-                        {isAdmin && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUnassignFutureDriver(driver.id, driver.name);
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  {displayDrivers.filter(d => d.status === "assigned").length === 0 && (
-                    <p className="text-xs text-muted-foreground italic py-2">No drivers assigned yet</p>
-                  )}
+                {/* Right Column - Assigned */}
+                <div className="space-y-2">
+                  <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
+                    <span>Assigned</span>
+                    <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
+                      {
+                        displayDrivers
+                          .filter((d) => d.status === "assigned")
+                          .filter((d) => {
+                            if (globalCdlFilter === "cdl") return (d as any).has_cdl;
+                            if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
+                            return true;
+                          }).length
+                      }
+                    </span>
+                  </h3>
+                  <div className="flex flex-col gap-1">
+                    {displayDrivers
+                      .filter((d) => d.status === "assigned")
+                      .filter((d) => {
+                        if (globalCdlFilter === "cdl") return (d as any).has_cdl;
+                        if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
+                        return true;
+                      })
+                      .map((driver) => (
+                        <div
+                          key={driver.id}
+                          onClick={() => handleDriverSelect(driver.id)}
+                          className={cn(
+                            "flex items-center gap-3 rounded border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm group cursor-pointer transition-all duration-200",
+                            selectedDriverId === driver.id &&
+                              "ring-2 ring-primary ring-offset-1 ring-offset-background border-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]",
+                          )}
+                        >
+                          <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                          <span className="font-medium text-foreground flex-1">{driver.name}</span>
+                          {(driver as any).has_cdl && (
+                            <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                              CDL
+                            </span>
+                          )}
+                          {driver.report_time && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
+                              <Clock className="h-3 w-3" />
+                              <span>{driver.report_time.slice(0, 5)}</span>
+                            </div>
+                          )}
+                          {driver.vehicle && (
+                            <div className="flex items-center gap-1 text-xs text-primary font-mono">
+                              <Truck className="h-3 w-3" />
+                              <span>{driver.vehicle}</span>
+                            </div>
+                          )}
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUnassignFutureDriver(driver.id, driver.name);
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    {displayDrivers.filter((d) => d.status === "assigned").length === 0 && (
+                      <p className="text-xs text-muted-foreground italic py-2">No drivers assigned yet</p>
+                    )}
+                  </div>
                 </div>
-              </div>
               </div>
               {/* OFF Drivers Section for Future Dates */}
               {selectedDateCallOuts.length > 0 && (
@@ -1824,7 +1879,7 @@ const Drivers = () => {
                   </h3>
                   <div className="flex flex-wrap gap-1">
                     {selectedDateCallOuts.map((callOut) => {
-                      const driver = drivers.find(d => d.id === callOut.driver_id);
+                      const driver = drivers.find((d) => d.id === callOut.driver_id);
                       return (
                         <div
                           key={callOut.id}
@@ -1833,10 +1888,15 @@ const Drivers = () => {
                           <span className="h-2 w-2 rounded-full bg-status-offline shrink-0" />
                           <span className="font-medium text-foreground">{callOut.driver_name}</span>
                           {driver?.has_cdl && (
-                            <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
+                            <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                              CDL
+                            </span>
                           )}
                           {callOut.note && (
-                            <span className="text-xs text-muted-foreground italic truncate max-w-[120px]" title={callOut.note}>
+                            <span
+                              className="text-xs text-muted-foreground italic truncate max-w-[120px]"
+                              title={callOut.note}
+                            >
                               {callOut.note}
                             </span>
                           )}
@@ -1892,264 +1952,267 @@ const Drivers = () => {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-6">
-              {/* Left Column */}
-              <div className="flex flex-col gap-5">
-                {/* Assigned */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                    <span className="flex items-center gap-2">
-                      Assigned
-                      <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                        {assignedDrivers}
+                {/* Left Column */}
+                <div className="flex flex-col gap-5">
+                  {/* Assigned */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
+                      <span className="flex items-center gap-2">
+                        Assigned
+                        <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">{assignedDrivers}</span>
                       </span>
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {displayDrivers
-                      .filter((d) => d.status === "assigned")
-                      .filter((d) => {
-                        if (globalCdlFilter === "cdl") return d.has_cdl;
-                        if (globalCdlFilter === "non-cdl") return !d.has_cdl;
-                        return true;
-                      })
-                      .sort((a, b) => {
-                        if (globalCdlFilter === "all") {
-                          if (a.has_cdl === b.has_cdl) return a.name.localeCompare(b.name);
-                          return a.has_cdl ? 1 : -1;
-                        }
-                        return a.name.localeCompare(b.name);
-                      })
-                      .map((driver) => (
-                        <DriverRow
-                          key={driver.id}
-                          driver={driver}
-                          canEdit={isAdmin}
-                          isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                          onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
-                          availableVehicles={vehicles}
-                          mini
-                          isSelected={selectedDriverId === driver.id}
-                          onSelect={handleDriverSelect}
-                          isAnyHours={(driver as any).isAnyHours || false}
-                        />
-                      ))}
-                    {assignedDrivers === 0 && (
-                      <p className="text-sm text-muted-foreground italic py-3">No assigned drivers</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Unassigned */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                    <span className="flex items-center gap-2">
-                      Unassigned
-                      <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                        {unassignedDrivers}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {displayDrivers
-                      .filter((d) => d.status === "unassigned" || d.status === "scheduled")
-                      .filter((d) => {
-                        if (globalCdlFilter === "cdl") return d.has_cdl;
-                        if (globalCdlFilter === "non-cdl") return !d.has_cdl;
-                        return true;
-                      })
-                      .sort((a, b) => {
-                        // Non-CDL first when showing all
-                        if (globalCdlFilter === "all") {
-                          if (a.has_cdl === b.has_cdl) return a.name.localeCompare(b.name);
-                          return a.has_cdl ? 1 : -1;
-                        }
-                        return a.name.localeCompare(b.name);
-                      })
-                      .map((driver) => (
-                        <DriverRow
-                          key={driver.id}
-                          driver={driver}
-                          canEdit={isAdmin}
-                          isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                          onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
-                          availableVehicles={vehicles}
-                          mini
-                          isSelected={selectedDriverId === driver.id}
-                          onSelect={handleDriverSelect}
-                          isAnyHours={(driver as any).isAnyHours || false}
-                        />
-                      ))}
-                    {unassignedDrivers === 0 && (
-                      <p className="text-sm text-muted-foreground italic py-3">No unassigned drivers</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* OFF Drivers - Collapsible */}
-                <Collapsible open={offDriversOpen} onOpenChange={setOffDriversOpen}>
-                  <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2 hover:text-foreground transition-colors cursor-pointer">
-                    <span className="flex items-center gap-2">
-                      <ChevronDown className={cn("h-4 w-4 transition-transform", !offDriversOpen && "-rotate-90")} />
-                      OFF Drivers
-                      {calledOutCount > 0 && (
-                        <span className="rounded bg-destructive/20 text-destructive px-1.5 py-0.5 font-mono text-xs">
-                          {calledOutCount} called out
-                        </span>
-                      )}
-                    </span>
-                    <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                      {offDriverCount}
-                    </span>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-2">
-                    {/* Search box for off drivers */}
-                    <div className="relative mb-3">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                      <Input
-                        type="text"
-                        placeholder="Search off drivers..."
-                        value={offDriverSearch}
-                        onChange={(e) => setOffDriverSearch(e.target.value)}
-                        className="h-8 pl-8 pr-8 text-sm bg-background/50"
-                      />
-                      {offDriverSearch && (
-                        <button
-                          onClick={() => setOffDriverSearch("")}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      )}
                     </div>
-                    
-                    <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
-                      {filteredOffDrivers.map((driver) => {
-                        const calledOut = isCallOut(driver.id);
-                        const note = getCallOutNote(driver.id);
-                        return (
-                          <div
+                    <div className="flex flex-wrap gap-1.5">
+                      {displayDrivers
+                        .filter((d) => d.status === "assigned")
+                        .filter((d) => {
+                          if (globalCdlFilter === "cdl") return d.has_cdl;
+                          if (globalCdlFilter === "non-cdl") return !d.has_cdl;
+                          return true;
+                        })
+                        .sort((a, b) => {
+                          if (globalCdlFilter === "all") {
+                            if (a.has_cdl === b.has_cdl) return a.name.localeCompare(b.name);
+                            return a.has_cdl ? 1 : -1;
+                          }
+                          return a.name.localeCompare(b.name);
+                        })
+                        .map((driver) => (
+                          <DriverRow
                             key={driver.id}
-                            className={cn(
-                              "flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm group",
-                              calledOut && "border-l-2 border-l-destructive bg-destructive/5"
-                            )}
-                          >
-                            <span className="h-2.5 w-2.5 rounded-full bg-status-offline shrink-0" />
-                            <span className="font-mono font-medium text-foreground flex-1">{driver.name}</span>
-                            {(driver as any).has_cdl && (
-                              <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
-                            )}
-                            {calledOut && (
-                              <span className="flex items-center gap-1.5 text-destructive" title={note || "Called out"}>
-                                <PhoneOff className="h-4 w-4" />
-                                <span className="text-xs">Called Out</span>
-                              </span>
-                            )}
-                            {/* Add to schedule button */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => addOffDriverToSchedule(driver.id, driver.name)}
-                              className="h-7 px-2 gap-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 hover:text-primary"
-                              title="Add to today's schedule"
-                            >
-                              <UserPlus className="h-3.5 w-3.5" />
-                              <span className="hidden sm:inline">Add to Today</span>
-                            </Button>
-                          </div>
-                        );
-                      })}
-                      {filteredOffDrivers.length === 0 && offDriverSearch && (
-                        <p className="text-sm text-muted-foreground italic py-3">No matching drivers</p>
-                      )}
-                      {offDriverCount === 0 && !offDriverSearch && (
-                        <p className="text-sm text-muted-foreground italic py-3">No OFF drivers</p>
+                            driver={driver}
+                            canEdit={isAdmin}
+                            isUpdated={recentlyUpdatedDrivers.has(driver.id)}
+                            onStatusChange={(newStatus, reportTime, vehicle) =>
+                              updateDriverStatus(driver.id, newStatus, reportTime, vehicle)
+                            }
+                            availableVehicles={vehicles}
+                            mini
+                            isSelected={selectedDriverId === driver.id}
+                            onSelect={handleDriverSelect}
+                            isAnyHours={(driver as any).isAnyHours || false}
+                          />
+                        ))}
+                      {assignedDrivers === 0 && (
+                        <p className="text-sm text-muted-foreground italic py-3">No assigned drivers</p>
                       )}
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              </div>
+                  </div>
 
-              {/* Right Column */}
-              <div className="flex flex-col gap-5">
-                {/* Working */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                    <span className="flex items-center gap-2">
-                      Working
-                      <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                        {workingDrivers}
+                  {/* Unassigned */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
+                      <span className="flex items-center gap-2">
+                        Unassigned
+                        <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">{unassignedDrivers}</span>
                       </span>
-                    </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {displayDrivers
+                        .filter((d) => d.status === "unassigned" || d.status === "scheduled")
+                        .filter((d) => {
+                          if (globalCdlFilter === "cdl") return d.has_cdl;
+                          if (globalCdlFilter === "non-cdl") return !d.has_cdl;
+                          return true;
+                        })
+                        .sort((a, b) => {
+                          // Non-CDL first when showing all
+                          if (globalCdlFilter === "all") {
+                            if (a.has_cdl === b.has_cdl) return a.name.localeCompare(b.name);
+                            return a.has_cdl ? 1 : -1;
+                          }
+                          return a.name.localeCompare(b.name);
+                        })
+                        .map((driver) => (
+                          <DriverRow
+                            key={driver.id}
+                            driver={driver}
+                            canEdit={isAdmin}
+                            isUpdated={recentlyUpdatedDrivers.has(driver.id)}
+                            onStatusChange={(newStatus, reportTime, vehicle) =>
+                              updateDriverStatus(driver.id, newStatus, reportTime, vehicle)
+                            }
+                            availableVehicles={vehicles}
+                            mini
+                            isSelected={selectedDriverId === driver.id}
+                            onSelect={handleDriverSelect}
+                            isAnyHours={(driver as any).isAnyHours || false}
+                          />
+                        ))}
+                      {unassignedDrivers === 0 && (
+                        <p className="text-sm text-muted-foreground italic py-3">No unassigned drivers</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {displayDrivers
-                      .filter((d) => ["on-route", "working"].includes(d.status))
-                      .filter((d) => {
-                        if (globalCdlFilter === "cdl") return d.has_cdl;
-                        if (globalCdlFilter === "non-cdl") return !d.has_cdl;
-                        return true;
-                      })
-                      .sort((a, b) => {
-                        if (globalCdlFilter === "all") {
-                          if (a.has_cdl === b.has_cdl) return a.name.localeCompare(b.name);
-                          return a.has_cdl ? 1 : -1;
-                        }
-                        return a.name.localeCompare(b.name);
-                      })
-                      .map((driver) => (
-                        <DriverRow
-                          key={driver.id}
-                          driver={driver}
-                          canEdit={isAdmin}
-                          isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                          onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
-                          availableVehicles={vehicles}
-                          mini
-                          isSelected={selectedDriverId === driver.id}
-                          onSelect={handleDriverSelect}
-                          isAnyHours={(driver as any).isAnyHours || false}
+
+                  {/* OFF Drivers - Collapsible */}
+                  <Collapsible open={offDriversOpen} onOpenChange={setOffDriversOpen}>
+                    <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2 hover:text-foreground transition-colors cursor-pointer">
+                      <span className="flex items-center gap-2">
+                        <ChevronDown className={cn("h-4 w-4 transition-transform", !offDriversOpen && "-rotate-90")} />
+                        OFF Drivers
+                        {calledOutCount > 0 && (
+                          <span className="rounded bg-destructive/20 text-destructive px-1.5 py-0.5 font-mono text-xs">
+                            {calledOutCount} called out
+                          </span>
+                        )}
+                      </span>
+                      <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">{offDriverCount}</span>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-2">
+                      {/* Search box for off drivers */}
+                      <div className="relative mb-3">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                        <Input
+                          type="text"
+                          placeholder="Search off drivers..."
+                          value={offDriverSearch}
+                          onChange={(e) => setOffDriverSearch(e.target.value)}
+                          className="h-8 pl-8 pr-8 text-sm bg-background/50"
                         />
-                      ))}
-                    {workingDrivers === 0 && (
-                      <p className="text-sm text-muted-foreground italic py-3">No drivers working</p>
-                    )}
-                  </div>
+                        {offDriverSearch && (
+                          <button
+                            onClick={() => setOffDriverSearch("")}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
+                        {filteredOffDrivers.map((driver) => {
+                          const calledOut = isCallOut(driver.id);
+                          const note = getCallOutNote(driver.id);
+                          return (
+                            <div
+                              key={driver.id}
+                              className={cn(
+                                "flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm group",
+                                calledOut && "border-l-2 border-l-destructive bg-destructive/5",
+                              )}
+                            >
+                              <span className="h-2.5 w-2.5 rounded-full bg-status-offline shrink-0" />
+                              <span className="font-mono font-medium text-foreground flex-1">{driver.name}</span>
+                              {(driver as any).has_cdl && (
+                                <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                                  CDL
+                                </span>
+                              )}
+                              {calledOut && (
+                                <span
+                                  className="flex items-center gap-1.5 text-destructive"
+                                  title={note || "Called out"}
+                                >
+                                  <PhoneOff className="h-4 w-4" />
+                                  <span className="text-xs">Called Out</span>
+                                </span>
+                              )}
+                              {/* Add to schedule button */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => addOffDriverToSchedule(driver.id, driver.name)}
+                                className="h-7 px-2 gap-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 hover:text-primary"
+                                title="Add to today's schedule"
+                              >
+                                <UserPlus className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Add to Today</span>
+                              </Button>
+                            </div>
+                          );
+                        })}
+                        {filteredOffDrivers.length === 0 && offDriverSearch && (
+                          <p className="text-sm text-muted-foreground italic py-3">No matching drivers</p>
+                        )}
+                        {offDriverCount === 0 && !offDriverSearch && (
+                          <p className="text-sm text-muted-foreground italic py-3">No OFF drivers</p>
+                        )}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 </div>
 
-                {/* Punched Out */}
-                <div className="space-y-2">
-                  <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                    <span>Punched Out</span>
-                    <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                      {punchedOutDrivers}
-                    </span>
-                  </h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {displayDrivers
-                      .filter((d) => ["offline", "punched-out"].includes(d.status))
-                      .map((driver) => (
-                        <DriverRow
-                          key={driver.id}
-                          driver={driver}
-                          canEdit={isAdmin}
-                          isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                          onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
-                          availableVehicles={vehicles}
-                          mini
-                          isSelected={selectedDriverId === driver.id}
-                          onSelect={handleDriverSelect}
-                          isAnyHours={(driver as any).isAnyHours || false}
-                        />
-                      ))}
-                    {punchedOutDrivers === 0 && (
-                      <p className="text-sm text-muted-foreground italic py-3">No drivers punched out</p>
-                    )}
+                {/* Right Column */}
+                <div className="flex flex-col gap-5">
+                  {/* Working */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
+                      <span className="flex items-center gap-2">
+                        Working
+                        <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">{workingDrivers}</span>
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {displayDrivers
+                        .filter((d) => ["on-route", "working"].includes(d.status))
+                        .filter((d) => {
+                          if (globalCdlFilter === "cdl") return d.has_cdl;
+                          if (globalCdlFilter === "non-cdl") return !d.has_cdl;
+                          return true;
+                        })
+                        .sort((a, b) => {
+                          if (globalCdlFilter === "all") {
+                            if (a.has_cdl === b.has_cdl) return a.name.localeCompare(b.name);
+                            return a.has_cdl ? 1 : -1;
+                          }
+                          return a.name.localeCompare(b.name);
+                        })
+                        .map((driver) => (
+                          <DriverRow
+                            key={driver.id}
+                            driver={driver}
+                            canEdit={isAdmin}
+                            isUpdated={recentlyUpdatedDrivers.has(driver.id)}
+                            onStatusChange={(newStatus, reportTime, vehicle) =>
+                              updateDriverStatus(driver.id, newStatus, reportTime, vehicle)
+                            }
+                            availableVehicles={vehicles}
+                            mini
+                            isSelected={selectedDriverId === driver.id}
+                            onSelect={handleDriverSelect}
+                            isAnyHours={(driver as any).isAnyHours || false}
+                          />
+                        ))}
+                      {workingDrivers === 0 && (
+                        <p className="text-sm text-muted-foreground italic py-3">No drivers working</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Punched Out */}
+                  <div className="space-y-2">
+                    <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
+                      <span>Punched Out</span>
+                      <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">{punchedOutDrivers}</span>
+                    </h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {displayDrivers
+                        .filter((d) => ["offline", "punched-out"].includes(d.status))
+                        .map((driver) => (
+                          <DriverRow
+                            key={driver.id}
+                            driver={driver}
+                            canEdit={isAdmin}
+                            isUpdated={recentlyUpdatedDrivers.has(driver.id)}
+                            onStatusChange={(newStatus, reportTime, vehicle) =>
+                              updateDriverStatus(driver.id, newStatus, reportTime, vehicle)
+                            }
+                            availableVehicles={vehicles}
+                            mini
+                            isSelected={selectedDriverId === driver.id}
+                            onSelect={handleDriverSelect}
+                            isAnyHours={(driver as any).isAnyHours || false}
+                          />
+                        ))}
+                      {punchedOutDrivers === 0 && (
+                        <p className="text-sm text-muted-foreground italic py-3">No drivers punched out</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
           )}
         </section>
 
@@ -2160,7 +2223,9 @@ const Drivers = () => {
               <BarChart3 className="h-4 w-4 text-primary" />
               <span className="text-sm font-semibold text-foreground">Stats Overview</span>
             </div>
-            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${statsOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${statsOpen ? "rotate-180" : ""}`}
+            />
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-3">
             <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
@@ -2171,20 +2236,8 @@ const Drivers = () => {
                 icon={Users}
                 accentColor="accent"
               />
-              <StatsCard
-                title="Assigned"
-                value={assignedDrivers}
-                subtitle="Ready"
-                icon={Users}
-                accentColor="primary"
-              />
-              <StatsCard
-                title="Working"
-                value={workingDrivers}
-                subtitle="Active"
-                icon={Users}
-                accentColor="primary"
-              />
+              <StatsCard title="Assigned" value={assignedDrivers} subtitle="Ready" icon={Users} accentColor="primary" />
+              <StatsCard title="Working" value={workingDrivers} subtitle="Active" icon={Users} accentColor="primary" />
               <StatsCard
                 title="Punched Out"
                 value={punchedOutDrivers}
@@ -2203,17 +2256,15 @@ const Drivers = () => {
           <DialogHeader>
             <DialogTitle>Assign Driver</DialogTitle>
           </DialogHeader>
-          <p className="text-xs text-muted-foreground">
-            Assign for {format(selectedDate, "EEEE, MMMM d, yyyy")}
-          </p>
+          <p className="text-xs text-muted-foreground">Assign for {format(selectedDate, "EEEE, MMMM d, yyyy")}</p>
           <div className="grid gap-4 py-4">
             {/* Driver - First visually, but skipped in first tab cycle */}
             <div className="grid gap-2">
               <Label htmlFor="assign-driver">Driver</Label>
-              <Select 
-                value={assigningDriver?.id || ""} 
+              <Select
+                value={assigningDriver?.id || ""}
                 onValueChange={(val) => {
-                  const driver = drivers.find(d => d.id === val);
+                  const driver = drivers.find((d) => d.id === val);
                   if (driver) {
                     const defaultVehicle = (driver as any)?.default_vehicle;
                     setAssigningDriver({ id: driver.id, name: driver.name });
@@ -2221,11 +2272,7 @@ const Drivers = () => {
                   }
                 }}
               >
-                <SelectTrigger 
-                  ref={assignDriverSelectRef}
-                  id="assign-driver"
-                  tabIndex={-1}
-                >
+                <SelectTrigger ref={assignDriverSelectRef} id="assign-driver" tabIndex={-1}>
                   <SelectValue placeholder="Select driver" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover">
@@ -2269,14 +2316,10 @@ const Drivers = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowAssignDialog(false)}
-              tabIndex={-1}
-            >
+            <Button variant="outline" onClick={() => setShowAssignDialog(false)} tabIndex={-1}>
               Cancel
             </Button>
-            <Button 
+            <Button
               ref={assignButtonRef}
               onClick={handleAssignDriver}
               disabled={!assigningDriver}
@@ -2299,17 +2342,15 @@ const Drivers = () => {
         <DialogContent className="sm:max-w-[350px]">
           <DialogHeader>
             <DialogTitle>Mark Driver OFF</DialogTitle>
-            <DialogDescription>
-              Did the driver call out?
-            </DialogDescription>
+            <DialogDescription>Did the driver call out?</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="off-driver">Driver</Label>
-              <Select 
-                value={offDriver?.id || ""} 
+              <Select
+                value={offDriver?.id || ""}
                 onValueChange={(val) => {
-                  const driver = drivers.find(d => d.id === val);
+                  const driver = drivers.find((d) => d.id === val);
                   if (driver) {
                     setOffDriver({ id: driver.id, name: driver.name });
                   }
@@ -2333,15 +2374,11 @@ const Drivers = () => {
               <Label className="text-sm font-medium">Schedule OFF for future dates (optional)</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="justify-start text-left font-normal"
-                  >
+                  <Button variant="outline" className="justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {offDates.length > 0 
+                    {offDates.length > 0
                       ? `${offDates.length} date${offDates.length > 1 ? "s" : ""} selected`
-                      : "Select future dates"
-                    }
+                      : "Select future dates"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -2360,14 +2397,14 @@ const Drivers = () => {
                   {offDates
                     .sort((a, b) => a.getTime() - b.getTime())
                     .map((date, idx) => (
-                      <span 
-                        key={idx} 
+                      <span
+                        key={idx}
                         className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs"
                       >
                         {format(date, "EEE, MMM d")}
                         <button
                           type="button"
-                          onClick={() => setOffDates(offDates.filter(d => !isSameDay(d, date)))}
+                          onClick={() => setOffDates(offDates.filter((d) => !isSameDay(d, date)))}
                           className="ml-0.5 hover:text-destructive"
                         >
                           <X className="h-3 w-3" />
@@ -2377,12 +2414,11 @@ const Drivers = () => {
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
-                {offDates.length === 0 
+                {offDates.length === 0
                   ? "Leave empty to mark OFF for today only"
-                  : offDates.some(d => isSameDay(d, today))
+                  : offDates.some((d) => isSameDay(d, today))
                     ? "Today is included - driver status will change now"
-                    : "Future dates only - driver status won't change today"
-                }
+                    : "Future dates only - driver status won't change today"}
               </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -2409,10 +2445,14 @@ const Drivers = () => {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowOffDialog(false);
-              setOffDates([]);
-            }} tabIndex={-1}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowOffDialog(false);
+                setOffDates([]);
+              }}
+              tabIndex={-1}
+            >
               Cancel
             </Button>
             <Button onClick={handleConfirmOff} disabled={!offDriver}>
@@ -2423,8 +2463,8 @@ const Drivers = () => {
       </Dialog>
 
       {/* Punch In Dialog */}
-      <Dialog 
-        open={showPunchInDialog} 
+      <Dialog
+        open={showPunchInDialog}
         onOpenChange={(open) => {
           setShowPunchInDialog(open);
           if (!open) {
@@ -2433,7 +2473,7 @@ const Drivers = () => {
           }
         }}
       >
-        <DialogContent 
+        <DialogContent
           className="sm:max-w-[350px]"
           onOpenAutoFocus={(e) => {
             e.preventDefault();
@@ -2452,7 +2492,7 @@ const Drivers = () => {
           onKeyDown={(e) => {
             const hasVehicle = punchInVehicle && punchInVehicle !== "__none__";
             const activeEl = document.activeElement;
-            
+
             // Handle Tab key navigation
             if (e.key === "Tab") {
               // Stage 1: Minimal loop
@@ -2550,10 +2590,10 @@ const Drivers = () => {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="punch-in-driver">Driver</Label>
-              <Select 
-                value={punchInDriver?.id || ""} 
+              <Select
+                value={punchInDriver?.id || ""}
                 onValueChange={(val) => {
-                  const driver = drivers.find(d => d.id === val);
+                  const driver = drivers.find((d) => d.id === val);
                   if (driver) {
                     setPunchInDriver({ id: driver.id, name: driver.name });
                     const newVehicle = getDriverDefaultVehicle(driver.id);
@@ -2582,9 +2622,7 @@ const Drivers = () => {
                       <SelectItem key={driver.id} value={driver.id}>
                         {driver.name}
                         {driver.status !== "assigned" && (
-                          <span className="text-muted-foreground ml-2 text-xs">
-                            ({driver.status})
-                          </span>
+                          <span className="text-muted-foreground ml-2 text-xs">({driver.status})</span>
                         )}
                       </SelectItem>
                     ))}
@@ -2592,17 +2630,21 @@ const Drivers = () => {
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="punch-in-vehicle" className={
-                punchInDriver && drivers.find(d => d.id === punchInDriver.id)?.status === "unassigned"
-                  ? "text-amber-400 font-medium"
-                  : ""
-              }>
-                Vehicle {punchInDriver && drivers.find(d => d.id === punchInDriver.id)?.status === "unassigned" && (
+              <Label
+                htmlFor="punch-in-vehicle"
+                className={
+                  punchInDriver && drivers.find((d) => d.id === punchInDriver.id)?.status === "unassigned"
+                    ? "text-amber-400 font-medium"
+                    : ""
+                }
+              >
+                Vehicle{" "}
+                {punchInDriver && drivers.find((d) => d.id === punchInDriver.id)?.status === "unassigned" && (
                   <span className="text-amber-400 text-xs ml-1">(required)</span>
                 )}
               </Label>
-              <Select 
-                value={punchInVehicle} 
+              <Select
+                value={punchInVehicle}
                 onValueChange={(val) => {
                   setPunchInVehicle(val);
                   // After vehicle selection, move focus to time
@@ -2612,12 +2654,14 @@ const Drivers = () => {
                   }, 0);
                 }}
               >
-                <SelectTrigger 
+                <SelectTrigger
                   id="punch-in-vehicle"
                   ref={punchInVehicleRef}
-                  tabIndex={punchInTabStage === 2 || (punchInVehicle === "__none__" || !punchInVehicle) ? 0 : -1}
+                  tabIndex={punchInTabStage === 2 || punchInVehicle === "__none__" || !punchInVehicle ? 0 : -1}
                   className={
-                    punchInDriver && drivers.find(d => d.id === punchInDriver.id)?.status === "unassigned" && (punchInVehicle === "__none__" || !punchInVehicle)
+                    punchInDriver &&
+                    drivers.find((d) => d.id === punchInDriver.id)?.status === "unassigned" &&
+                    (punchInVehicle === "__none__" || !punchInVehicle)
                       ? "ring-2 ring-amber-400 border-amber-400"
                       : ""
                   }
@@ -2660,8 +2704,8 @@ const Drivers = () => {
       </Dialog>
 
       {/* Punch Out Dialog */}
-      <Dialog 
-        open={showPunchOutDialog} 
+      <Dialog
+        open={showPunchOutDialog}
         onOpenChange={(open) => {
           setShowPunchOutDialog(open);
           if (!open) {
@@ -2670,7 +2714,7 @@ const Drivers = () => {
           }
         }}
       >
-        <DialogContent 
+        <DialogContent
           className="sm:max-w-[350px]"
           onOpenAutoFocus={(e) => {
             e.preventDefault();
@@ -2688,7 +2732,7 @@ const Drivers = () => {
           onKeyDown={(e) => {
             const hasDriver = !!punchOutDriver;
             const activeEl = document.activeElement;
-            
+
             // Handle Tab key navigation
             if (e.key === "Tab") {
               // Stage 1: Minimal loop
@@ -2778,10 +2822,10 @@ const Drivers = () => {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="punch-out-driver">Driver</Label>
-              <Select 
-                value={punchOutDriver?.id || ""} 
+              <Select
+                value={punchOutDriver?.id || ""}
                 onValueChange={(val) => {
-                  const driver = drivers.find(d => d.id === val);
+                  const driver = drivers.find((d) => d.id === val);
                   if (driver) {
                     setPunchOutDriver({ id: driver.id, name: driver.name });
                     // Reset to Stage 1 when driver changes
@@ -2794,7 +2838,11 @@ const Drivers = () => {
                   }
                 }}
               >
-                <SelectTrigger id="punch-out-driver" ref={punchOutDriverRef} tabIndex={punchOutTabStage === 2 || !punchOutDriver ? 0 : -1}>
+                <SelectTrigger
+                  id="punch-out-driver"
+                  ref={punchOutDriverRef}
+                  tabIndex={punchOutTabStage === 2 || !punchOutDriver ? 0 : -1}
+                >
                   <SelectValue placeholder="Select driver" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2804,9 +2852,7 @@ const Drivers = () => {
                       <SelectItem key={driver.id} value={driver.id}>
                         {driver.name}
                         {!["working", "on-route"].includes(driver.status) && (
-                          <span className="text-muted-foreground ml-2 text-xs">
-                            ({driver.status})
-                          </span>
+                          <span className="text-muted-foreground ml-2 text-xs">({driver.status})</span>
                         )}
                       </SelectItem>
                     ))}
@@ -2814,18 +2860,17 @@ const Drivers = () => {
               </Select>
             </div>
             {/* Display current vehicle as read-only */}
-            {punchOutDriver && (() => {
-              const driver = drivers.find(d => d.id === punchOutDriver.id);
-              const vehicleUnit = driver?.vehicle;
-              return vehicleUnit ? (
-                <div className="grid gap-2">
-                  <Label className="text-muted-foreground text-xs">Vehicle</Label>
-                  <div className="text-sm font-medium px-3 py-2 rounded-md bg-muted/50">
-                    {vehicleUnit}
+            {punchOutDriver &&
+              (() => {
+                const driver = drivers.find((d) => d.id === punchOutDriver.id);
+                const vehicleUnit = driver?.vehicle;
+                return vehicleUnit ? (
+                  <div className="grid gap-2">
+                    <Label className="text-muted-foreground text-xs">Vehicle</Label>
+                    <div className="text-sm font-medium px-3 py-2 rounded-md bg-muted/50">{vehicleUnit}</div>
                   </div>
-                </div>
-              ) : null;
-            })()}
+                ) : null;
+              })()}
             <div className="grid gap-2">
               <Label htmlFor="punch-out-time">Time</Label>
               <TimeInput
@@ -2855,19 +2900,21 @@ const Drivers = () => {
           <DialogHeader>
             <DialogTitle>Assign OFF Driver?</DialogTitle>
             <DialogDescription>
-              <strong>{pendingOffDriver?.name}</strong> is currently marked as OFF for today. Are you sure you want to bring them in and assign them?
+              <strong>{pendingOffDriver?.name}</strong> is currently marked as OFF for today. Are you sure you want to
+              bring them in and assign them?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowOffDriverConfirm(false);
-              setPendingOffDriver(null);
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowOffDriverConfirm(false);
+                setPendingOffDriver(null);
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={confirmOffDriverAssign}>
-              Yes, Assign Driver
-            </Button>
+            <Button onClick={confirmOffDriverAssign}>Yes, Assign Driver</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2882,15 +2929,17 @@ const Drivers = () => {
         drivers={selectableDrivers}
         onSelect={handleDriverPickerSelect}
         title={
-          pendingAction === "assign" ? "Select Driver to Assign" :
-          pendingAction === "off" ? "Select Driver to Mark OFF" :
-          "Select Driver"
+          pendingAction === "assign"
+            ? "Select Driver to Assign"
+            : pendingAction === "off"
+              ? "Select Driver to Mark OFF"
+              : "Select Driver"
         }
       />
 
       {/* Driver Details Panel */}
-      <DriverDetailsPanel 
-        driver={showDetailsPanel && selectedDriverId ? drivers.find(d => d.id === selectedDriverId) || null : null}
+      <DriverDetailsPanel
+        driver={showDetailsPanel && selectedDriverId ? drivers.find((d) => d.id === selectedDriverId) || null : null}
         onClose={() => setShowDetailsPanel(false)}
       />
     </div>
