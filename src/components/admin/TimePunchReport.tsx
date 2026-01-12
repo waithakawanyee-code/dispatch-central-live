@@ -291,6 +291,7 @@ export function TimePunchReport() {
       punchOut: string | null;
       dailyTotalMinutes: number;
       dailyTotal: string;
+      vehicleUnit: string | null;
     }
     
     interface DriverPayroll {
@@ -320,16 +321,17 @@ export function TimePunchReport() {
       );
 
       // Group by date
-      const dateGroups = new Map<string, { ins: Date[]; outs: (Date | null)[] }>();
+      const dateGroups = new Map<string, { ins: Date[]; outs: (Date | null)[]; vehicles: (string | null)[] }>();
       
       sortedShifts.forEach((shift) => {
         const inTime = new Date(shift.punch_in_at);
         const dateStr = format(inTime, "MM/dd/yyyy");
         if (!dateGroups.has(dateStr)) {
-          dateGroups.set(dateStr, { ins: [], outs: [] });
+          dateGroups.set(dateStr, { ins: [], outs: [], vehicles: [] });
         }
         dateGroups.get(dateStr)!.ins.push(inTime);
         dateGroups.get(dateStr)!.outs.push(shift.punch_out_at ? new Date(shift.punch_out_at) : null);
+        dateGroups.get(dateStr)!.vehicles.push(shift.vehicle_unit);
       });
 
       const dailyRecords: DailyRecord[] = [];
@@ -346,6 +348,7 @@ export function TimePunchReport() {
           for (let i = 0; i < group.ins.length; i++) {
             const punchIn = group.ins[i];
             const punchOut = group.outs[i];
+            const vehicleUnit = group.vehicles[i];
             
             if (punchIn && punchOut) {
               dailyMinutes += (punchOut.getTime() - punchIn.getTime()) / (1000 * 60);
@@ -357,6 +360,7 @@ export function TimePunchReport() {
               punchOut: punchOut ? format(punchOut, "h:mm a") : null,
               dailyTotalMinutes: i === group.ins.length - 1 ? dailyMinutes : 0,
               dailyTotal: i === group.ins.length - 1 ? formatHoursMinutes(dailyMinutes) : "",
+              vehicleUnit: vehicleUnit,
             });
           }
           
@@ -948,6 +952,7 @@ export function TimePunchReport() {
                         <TableHead className="text-center min-w-[100px]">Date</TableHead>
                         <TableHead className="text-center min-w-[90px]">Punch In</TableHead>
                         <TableHead className="text-center min-w-[90px]">Punch Out</TableHead>
+                        <TableHead className="text-center min-w-[80px]">Vehicle</TableHead>
                         <TableHead className="text-center min-w-[100px]">Daily Total</TableHead>
                         <TableHead className="text-center min-w-[100px] font-bold">Weekly Total</TableHead>
                         <TableHead className="text-center min-w-[90px] font-bold">Overtime</TableHead>
@@ -993,6 +998,9 @@ export function TimePunchReport() {
                                 ) : (
                                   <span className="text-muted-foreground">-</span>
                                 )}
+                              </TableCell>
+                              <TableCell className="text-center font-mono text-sm text-muted-foreground">
+                                {record.vehicleUnit || "-"}
                               </TableCell>
                               <TableCell className="text-center font-mono text-sm font-medium">
                                 {record.dailyTotal !== "0h 0m" ? record.dailyTotal : "-"}
