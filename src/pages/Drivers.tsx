@@ -1023,9 +1023,12 @@ const Drivers = () => {
       return;
     }
     
-    const reportTime = "08:00";
-    const punchInTime = "08:00";
-    const punchOutTime = "16:00";
+    // Set punch-in time to 6 hours ago to ensure punch-out works correctly
+    const now = new Date();
+    const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+    const reportTime = `${sixHoursAgo.getHours().toString().padStart(2, '0')}:${sixHoursAgo.getMinutes().toString().padStart(2, '0')}`;
+    const punchInTime = reportTime;
+    const punchOutTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     
     toast({
       title: "Simulating workflow...",
