@@ -7,6 +7,7 @@ import { DriverRow } from "@/components/DriverRow";
 import { DriverDetailsPanel } from "@/components/DriverDetailsPanel";
 import { DriverPicker } from "@/components/DriverPicker";
 import { DriverActionToolbar } from "@/components/DriverActionToolbar";
+import { DriverWorkbookPanel } from "@/components/drivers";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useShifts } from "@/hooks/useShifts";
@@ -1587,34 +1588,40 @@ const Drivers = () => {
         </section>
 
         {/* Driver Status */}
-        <section className="rounded-xl border border-border bg-card/50 p-6 mb-6 min-h-[500px]">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Users className="h-5 w-5 text-primary" />
-              Driver Status
-            </h2>
-            <span className="rounded bg-secondary px-2 py-1 font-mono text-xs text-muted-foreground">
-              {displayDrivers.length} TOTAL
-            </span>
-          </div>
-          
-          {/* Color Legend */}
-          <div className="mb-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-slate-500" />
-              <span>Unassigned</span>
+        <section className="rounded-xl border border-border bg-card/30 p-6 mb-6 min-h-[500px]">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">
+                <Users className="h-5 w-5 text-primary" />
+                Driver Workbook
+              </h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Real-time driver status and assignments
+              </p>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-              <span>Assigned</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-status-on-route" />
-              <span>Working</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-status-offline" />
-              <span>Punched Out</span>
+            <div className="flex items-center gap-3">
+              {/* Quick Stats Pills */}
+              <div className="hidden md:flex items-center gap-2 text-xs">
+                <span className="flex items-center gap-1.5 bg-slate-500/20 text-slate-400 px-2.5 py-1 rounded-full">
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />
+                  {unassignedDrivers} Unconfirmed
+                </span>
+                <span className="flex items-center gap-1.5 bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  {assignedDrivers} Confirmed
+                </span>
+                <span className="flex items-center gap-1.5 bg-status-active/20 text-status-active px-2.5 py-1 rounded-full">
+                  <span className="h-1.5 w-1.5 rounded-full bg-status-active" />
+                  {workingDrivers} Working
+                </span>
+                <span className="flex items-center gap-1.5 bg-muted text-muted-foreground px-2.5 py-1 rounded-full">
+                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                  {punchedOutDrivers} Done
+                </span>
+              </div>
+              <span className="rounded-full bg-secondary px-3 py-1 font-mono text-xs text-muted-foreground">
+                {displayDrivers.length} TOTAL
+              </span>
             </div>
           </div>
 
@@ -1836,16 +1843,16 @@ const Drivers = () => {
               )}
             </div>
           ) : (
-            /* Today View - Full Status Grid */
+            /* Today View - Modern Workbook Panel */
             <div className="space-y-4">
               {/* Global CDL Filter */}
               <div className="flex items-center justify-end gap-2">
                 <span className="text-xs text-muted-foreground uppercase tracking-wide">CDL Filter:</span>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-0.5">
                   <Button
                     variant={globalCdlFilter === "all" ? "secondary" : "ghost"}
                     size="sm"
-                    className="h-6 px-2 text-xs"
+                    className="h-7 px-3 text-xs rounded-md"
                     onClick={() => setGlobalCdlFilter("all")}
                   >
                     All
@@ -1853,7 +1860,7 @@ const Drivers = () => {
                   <Button
                     variant={globalCdlFilter === "non-cdl" ? "secondary" : "ghost"}
                     size="sm"
-                    className="h-6 px-2 text-xs"
+                    className="h-7 px-3 text-xs rounded-md"
                     onClick={() => setGlobalCdlFilter("non-cdl")}
                   >
                     Non-CDL
@@ -1861,272 +1868,112 @@ const Drivers = () => {
                   <Button
                     variant={globalCdlFilter === "cdl" ? "secondary" : "ghost"}
                     size="sm"
-                    className="h-6 px-2 text-xs"
+                    className="h-7 px-3 text-xs rounded-md"
                     onClick={() => setGlobalCdlFilter("cdl")}
                   >
                     CDL
                   </Button>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-6">
-              {/* Left Column */}
-              <div className="flex flex-col gap-5">
-                {/* Confirmed */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                    <span className="flex items-center gap-2">
-                      Confirmed
-                      <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                        {assignedDrivers}
+
+              {/* New Workbook Panel */}
+              <DriverWorkbookPanel
+                drivers={displayDrivers.map(d => ({
+                  ...d,
+                  shiftData: (d as any).shiftData || null,
+                }))}
+                selectedDriverId={selectedDriverId}
+                recentlyUpdatedDrivers={recentlyUpdatedDrivers}
+                onDriverSelect={handleDriverSelect}
+                cdlFilter={globalCdlFilter}
+                isAdmin={isAdmin}
+              />
+
+              {/* OFF Drivers - Collapsible */}
+              <Collapsible open={offDriversOpen} onOpenChange={setOffDriversOpen} className="mt-4">
+                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-border bg-card/50 px-4 py-2.5 hover:bg-card/80 transition-colors cursor-pointer">
+                  <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <ChevronDown className={cn("h-4 w-4 transition-transform", !offDriversOpen && "-rotate-90")} />
+                    <PhoneOff className="h-4 w-4" />
+                    OFF / Not Scheduled
+                    {calledOutCount > 0 && (
+                      <span className="rounded-full bg-destructive/20 text-destructive px-2 py-0.5 font-mono text-xs">
+                        {calledOutCount} called out
                       </span>
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {displayDrivers
-                      .filter((d) => d.status === "confirmed")
-                      .filter((d) => {
-                        if (globalCdlFilter === "cdl") return d.has_cdl;
-                        if (globalCdlFilter === "non-cdl") return !d.has_cdl;
-                        return true;
-                      })
-                      .sort((a, b) => {
-                        if (globalCdlFilter === "all") {
-                          if (a.has_cdl === b.has_cdl) return a.name.localeCompare(b.name);
-                          return a.has_cdl ? 1 : -1;
-                        }
-                        return a.name.localeCompare(b.name);
-                      })
-                      .map((driver) => (
-                        <DriverRow
-                          key={driver.id}
-                          driver={driver}
-                          canEdit={isAdmin}
-                          isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                          onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
-                          availableVehicles={vehicles}
-                          mini
-                          isSelected={selectedDriverId === driver.id}
-                          onSelect={handleDriverSelect}
-                          isAnyHours={(driver as any).isAnyHours || false}
-                        />
-                      ))}
-                    {assignedDrivers === 0 && (
-                      <p className="text-sm text-muted-foreground italic py-3">No confirmed drivers</p>
+                    )}
+                  </span>
+                  <span className="rounded-full bg-muted px-2.5 py-0.5 font-mono text-xs text-muted-foreground">
+                    {offDriverCount}
+                  </span>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-3">
+                  {/* Search box for off drivers */}
+                  <div className="relative mb-3">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                      type="text"
+                      placeholder="Search off drivers..."
+                      value={offDriverSearch}
+                      onChange={(e) => setOffDriverSearch(e.target.value)}
+                      className="h-9 pl-9 pr-9 text-sm bg-background/50 rounded-lg"
+                    />
+                    {offDriverSearch && (
+                      <button
+                        onClick={() => setOffDriverSearch("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
                     )}
                   </div>
-                </div>
-
-                {/* Unconfirmed */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                    <span className="flex items-center gap-2">
-                      Unconfirmed
-                      <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                        {unassignedDrivers}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {displayDrivers
-                      .filter((d) => d.status === "unconfirmed")
-                      .filter((d) => {
-                        if (globalCdlFilter === "cdl") return d.has_cdl;
-                        if (globalCdlFilter === "non-cdl") return !d.has_cdl;
-                        return true;
-                      })
-                      .sort((a, b) => {
-                        // Non-CDL first when showing all
-                        if (globalCdlFilter === "all") {
-                          if (a.has_cdl === b.has_cdl) return a.name.localeCompare(b.name);
-                          return a.has_cdl ? 1 : -1;
-                        }
-                        return a.name.localeCompare(b.name);
-                      })
-                      .map((driver) => (
-                        <DriverRow
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 max-h-[300px] overflow-y-auto">
+                    {filteredOffDrivers.map((driver) => {
+                      const calledOut = isCallOut(driver.id);
+                      const note = getCallOutNote(driver.id);
+                      return (
+                        <div
                           key={driver.id}
-                          driver={driver}
-                          canEdit={isAdmin}
-                          isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                          onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
-                          availableVehicles={vehicles}
-                          mini
-                          isSelected={selectedDriverId === driver.id}
-                          onSelect={handleDriverSelect}
-                          isAnyHours={(driver as any).isAnyHours || false}
-                        />
-                      ))}
-                    {unassignedDrivers === 0 && (
-                      <p className="text-sm text-muted-foreground italic py-3">No unconfirmed drivers</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* OFF Drivers - Collapsible */}
-                <Collapsible open={offDriversOpen} onOpenChange={setOffDriversOpen}>
-                  <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2 hover:text-foreground transition-colors cursor-pointer">
-                    <span className="flex items-center gap-2">
-                      <ChevronDown className={cn("h-4 w-4 transition-transform", !offDriversOpen && "-rotate-90")} />
-                      OFF Drivers
-                      {calledOutCount > 0 && (
-                        <span className="rounded bg-destructive/20 text-destructive px-1.5 py-0.5 font-mono text-xs">
-                          {calledOutCount} called out
-                        </span>
-                      )}
-                    </span>
-                    <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                      {offDriverCount}
-                    </span>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-2">
-                    {/* Search box for off drivers */}
-                    <div className="relative mb-3">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                      <Input
-                        type="text"
-                        placeholder="Search off drivers..."
-                        value={offDriverSearch}
-                        onChange={(e) => setOffDriverSearch(e.target.value)}
-                        className="h-8 pl-8 pr-8 text-sm bg-background/50"
-                      />
-                      {offDriverSearch && (
-                        <button
-                          onClick={() => setOffDriverSearch("")}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          className={cn(
+                            "group flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 text-sm transition-all duration-200",
+                            calledOut ? "border-destructive/30 bg-destructive/5" : "border-border hover:border-primary/30"
+                          )}
                         >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
-                      {filteredOffDrivers.map((driver) => {
-                        const calledOut = isCallOut(driver.id);
-                        const note = getCallOutNote(driver.id);
-                        return (
-                          <div
-                            key={driver.id}
-                            className={cn(
-                              "flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm group",
-                              calledOut && "border-l-2 border-l-destructive bg-destructive/5"
-                            )}
+                          <span className="h-2 w-2 rounded-full bg-muted-foreground shrink-0" />
+                          <span className="font-medium text-foreground flex-1 truncate">{driver.name}</span>
+                          {(driver as any).has_cdl && (
+                            <span className="text-[9px] font-bold text-primary bg-primary/15 px-1.5 py-0.5 rounded uppercase">CDL</span>
+                          )}
+                          {calledOut && (
+                            <span className="flex items-center gap-1 text-destructive" title={note || "Called out"}>
+                              <PhoneOff className="h-3.5 w-3.5" />
+                              <span className="text-[10px] font-medium">Called Out</span>
+                            </span>
+                          )}
+                          {/* Add to schedule button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => addOffDriverToSchedule(driver.id, driver.name)}
+                            className="h-7 px-2 gap-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 hover:text-primary"
+                            title="Add to today's schedule"
                           >
-                            <span className="h-2.5 w-2.5 rounded-full bg-status-offline shrink-0" />
-                            <span className="font-mono font-medium text-foreground flex-1">{driver.name}</span>
-                            {(driver as any).has_cdl && (
-                              <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
-                            )}
-                            {calledOut && (
-                              <span className="flex items-center gap-1.5 text-destructive" title={note || "Called out"}>
-                                <PhoneOff className="h-4 w-4" />
-                                <span className="text-xs">Called Out</span>
-                              </span>
-                            )}
-                            {/* Add to schedule button */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => addOffDriverToSchedule(driver.id, driver.name)}
-                              className="h-7 px-2 gap-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 hover:text-primary"
-                              title="Add to today's schedule"
-                            >
-                              <UserPlus className="h-3.5 w-3.5" />
-                              <span className="hidden sm:inline">Add to Today</span>
-                            </Button>
-                          </div>
-                        );
-                      })}
-                      {filteredOffDrivers.length === 0 && offDriverSearch && (
-                        <p className="text-sm text-muted-foreground italic py-3">No matching drivers</p>
-                      )}
-                      {offDriverCount === 0 && !offDriverSearch && (
-                        <p className="text-sm text-muted-foreground italic py-3">No OFF drivers</p>
-                      )}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              </div>
-
-              {/* Right Column */}
-              <div className="flex flex-col gap-5">
-                {/* Working */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                    <span className="flex items-center gap-2">
-                      Working
-                      <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                        {workingDrivers}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {displayDrivers
-                      .filter((d) => d.status === "on_the_clock")
-                      .filter((d) => {
-                        if (globalCdlFilter === "cdl") return d.has_cdl;
-                        if (globalCdlFilter === "non-cdl") return !d.has_cdl;
-                        return true;
-                      })
-                      .sort((a, b) => {
-                        if (globalCdlFilter === "all") {
-                          if (a.has_cdl === b.has_cdl) return a.name.localeCompare(b.name);
-                          return a.has_cdl ? 1 : -1;
-                        }
-                        return a.name.localeCompare(b.name);
-                      })
-                      .map((driver) => (
-                        <DriverRow
-                          key={driver.id}
-                          driver={driver}
-                          canEdit={isAdmin}
-                          isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                          onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
-                          availableVehicles={vehicles}
-                          mini
-                          isSelected={selectedDriverId === driver.id}
-                          onSelect={handleDriverSelect}
-                          isAnyHours={(driver as any).isAnyHours || false}
-                        />
-                      ))}
-                    {workingDrivers === 0 && (
-                      <p className="text-sm text-muted-foreground italic py-3">No drivers working</p>
+                            <UserPlus className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Add</span>
+                          </Button>
+                        </div>
+                      );
+                    })}
+                    {filteredOffDrivers.length === 0 && offDriverSearch && (
+                      <p className="text-sm text-muted-foreground italic py-4 col-span-2 text-center">No matching drivers</p>
+                    )}
+                    {offDriverCount === 0 && !offDriverSearch && (
+                      <p className="text-sm text-muted-foreground italic py-4 col-span-2 text-center">No OFF drivers</p>
                     )}
                   </div>
-                </div>
-
-                {/* Punched Out */}
-                <div className="space-y-2">
-                  <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                    <span>Punched Out</span>
-                    <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                      {punchedOutDrivers}
-                    </span>
-                  </h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {displayDrivers
-                      .filter((d) => d.status === "done")
-                      .map((driver) => (
-                        <DriverRow
-                          key={driver.id}
-                          driver={driver}
-                          canEdit={isAdmin}
-                          isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                          onStatusChange={(newStatus, reportTime, vehicle) => updateDriverStatus(driver.id, newStatus, reportTime, vehicle)}
-                          availableVehicles={vehicles}
-                          mini
-                          isSelected={selectedDriverId === driver.id}
-                          onSelect={handleDriverSelect}
-                          isAnyHours={(driver as any).isAnyHours || false}
-                        />
-                      ))}
-                    {punchedOutDrivers === 0 && (
-                      <p className="text-sm text-muted-foreground italic py-3">No drivers punched out</p>
-                    )}
-                  </div>
-                </div>
-              </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
-          </div>
           )}
         </section>
 
