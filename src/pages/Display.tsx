@@ -35,12 +35,11 @@ const Display = () => {
   // Filter to only active drivers
   const activeDrivers = drivers.filter((d) => (d as any).is_active !== false);
 
-  // Group drivers by status
-  const assignedDrivers = activeDrivers.filter((d) => d.status === "assigned");
-  const workingDrivers = activeDrivers.filter((d) => ["working", "on-route"].includes(d.status));
-  const unassignedDrivers = activeDrivers.filter((d) => d.status === "unassigned" || d.status === "scheduled");
-  const punchedOutDrivers = activeDrivers.filter((d) => ["punched-out", "offline"].includes(d.status));
-  const offDrivers = activeDrivers.filter((d) => d.status === "off");
+  // Group drivers by status (using new status model)
+  const confirmedDrivers = activeDrivers.filter((d) => d.status === "confirmed");
+  const onTheClockDrivers = activeDrivers.filter((d) => d.status === "on_the_clock");
+  const unconfirmedDrivers = activeDrivers.filter((d) => d.status === "unconfirmed");
+  const doneDrivers = activeDrivers.filter((d) => d.status === "done");
 
   // Group vehicles by status
   const activeVehicles = vehicles.filter((v) => v.status === "active");
@@ -94,52 +93,41 @@ const Display = () => {
               <span className="ml-auto text-sm font-mono text-muted-foreground">{activeDrivers.length} total</span>
             </div>
 
-            {/* Working */}
+            {/* On the Clock */}
             <DriverSection 
-              title="Working" 
-              count={workingDrivers.length} 
-              drivers={workingDrivers} 
+              title="On the Clock" 
+              count={onTheClockDrivers.length} 
+              drivers={onTheClockDrivers} 
               statusColor="bg-status-available"
               bgColor="bg-status-available/5 border-status-available/30"
             />
 
-            {/* Assigned */}
+            {/* Confirmed */}
             <DriverSection 
-              title="Assigned" 
-              count={assignedDrivers.length} 
-              drivers={assignedDrivers} 
+              title="Confirmed" 
+              count={confirmedDrivers.length} 
+              drivers={confirmedDrivers} 
               statusColor="bg-emerald-500"
               bgColor="bg-emerald-500/5 border-emerald-500/30"
             />
 
-            {/* Unassigned */}
+            {/* Unconfirmed */}
             <DriverSection 
-              title="Unassigned" 
-              count={unassignedDrivers.length} 
-              drivers={unassignedDrivers} 
+              title="Unconfirmed" 
+              count={unconfirmedDrivers.length} 
+              drivers={unconfirmedDrivers} 
               statusColor="bg-slate-500"
               bgColor=""
             />
 
-            {/* Punched Out */}
+            {/* Done */}
             <DriverSection 
-              title="Punched Out" 
-              count={punchedOutDrivers.length} 
-              drivers={punchedOutDrivers} 
+              title="Done" 
+              count={doneDrivers.length} 
+              drivers={doneDrivers} 
               statusColor="bg-status-offline"
               bgColor="opacity-60"
             />
-
-            {/* OFF */}
-            {offDrivers.length > 0 && (
-              <DriverSection 
-                title="OFF" 
-                count={offDrivers.length} 
-                drivers={offDrivers} 
-                statusColor="bg-muted-foreground"
-                bgColor="opacity-50"
-              />
-            )}
           </section>
 
           {/* Right Column - Vehicles */}

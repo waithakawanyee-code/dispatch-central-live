@@ -1,8 +1,9 @@
 import { User, Clock, MapPin, Phone } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
+import type { Database } from "@/integrations/supabase/types";
 
-type DriverStatus = "available" | "on-route" | "break" | "offline";
+type DriverStatus = Database["public"]["Enums"]["driver_status"];
 
 interface Driver {
   id: string;
@@ -25,10 +26,10 @@ export function DriverCard({ driver }: DriverCardProps) {
       className={cn(
         "relative overflow-hidden rounded-lg border border-border bg-card p-4 transition-all duration-300",
         "hover:border-primary/30 hover:bg-card/80",
-        driver.status === "available" && "border-l-4 border-l-status-available",
-        driver.status === "on-route" && "border-l-4 border-l-status-on-route",
-        driver.status === "break" && "border-l-4 border-l-status-break",
-        driver.status === "offline" && "border-l-4 border-l-status-offline opacity-60"
+        driver.status === "unconfirmed" && "border-l-4 border-l-slate-500",
+        driver.status === "confirmed" && "border-l-4 border-l-emerald-500",
+        driver.status === "on_the_clock" && "border-l-4 border-l-status-available",
+        driver.status === "done" && "border-l-4 border-l-status-offline opacity-60"
       )}
     >
       <div className="flex items-start justify-between gap-4">
@@ -41,7 +42,7 @@ export function DriverCard({ driver }: DriverCardProps) {
             <p className="font-mono text-xs text-muted-foreground">{driver.id}</p>
           </div>
         </div>
-        <StatusBadge status={driver.status} showPulse={driver.status !== "offline"} size="sm" />
+        <StatusBadge status={driver.status} showPulse={driver.status !== "done"} size="sm" />
       </div>
 
       <div className="mt-4 grid gap-2 text-sm">

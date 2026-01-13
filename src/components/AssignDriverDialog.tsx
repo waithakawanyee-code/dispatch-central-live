@@ -114,8 +114,8 @@ export function AssignDriverDialog({
   // Filter to active vehicles only
   const activeVehicles = vehicles.filter(v => v.status === "active");
   
-  // Filter to unassigned drivers only (for driver picker)
-  const unassignedDrivers = drivers.filter(d => d.status === "unassigned" && d.is_active);
+  // Filter to unconfirmed drivers only (for driver picker)
+  const unassignedDrivers = drivers.filter(d => d.status === "unconfirmed" && d.is_active);
 
   // Show driver select only if drivers list is provided and has entries
   const showDriverSelect = drivers.length > 0;
