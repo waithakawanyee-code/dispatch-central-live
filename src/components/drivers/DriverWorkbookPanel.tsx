@@ -51,10 +51,10 @@ export function DriverWorkbookPanel({
 
   // Categorize drivers
   const categorizedDrivers = useMemo(() => {
-    // UNCONFIRMED - split by has vehicle vs reporting to office
+    // UNCONFIRMED - split by has vehicle vs no vehicle
     const unconfirmed = filterByCdl(drivers.filter((d) => d.status === "unconfirmed"));
     const unconfirmedWithVehicle = unconfirmed.filter((d) => d.vehicle || d.default_vehicle);
-    const unconfirmedReporting = unconfirmed.filter((d) => !d.vehicle && !d.default_vehicle);
+    const unconfirmedNoVehicle = unconfirmed.filter((d) => !d.vehicle && !d.default_vehicle);
 
     // CONFIRMED - split by dispatched (has vehicle) vs needs vehicle
     const confirmed = filterByCdl(drivers.filter((d) => d.status === "confirmed"));
@@ -71,7 +71,7 @@ export function DriverWorkbookPanel({
       unconfirmed: {
         total: unconfirmed.length,
         withVehicle: unconfirmedWithVehicle,
-        reporting: unconfirmedReporting,
+        noVehicle: unconfirmedNoVehicle,
       },
       confirmed: {
         total: confirmed.length,
@@ -100,41 +100,41 @@ export function DriverWorkbookPanel({
             </p>
           ) : (
             <div className="space-y-4">
-              {/* Has Vehicle subcategory */}
-              <DriverSubcategoryGroup
-                type="has_vehicle"
-                count={categorizedDrivers.unconfirmed.withVehicle.length}
-              >
-                {categorizedDrivers.unconfirmed.withVehicle.map((driver) => (
-                  <DriverWorkbookCard
-                    key={driver.id}
-                    driver={driver}
-                    shiftData={driver.shiftData}
-                    isSelected={selectedDriverId === driver.id}
-                    isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                    onClick={() => onDriverSelect(driver.id)}
-                    subcategory="has_vehicle"
-                  />
-                ))}
-              </DriverSubcategoryGroup>
+              {/* Has Vehicle subcategory - take-home drivers not yet confirmed */}
+              {categorizedDrivers.unconfirmed.withVehicle.length > 0 && (
+                <DriverSubcategoryGroup
+                  type="has_vehicle"
+                  count={categorizedDrivers.unconfirmed.withVehicle.length}
+                >
+                  {categorizedDrivers.unconfirmed.withVehicle.map((driver) => (
+                    <DriverWorkbookCard
+                      key={driver.id}
+                      driver={driver}
+                      shiftData={driver.shiftData}
+                      isSelected={selectedDriverId === driver.id}
+                      isUpdated={recentlyUpdatedDrivers.has(driver.id)}
+                      onClick={() => onDriverSelect(driver.id)}
+                      subcategory="has_vehicle"
+                    />
+                  ))}
+                </DriverSubcategoryGroup>
+              )}
 
-              {/* Reporting to Office subcategory */}
-              <DriverSubcategoryGroup
-                type="reporting_to_office"
-                count={categorizedDrivers.unconfirmed.reporting.length}
-              >
-                {categorizedDrivers.unconfirmed.reporting.map((driver) => (
-                  <DriverWorkbookCard
-                    key={driver.id}
-                    driver={driver}
-                    shiftData={driver.shiftData}
-                    isSelected={selectedDriverId === driver.id}
-                    isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                    onClick={() => onDriverSelect(driver.id)}
-                    subcategory="reporting_to_office"
-                  />
-                ))}
-              </DriverSubcategoryGroup>
+              {/* Regular unconfirmed drivers (no vehicle) - no subcategory label */}
+              {categorizedDrivers.unconfirmed.noVehicle.length > 0 && (
+                <div className="grid grid-cols-1 gap-1.5">
+                  {categorizedDrivers.unconfirmed.noVehicle.map((driver) => (
+                    <DriverWorkbookCard
+                      key={driver.id}
+                      driver={driver}
+                      shiftData={driver.shiftData}
+                      isSelected={selectedDriverId === driver.id}
+                      isUpdated={recentlyUpdatedDrivers.has(driver.id)}
+                      onClick={() => onDriverSelect(driver.id)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </DriverStatusSection>
