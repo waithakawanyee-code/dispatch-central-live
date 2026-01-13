@@ -70,10 +70,10 @@ const AMTRAK_SHIFTS = [
 ];
 
 const schedulerStatusOptions: { value: DriverStatus; label: string; color: string }[] = [
-  { value: "off", label: "Off", color: "text-muted-foreground" },
-  { value: "scheduled", label: "Scheduled", color: "text-status-available" },
-  { value: "assigned", label: "Assigned", color: "text-blue-500" },
-  { value: "working", label: "Working", color: "text-status-on-route" },
+  { value: "unconfirmed", label: "Unconfirmed", color: "text-muted-foreground" },
+  { value: "confirmed", label: "Confirmed", color: "text-status-available" },
+  { value: "on_the_clock", label: "On The Clock", color: "text-blue-500" },
+  { value: "done", label: "Done", color: "text-status-on-route" },
 ];
 
 const Scheduler = () => {
@@ -796,10 +796,10 @@ const Scheduler = () => {
               >
                 <span className={cn(
                   "h-1.5 w-1.5 rounded-full",
-                  option.value === "off" && "bg-muted-foreground",
-                  option.value === "scheduled" && "bg-status-available",
-                  option.value === "assigned" && "bg-blue-500",
-                  option.value === "working" && "bg-status-on-route"
+                  option.value === "unconfirmed" && "bg-muted-foreground",
+                  option.value === "confirmed" && "bg-status-available",
+                  option.value === "on_the_clock" && "bg-blue-500",
+                  option.value === "done" && "bg-status-on-route"
                 )} />
                 {option.label}
               </button>
