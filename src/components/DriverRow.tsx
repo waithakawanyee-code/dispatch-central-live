@@ -50,42 +50,40 @@ interface DriverRowProps {
   isAnyHours?: boolean;
 }
 
-// Workflow: Unassigned → Assigned → Working → Punched Out
-// Unassigned drivers get: Assign or OFF
-const unassignedStatusOptions: { value: DriverStatus; label: string }[] = [
-  { value: "assigned", label: "Assign" },
-  { value: "off", label: "OFF" },
+// New status workflow: unconfirmed → confirmed → on_the_clock → done
+const unconfirmedStatusOptions: { value: DriverStatus; label: string }[] = [
+  { value: "confirmed", label: "Confirm" },
 ];
 
-const assignedStatusOptions: { value: DriverStatus; label: string }[] = [
-  { value: "working", label: "Punch In" },
-  { value: "unassigned", label: "Unassign" },
+const confirmedStatusOptions: { value: DriverStatus; label: string }[] = [
+  { value: "on_the_clock", label: "Punch In" },
+  { value: "unconfirmed", label: "Unconfirm" },
 ];
 
-const workingStatusOptions: { value: DriverStatus; label: string }[] = [
-  { value: "punched-out", label: "Punch Out" },
+const onTheClockStatusOptions: { value: DriverStatus; label: string }[] = [
+  { value: "done", label: "Punch Out" },
 ];
 
-const punchedOutStatusOptions: { value: DriverStatus; label: string }[] = [
-  { value: "unassigned", label: "Reset to Unassigned" },
+const doneStatusOptions: { value: DriverStatus; label: string }[] = [
+  { value: "unconfirmed", label: "Reset to Unconfirmed" },
 ];
 
-const compactUnassignedOptions: { value: DriverStatus; label: string }[] = [
-  { value: "assigned", label: "Assign" },
-  { value: "off", label: "OFF" },
+// Compact versions
+const compactUnconfirmedOptions: { value: DriverStatus; label: string }[] = [
+  { value: "confirmed", label: "Confirm" },
 ];
 
-const compactAssignedOptions: { value: DriverStatus; label: string }[] = [
-  { value: "working", label: "Punch In" },
-  { value: "unassigned", label: "Unassign" },
+const compactConfirmedOptions: { value: DriverStatus; label: string }[] = [
+  { value: "on_the_clock", label: "Punch In" },
+  { value: "unconfirmed", label: "Unconfirm" },
 ];
 
-const compactWorkingOptions: { value: DriverStatus; label: string }[] = [
-  { value: "punched-out", label: "Punch Out" },
+const compactOnTheClockOptions: { value: DriverStatus; label: string }[] = [
+  { value: "done", label: "Punch Out" },
 ];
 
-const compactPunchedOutOptions: { value: DriverStatus; label: string }[] = [
-  { value: "unassigned", label: "Reset" },
+const compactDoneOptions: { value: DriverStatus; label: string }[] = [
+  { value: "unconfirmed", label: "Reset" },
 ];
 
 interface TimePunch {
@@ -97,7 +95,6 @@ interface TimePunch {
 export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, mini = false, availableVehicles = [], isSelected = false, onSelect, isAnyHours = false }: DriverRowProps) {
   const { toast } = useToast();
   const [showAssignDialog, setShowAssignDialog] = useState(false);
-  const [showOffDialog, setShowOffDialog] = useState(false);
   const [showPunchTimesDialog, setShowPunchTimesDialog] = useState(false);
   const [punchTimes, setPunchTimes] = useState<TimePunch[]>([]);
   const [loadingPunches, setLoadingPunches] = useState(false);
@@ -108,8 +105,6 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
   const [newPunchTime, setNewPunchTime] = useState("");
   const [reportTime, setReportTime] = useState(driver.report_time?.slice(0, 5) || "");
   const [selectedVehicle, setSelectedVehicle] = useState(driver.vehicle || "__none__");
-  const [isCallOut, setIsCallOut] = useState(false);
-  const [callOutNote, setCallOutNote] = useState("");
 
   // Calculate total hours worked from punch pairs
   const calculateTotalHours = () => {
@@ -268,58 +263,50 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
   };
 
   const handleStatusSelect = (status: DriverStatus) => {
-    if (status === "assigned") {
+    if (status === "confirmed") {
       setReportTime(driver.report_time?.slice(0, 5) || "");
       setSelectedVehicle(getInitialVehicle());
       setShowAssignDialog(true);
-    } else if (status === "off") {
-      setIsCallOut(false);
-      setCallOutNote("");
-      setShowOffDialog(true);
     } else {
       onStatusChange?.(status);
     }
   };
 
-  const handlePunchedOutClick = () => {
-    if (["punched-out", "offline"].includes(driver.status)) {
+  const handleDoneClick = () => {
+    if (driver.status === "done") {
       fetchPunchTimes();
     }
   };
 
   const handleAssign = (assignReportTime: string | undefined, assignVehicle: string | undefined) => {
-    onStatusChange?.("assigned", assignReportTime, assignVehicle);
+    onStatusChange?.("confirmed", assignReportTime, assignVehicle);
   };
 
-  const handleConfirmOff = async () => {
-    // If it's a call out, record it
-    if (isCallOut) {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from("call_outs").insert({
-        driver_id: driver.id,
-        driver_name: driver.name,
-        note: callOutNote.trim() || null,
-        created_by: user?.id || null,
-      });
-
-      if (error) {
-        toast({
-          title: "Error recording call out",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Call out recorded",
-          description: `${driver.name} marked as called out`,
-        });
-      }
+  // Helper to get status options based on current status
+  const getStatusOptions = () => {
+    switch (driver.status) {
+      case "done":
+        return doneStatusOptions;
+      case "on_the_clock":
+        return onTheClockStatusOptions;
+      case "confirmed":
+        return confirmedStatusOptions;
+      default:
+        return unconfirmedStatusOptions;
     }
+  };
 
-    onStatusChange?.("off");
-    setShowOffDialog(false);
-    setIsCallOut(false);
-    setCallOutNote("");
+  const getCompactStatusOptions = () => {
+    switch (driver.status) {
+      case "done":
+        return compactDoneOptions;
+      case "on_the_clock":
+        return compactOnTheClockOptions;
+      case "confirmed":
+        return compactConfirmedOptions;
+      default:
+        return compactUnconfirmedOptions;
+    }
   };
 
   // Mini view - very compact for high-density lists
@@ -335,11 +322,10 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
           "inline-flex items-center gap-1.5 rounded border border-border bg-card px-2 py-1 text-xs transition-all duration-200",
           "hover:border-primary/30",
           canEdit && "cursor-pointer",
-          driver.status === "unassigned" && "border-slate-500/30",
-          driver.status === "scheduled" && "border-amber-500/30 bg-amber-500/5",
-          driver.status === "assigned" && "border-emerald-500/30 bg-emerald-500/5",
-          ["working", "on-route"].includes(driver.status) && "border-status-available/30 bg-status-available/5",
-          ["offline", "punched-out"].includes(driver.status) && "border-status-offline/30 opacity-70",
+          driver.status === "unconfirmed" && "border-slate-500/30",
+          driver.status === "confirmed" && "border-emerald-500/30 bg-emerald-500/5",
+          driver.status === "on_the_clock" && "border-status-available/30 bg-status-available/5",
+          driver.status === "done" && "border-status-offline/30 opacity-70",
           isUpdated && "animate-row-flash",
           // Selection highlight
           isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background border-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
@@ -351,11 +337,10 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
           <span
             className={cn(
               "h-1.5 w-1.5 rounded-full shrink-0",
-              driver.status === "scheduled" && "bg-amber-500",
-              driver.status === "unassigned" && "bg-slate-500",
-              driver.status === "assigned" && "bg-emerald-500",
-              ["working", "on-route"].includes(driver.status) && "bg-status-available",
-              ["offline", "punched-out"].includes(driver.status) && "bg-status-offline"
+              driver.status === "unconfirmed" && "bg-slate-500",
+              driver.status === "confirmed" && "bg-emerald-500",
+              driver.status === "on_the_clock" && "bg-status-available",
+              driver.status === "done" && "bg-status-offline"
             )}
           />
         )}
@@ -368,12 +353,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
 
 
     // Determine which options to show based on status
-    const getMiniOptions = () => {
-      if (["punched-out", "offline", "off"].includes(driver.status)) return compactPunchedOutOptions;
-      if (["working", "on-route"].includes(driver.status)) return compactWorkingOptions;
-      if (driver.status === "assigned") return compactAssignedOptions;
-      return compactUnassignedOptions;
-    };
+    const getMiniOptions = () => getCompactStatusOptions();
 
     if (canEdit) {
       return (
@@ -383,9 +363,9 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               {miniContent}
             </ContextMenuTrigger>
             <ContextMenuContent className="min-w-[140px]">
-              {["punched-out", "offline"].includes(driver.status) && (
+              {driver.status === "done" && (
                 <ContextMenuItem
-                  onClick={handlePunchedOutClick}
+                  onClick={handleDoneClick}
                   className="cursor-pointer text-sm"
                 >
                   <Clock className="h-4 w-4 mr-2" />
@@ -416,49 +396,6 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
             vehicles={availableVehicles}
             onConfirm={handleAssign}
           />
-
-          <Dialog open={showOffDialog} onOpenChange={setShowOffDialog}>
-            <DialogContent className="sm:max-w-[350px]">
-              <DialogHeader>
-                <DialogTitle>Mark {driver.name} as OFF</DialogTitle>
-                <DialogDescription>
-                  Did the driver call out?
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="call-out-mini"
-                    checked={isCallOut}
-                    onCheckedChange={(checked) => setIsCallOut(checked === true)}
-                  />
-                  <Label htmlFor="call-out-mini" className="text-sm font-normal">
-                    Yes, driver called out
-                  </Label>
-                </div>
-                {isCallOut && (
-                  <div className="grid gap-2">
-                    <Label htmlFor="call-out-note-mini">Note (optional)</Label>
-                    <Textarea
-                      id="call-out-note-mini"
-                      placeholder="Reason for call out..."
-                      value={callOutNote}
-                      onChange={(e) => setCallOutNote(e.target.value)}
-                      rows={2}
-                    />
-                  </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowOffDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleConfirmOff}>
-                  Confirm OFF
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
 
           <Dialog open={showPunchTimesDialog} onOpenChange={setShowPunchTimesDialog}>
             <DialogContent className="sm:max-w-[350px]">
@@ -634,28 +571,20 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
           "flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm transition-all duration-200",
           "hover:border-primary/30",
           canEdit && "cursor-pointer",
-          driver.status === "available" && "border-l-4 border-l-status-available",
-          driver.status === "on-route" && "border-l-4 border-l-status-on-route",
-          driver.status === "break" && "border-l-4 border-l-status-break",
-          driver.status === "offline" && "border-l-4 border-l-status-offline opacity-60",
-          driver.status === "off" && "border-l-4 border-l-status-offline opacity-60",
-          driver.status === "scheduled" && "border-l-4 border-l-amber-500 bg-amber-500/10",
-          driver.status === "assigned" && "border-l-4 border-l-emerald-500 bg-emerald-500/10",
-          driver.status === "working" && "border-l-4 border-l-status-available",
+          driver.status === "unconfirmed" && "border-l-4 border-l-slate-500",
+          driver.status === "confirmed" && "border-l-4 border-l-emerald-500 bg-emerald-500/10",
+          driver.status === "on_the_clock" && "border-l-4 border-l-status-available",
+          driver.status === "done" && "border-l-4 border-l-status-offline opacity-60",
           isUpdated && "animate-row-flash"
         )}
       >
         <span
           className={cn(
             "h-3 w-3 rounded-full shrink-0",
-            driver.status === "scheduled" && "bg-amber-500",
-            driver.status === "assigned" && "bg-emerald-500",
-            driver.status === "available" && "bg-status-available",
-            driver.status === "on-route" && "bg-status-on-route",
-            driver.status === "break" && "bg-status-break",
-            driver.status === "offline" && "bg-status-offline",
-            driver.status === "off" && "bg-status-offline",
-            driver.status === "working" && "bg-status-available"
+            driver.status === "unconfirmed" && "bg-slate-500",
+            driver.status === "confirmed" && "bg-emerald-500",
+            driver.status === "on_the_clock" && "bg-status-available",
+            driver.status === "done" && "bg-status-offline"
           )}
         />
         <div className="flex flex-col gap-0.5 flex-1">
@@ -668,15 +597,15 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               <span className="text-[9px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded" title="Open to any shift">Any</span>
             )}
           </span>
-          {/* Show phone for unassigned/scheduled drivers */}
-          {(driver.status === "unassigned" || driver.status === "scheduled") && driver.phone && (
+          {/* Show phone for unconfirmed drivers */}
+          {driver.status === "unconfirmed" && driver.phone && (
             <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
               <Phone className="h-3 w-3" />
               {driver.phone}
             </span>
           )}
-          {/* Show vehicle or report time for assigned drivers */}
-          {driver.status === "assigned" && (
+          {/* Show vehicle or report time for confirmed drivers */}
+          {driver.status === "confirmed" && (
             <div className="flex items-center gap-3 text-xs">
               {driver.report_time && (
                 <span className="flex items-center gap-1.5 font-mono text-muted-foreground">
@@ -692,8 +621,8 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               )}
             </div>
           )}
-          {/* Show vehicle for working drivers */}
-          {["working", "on-route"].includes(driver.status) && driver.vehicle && (
+          {/* Show vehicle for on_the_clock drivers */}
+          {driver.status === "on_the_clock" && driver.vehicle && (
             <span className="flex items-center gap-1.5 font-mono text-xs text-primary">
               <Truck className="h-3.5 w-3.5" />
               {driver.vehicle}
@@ -711,16 +640,16 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               {content}
             </ContextMenuTrigger>
             <ContextMenuContent className="min-w-[140px]">
-              {["punched-out", "offline"].includes(driver.status) && (
+              {driver.status === "done" && (
                 <ContextMenuItem
-                  onClick={handlePunchedOutClick}
+                  onClick={handleDoneClick}
                   className="cursor-pointer text-sm"
                 >
                   <Clock className="h-4 w-4 mr-2" />
                   <span>View Times</span>
                 </ContextMenuItem>
               )}
-              {(["punched-out", "offline", "off"].includes(driver.status) ? compactPunchedOutOptions : ["working", "on-route"].includes(driver.status) ? compactWorkingOptions : driver.status === "assigned" ? compactAssignedOptions : compactUnassignedOptions).map((option) => (
+              {getCompactStatusOptions().map((option) => (
                 <ContextMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
@@ -744,49 +673,6 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
             vehicles={availableVehicles}
             onConfirm={handleAssign}
           />
-
-          <Dialog open={showOffDialog} onOpenChange={setShowOffDialog}>
-            <DialogContent className="sm:max-w-[350px]">
-              <DialogHeader>
-                <DialogTitle>Mark {driver.name} as OFF</DialogTitle>
-                <DialogDescription>
-                  Did the driver call out?
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="call-out-compact"
-                    checked={isCallOut}
-                    onCheckedChange={(checked) => setIsCallOut(checked === true)}
-                  />
-                  <Label htmlFor="call-out-compact" className="text-sm font-normal">
-                    Yes, driver called out
-                  </Label>
-                </div>
-                {isCallOut && (
-                  <div className="grid gap-2">
-                    <Label htmlFor="call-out-note-compact">Note (optional)</Label>
-                    <Textarea
-                      id="call-out-note-compact"
-                      placeholder="Reason for call out..."
-                      value={callOutNote}
-                      onChange={(e) => setCallOutNote(e.target.value)}
-                      rows={2}
-                    />
-                  </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowOffDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleConfirmOff}>
-                  Confirm OFF
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
 
           <Dialog open={showPunchTimesDialog} onOpenChange={setShowPunchTimesDialog}>
             <DialogContent className="sm:max-w-[350px]">
@@ -961,10 +847,10 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
         className={cn(
           "flex items-center gap-4 rounded-lg border border-border bg-card px-3 py-2 transition-all duration-200",
           "hover:border-primary/30",
-          driver.status === "available" && "border-l-4 border-l-status-available",
-          driver.status === "on-route" && "border-l-4 border-l-status-on-route",
-          driver.status === "break" && "border-l-4 border-l-status-break",
-          driver.status === "offline" && "border-l-4 border-l-status-offline opacity-60",
+          driver.status === "unconfirmed" && "border-l-4 border-l-slate-500",
+          driver.status === "confirmed" && "border-l-4 border-l-emerald-500",
+          driver.status === "on_the_clock" && "border-l-4 border-l-status-available",
+          driver.status === "done" && "border-l-4 border-l-status-offline opacity-60",
           isUpdated && "animate-row-flash"
         )}
       >
@@ -992,7 +878,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
           )}
         </div>
 
-        {driver.status === "assigned" && driver.report_time && (
+        {driver.status === "confirmed" && driver.report_time && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
             <span className="font-mono">{driver.report_time.slice(0, 5)}</span>
@@ -1010,20 +896,20 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
           <ContextMenu>
             <ContextMenuTrigger asChild>
               <button className="cursor-pointer focus:outline-none">
-                <StatusBadge status={driver.status} showPulse={driver.status !== "offline"} size="sm" />
+                <StatusBadge status={driver.status} showPulse={driver.status !== "done"} size="sm" />
               </button>
             </ContextMenuTrigger>
             <ContextMenuContent className="min-w-[140px]">
-              {["punched-out", "offline"].includes(driver.status) && (
+              {driver.status === "done" && (
                 <ContextMenuItem
-                  onClick={handlePunchedOutClick}
+                  onClick={handleDoneClick}
                   className="cursor-pointer text-sm"
                 >
                   <Clock className="h-4 w-4 mr-2" />
                   <span>View Times</span>
                 </ContextMenuItem>
               )}
-              {(["punched-out", "offline", "off"].includes(driver.status) ? punchedOutStatusOptions : ["working", "on-route"].includes(driver.status) ? workingStatusOptions : driver.status === "assigned" ? assignedStatusOptions : unassignedStatusOptions).map((option) => (
+              {getStatusOptions().map((option) => (
                 <ContextMenuItem
                   key={option.value}
                   onClick={() => handleStatusSelect(option.value)}
@@ -1039,7 +925,7 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
             </ContextMenuContent>
           </ContextMenu>
         ) : (
-          <StatusBadge status={driver.status} showPulse={driver.status !== "offline"} size="sm" />
+          <StatusBadge status={driver.status} showPulse={driver.status !== "done"} size="sm" />
         )}
       </div>
 
@@ -1052,49 +938,6 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
         vehicles={availableVehicles}
         onConfirm={handleAssign}
       />
-
-      <Dialog open={showOffDialog} onOpenChange={setShowOffDialog}>
-        <DialogContent className="sm:max-w-[350px]">
-          <DialogHeader>
-            <DialogTitle>Mark {driver.name} as OFF</DialogTitle>
-            <DialogDescription>
-              Did the driver call out?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="call-out-full"
-                checked={isCallOut}
-                onCheckedChange={(checked) => setIsCallOut(checked === true)}
-              />
-              <Label htmlFor="call-out-full" className="text-sm font-normal">
-                Yes, driver called out
-              </Label>
-            </div>
-            {isCallOut && (
-              <div className="grid gap-2">
-                <Label htmlFor="call-out-note-full">Note (optional)</Label>
-                <Textarea
-                  id="call-out-note-full"
-                  placeholder="Reason for call out..."
-                  value={callOutNote}
-                  onChange={(e) => setCallOutNote(e.target.value)}
-                  rows={2}
-                />
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowOffDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmOff}>
-              Confirm OFF
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={showPunchTimesDialog} onOpenChange={setShowPunchTimesDialog}>
         <DialogContent className="sm:max-w-[350px]">

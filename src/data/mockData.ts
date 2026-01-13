@@ -1,4 +1,6 @@
-export type DriverStatus = "available" | "on-route" | "break" | "offline";
+import type { Database } from "@/integrations/supabase/types";
+
+export type DriverStatus = Database["public"]["Enums"]["driver_status"];
 export type VehicleStatus = "active" | "out-of-service";
 export type CleanStatus = "clean" | "dirty";
 
@@ -40,7 +42,7 @@ export const mockDrivers: Driver[] = [
     id: "DRV-001",
     name: "Marcus Johnson",
     phone: "(555) 123-4567",
-    status: "on-route",
+    status: "on_the_clock",
     currentLocation: "Downtown → Airport",
     shiftStart: "06:00",
     shiftEnd: "14:00",
@@ -50,7 +52,7 @@ export const mockDrivers: Driver[] = [
     id: "DRV-002",
     name: "Sarah Chen",
     phone: "(555) 234-5678",
-    status: "available",
+    status: "confirmed",
     currentLocation: "Base Station A",
     shiftStart: "08:00",
     shiftEnd: "16:00",
@@ -60,7 +62,7 @@ export const mockDrivers: Driver[] = [
     id: "DRV-003",
     name: "James Williams",
     phone: "(555) 345-6789",
-    status: "break",
+    status: "on_the_clock",
     currentLocation: "Rest Stop 12",
     shiftStart: "10:00",
     shiftEnd: "18:00",
@@ -70,7 +72,7 @@ export const mockDrivers: Driver[] = [
     id: "DRV-004",
     name: "Emily Rodriguez",
     phone: "(555) 456-7890",
-    status: "on-route",
+    status: "on_the_clock",
     currentLocation: "Industrial Park → Port",
     shiftStart: "07:00",
     shiftEnd: "15:00",
@@ -80,7 +82,7 @@ export const mockDrivers: Driver[] = [
     id: "DRV-005",
     name: "Michael Thompson",
     phone: "(555) 567-8901",
-    status: "offline",
+    status: "unconfirmed",
     shiftStart: "14:00",
     shiftEnd: "22:00",
   },
@@ -88,7 +90,7 @@ export const mockDrivers: Driver[] = [
     id: "DRV-006",
     name: "Lisa Park",
     phone: "(555) 678-9012",
-    status: "available",
+    status: "confirmed",
     currentLocation: "Base Station B",
     shiftStart: "06:00",
     shiftEnd: "14:00",
@@ -98,7 +100,7 @@ export const mockDrivers: Driver[] = [
     id: "DRV-007",
     name: "David Martinez",
     phone: "(555) 789-0123",
-    status: "on-route",
+    status: "on_the_clock",
     currentLocation: "Suburb → City Center",
     shiftStart: "09:00",
     shiftEnd: "17:00",
@@ -108,7 +110,7 @@ export const mockDrivers: Driver[] = [
     id: "DRV-008",
     name: "Amanda Foster",
     phone: "(555) 890-1234",
-    status: "offline",
+    status: "done",
     shiftStart: "18:00",
     shiftEnd: "02:00",
   },
@@ -204,7 +206,7 @@ export const mockSchedule: ScheduleEntry[] = [
     shiftStart: "06:00",
     shiftEnd: "14:00",
     route: "Downtown → Airport",
-    status: "on-route",
+    status: "on_the_clock",
   },
   {
     id: "SCH-002",
@@ -214,7 +216,7 @@ export const mockSchedule: ScheduleEntry[] = [
     shiftStart: "07:00",
     shiftEnd: "15:00",
     route: "Industrial Park → Port",
-    status: "on-route",
+    status: "on_the_clock",
   },
   {
     id: "SCH-003",
@@ -224,7 +226,7 @@ export const mockSchedule: ScheduleEntry[] = [
     shiftStart: "08:00",
     shiftEnd: "16:00",
     route: "Standby - Base A",
-    status: "available",
+    status: "confirmed",
   },
   {
     id: "SCH-004",
@@ -234,7 +236,7 @@ export const mockSchedule: ScheduleEntry[] = [
     shiftStart: "09:00",
     shiftEnd: "17:00",
     route: "Suburb → City Center",
-    status: "on-route",
+    status: "on_the_clock",
   },
   {
     id: "SCH-005",
@@ -244,7 +246,7 @@ export const mockSchedule: ScheduleEntry[] = [
     shiftStart: "10:00",
     shiftEnd: "18:00",
     route: "Break",
-    status: "break",
+    status: "on_the_clock",
   },
   {
     id: "SCH-006",
@@ -254,6 +256,6 @@ export const mockSchedule: ScheduleEntry[] = [
     shiftStart: "14:00",
     shiftEnd: "22:00",
     route: "Pending Assignment",
-    status: "offline",
+    status: "unconfirmed",
   },
 ];

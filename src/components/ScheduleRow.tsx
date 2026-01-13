@@ -1,8 +1,9 @@
 import { Clock, MapPin, User, Truck } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
+import type { Database } from "@/integrations/supabase/types";
 
-type DriverStatus = "available" | "on-route" | "break" | "offline";
+type DriverStatus = Database["public"]["Enums"]["driver_status"];
 
 interface ScheduleEntry {
   id: string;
@@ -59,7 +60,7 @@ export function ScheduleRow({ entry, isActive = false }: ScheduleRowProps) {
         )}
       </div>
 
-      <StatusBadge status={entry.status} showPulse={entry.status !== "offline"} size="sm" />
+      <StatusBadge status={entry.status} showPulse={entry.status !== "done"} size="sm" />
     </div>
   );
 }
