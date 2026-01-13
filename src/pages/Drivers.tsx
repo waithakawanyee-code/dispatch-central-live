@@ -410,13 +410,33 @@ const Drivers = () => {
         setFutureAssignments([...futureAssignments, data as FutureAssignment]);
       }
     } else {
-      // Today: update driver status directly
-      const vehicleValue = assignVehicle === "__none__" ? undefined : assignVehicle;
-      await updateDriverStatus(assigningDriver.id, "confirmed", assignReportTime || undefined, vehicleValue);
-      toast({
-        title: "Driver assigned",
-        description: `${assigningDriver.name} has been assigned`,
-      });
+      // Today: update driver vehicle/report_time without changing status
+      // Status remains the same - assigning a vehicle does NOT confirm the driver
+      const driver = drivers.find(d => d.id === assigningDriver.id);
+      const vehicleValue = assignVehicle === "__none__" ? null : assignVehicle;
+      const reportTimeValue = assignReportTime || null;
+      
+      const { error } = await supabase
+        .from("drivers")
+        .update({
+          vehicle: vehicleValue,
+          report_time: reportTimeValue,
+        })
+        .eq("id", assigningDriver.id);
+      
+      if (error) {
+        toast({
+          title: "Error assigning vehicle",
+          description: error.message,
+          variant: "destructive",
+        });
+        setLastAction(null);
+      } else {
+        toast({
+          title: "Vehicle assigned",
+          description: `${assigningDriver.name} assigned to ${vehicleValue || "no vehicle"}`,
+        });
+      }
     }
     
     setShowAssignDialog(false);

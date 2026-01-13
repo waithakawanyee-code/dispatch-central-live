@@ -149,8 +149,8 @@ export function DriverWorkbookCard({
           </span>
         )}
 
-        {/* Vehicle indicator for confirmed/on_the_clock */}
-        {(driver.status === "confirmed" || driver.status === "on_the_clock") && vehicleUnit && (
+        {/* Vehicle indicator - show for unconfirmed with vehicle, confirmed dispatched, or on_the_clock */}
+        {vehicleUnit && (driver.status === "on_the_clock" || driver.status === "confirmed" || subcategory === "has_vehicle") && (
           <div className="flex items-center gap-1 text-xs font-mono text-primary">
             <Truck className="h-3 w-3" />
             <span>{vehicleUnit}</span>
