@@ -63,7 +63,7 @@ const Drivers = () => {
   const { shifts, getDriverStatusForWorkday, punchIn, punchOut, getOpenShiftForDriver } = useShifts(selectedDate);
   const [schedules, setSchedules] = useState<DriverSchedule[]>([]);
   const [schedulesLoading, setSchedulesLoading] = useState(true);
-  const [weekOffset, setWeekOffset] = useState(0);
+  
   const [todayCallOuts, setTodayCallOuts] = useState<CallOut[]>([]);
   const [selectedDateCallOuts, setSelectedDateCallOuts] = useState<CallOut[]>([]);
   const [offDriversOpen, setOffDriversOpen] = useState(false);
@@ -134,11 +134,6 @@ const Drivers = () => {
   const isToday = isSameDay(selectedDate, today);
   const isFutureDate = selectedDate > today;
 
-  // Generate week days based on offset
-  const weekDays = useMemo(() => {
-    const startDate = addDays(today, weekOffset * 7);
-    return Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
-  }, [weekOffset]);
 
   // Fetch driver schedules and today's call outs
   useEffect(() => {
@@ -1521,89 +1516,70 @@ const Drivers = () => {
 
         {/* Date Selector */}
         <section className="rounded-lg border border-border bg-card/50 p-3 mb-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setWeekOffset((prev) => prev - 1)}
-                disabled={weekOffset === 0}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-xs font-medium text-muted-foreground">
-                {format(weekDays[0], "MMM d")} - {format(weekDays[6], "MMM d, yyyy")}
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setWeekOffset((prev) => prev + 1)}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-7 gap-1">
-                  <CalendarIcon className="h-3 w-3" />
-                  <span className="text-xs">Calendar</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      setSelectedDate(startOfDay(date));
-                      // Adjust week offset to show the selected date's week
-                      const daysDiff = Math.floor((startOfDay(date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                      setWeekOffset(Math.floor(daysDiff / 7));
-                    }
-                  }}
-                  disabled={(date) => startOfDay(date) < today}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
+              {/* Date Picker */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-2 min-w-[180px] justify-start">
+                    <CalendarIcon className="h-4 w-4" />
+                    <span className="text-sm font-medium">
+                      {isToday ? "Today" : format(selectedDate, "EEE, MMM d, yyyy")}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        setSelectedDate(startOfDay(date));
+                      }
+                    }}
+                    disabled={(date) => startOfDay(date) < today}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
 
-          {/* Day Buttons */}
-          <div className="flex gap-1">
-            {weekDays.map((date) => {
-              const isSelected = isSameDay(date, selectedDate);
-              const isPast = date < today;
-              const isCurrentDay = isSameDay(date, today);
-              
-              return (
+              {/* Day Navigation */}
+              <div className="flex items-center gap-1">
                 <Button
-                  key={date.toISOString()}
-                  variant={isSelected ? "default" : "outline"}
-                  size="sm"
-                  className={cn(
-                    "flex-1 flex flex-col h-auto py-1.5 px-1",
-                    isPast && "opacity-50 cursor-not-allowed",
-                    isCurrentDay && !isSelected && "border-primary"
-                  )}
-                  onClick={() => !isPast && setSelectedDate(date)}
-                  disabled={isPast}
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setSelectedDate((prev) => addDays(prev, -1))}
+                  disabled={isSameDay(selectedDate, today)}
+                  title="Previous day"
                 >
-                  <span className="text-[10px] font-medium">{format(date, "EEE")}</span>
-                  <span className="text-sm font-bold">{format(date, "d")}</span>
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
-              );
-            })}
-          </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setSelectedDate((prev) => addDays(prev, 1))}
+                  title="Next day"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
 
-          {/* Selected Date Info */}
-          <div className="mt-3 flex items-center justify-between">
-            <p className="text-sm font-medium text-foreground">
-              {isToday ? "Today" : format(selectedDate, "EEEE, MMMM d, yyyy")}
-            </p>
+              {/* Today Button */}
+              {!isToday && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => setSelectedDate(today)}
+                >
+                  Today
+                </Button>
+              )}
+            </div>
+
             {isFutureDate && (
               <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">
                 Showing {getAvailableDriversWithSchedule?.length || 0} scheduled drivers as unassigned
