@@ -410,31 +410,42 @@ const Drivers = () => {
         setFutureAssignments([...futureAssignments, data as FutureAssignment]);
       }
     } else {
-      // Today: update driver vehicle/report_time without changing status
-      // Status remains the same - assigning a vehicle does NOT confirm the driver
+      // Today: update driver
+      // If report time is set, driver becomes "confirmed" (they've confirmed they're coming in)
+      // If only vehicle is assigned without report time, status stays the same
       const driver = drivers.find(d => d.id === assigningDriver.id);
       const vehicleValue = assignVehicle === "__none__" ? null : assignVehicle;
       const reportTimeValue = assignReportTime || null;
       
+      // Setting a report time = confirming the driver
+      const shouldConfirm = !!reportTimeValue && driver?.status === "unconfirmed";
+      
+      const updateData: Record<string, unknown> = {
+        vehicle: vehicleValue,
+        report_time: reportTimeValue,
+      };
+      
+      if (shouldConfirm) {
+        updateData.status = "confirmed";
+      }
+      
       const { error } = await supabase
         .from("drivers")
-        .update({
-          vehicle: vehicleValue,
-          report_time: reportTimeValue,
-        })
+        .update(updateData)
         .eq("id", assigningDriver.id);
       
       if (error) {
         toast({
-          title: "Error assigning vehicle",
+          title: "Error assigning driver",
           description: error.message,
           variant: "destructive",
         });
         setLastAction(null);
       } else {
+        const action = shouldConfirm ? "confirmed" : "assigned";
         toast({
-          title: "Vehicle assigned",
-          description: `${assigningDriver.name} assigned to ${vehicleValue || "no vehicle"}`,
+          title: `Driver ${action}`,
+          description: `${assigningDriver.name} ${shouldConfirm ? "confirmed with report time" : `assigned to ${vehicleValue || "no vehicle"}`}`,
         });
       }
     }
