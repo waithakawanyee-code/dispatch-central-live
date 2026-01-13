@@ -158,14 +158,14 @@ export function useDispatchData() {
       updated_at: new Date().toISOString(),
     };
 
-    // Set report_time and vehicle when assigning, clear them for other statuses
-    if (newStatus === "assigned") {
+    // Set report_time and vehicle when confirming, clear them for other statuses
+    if (newStatus === "confirmed") {
       updateData.report_time = reportTime || null;
       updateData.vehicle = vehicle || null;
-    } else if (newStatus === "working" && vehicle) {
+    } else if (newStatus === "on_the_clock" && vehicle) {
       // When punching in with a vehicle, set the vehicle
       updateData.vehicle = vehicle;
-    } else if (newStatus === "unassigned" || newStatus === "punched-out") {
+    } else if (newStatus === "unconfirmed" || newStatus === "done") {
       updateData.report_time = null;
       updateData.vehicle = null;
     }
@@ -181,22 +181,22 @@ export function useDispatchData() {
       await logStatusChange("driver", driverId, driver.name, "status", oldStatus, newStatus);
       
       // Record vehicle assignment history
-      if ((newStatus === "assigned" || newStatus === "working") && vehicle) {
+      if ((newStatus === "confirmed" || newStatus === "on_the_clock") && vehicle) {
         // Find the vehicle to get its ID and unit
         const assignedVehicle = vehicles.find(v => v.unit === vehicle);
         if (assignedVehicle) {
           await recordVehicleAssignment(assignedVehicle.id, assignedVehicle.unit, driverId, driver.name);
         }
-      } else if ((newStatus === "unassigned" || newStatus === "punched-out") && oldVehicle) {
+      } else if ((newStatus === "unconfirmed" || newStatus === "done") && oldVehicle) {
         // Close any open assignments for this driver
         await closeVehicleAssignment(driverId);
       }
       
-      // Record punch in when status changes to working
-      if (newStatus === "working" && oldStatus !== "working") {
+      // Record punch in when status changes to on_the_clock
+      if (newStatus === "on_the_clock" && oldStatus !== "on_the_clock") {
         await recordTimePunch(driverId, driver.name, "in", punchTime);
-      } else if (newStatus === "punched-out" && oldStatus !== "punched-out" && oldStatus !== "unassigned") {
-        // Record punch out when status changes to punched-out (not from unassigned)
+      } else if (newStatus === "done" && oldStatus !== "done" && oldStatus !== "unconfirmed") {
+        // Record punch out when status changes to done (not from unconfirmed)
         await recordTimePunch(driverId, driver.name, "out", punchTime);
         
         // Rule B: Mark vehicle dirty on punch-out for non-take-home vehicles

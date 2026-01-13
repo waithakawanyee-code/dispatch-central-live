@@ -1,4 +1,4 @@
-import { UserPlus, Clock, LogOut, Power, Undo2, RotateCcw, Play } from "lucide-react";
+import { UserPlus, Clock, LogOut, Power, Undo2, RotateCcw, Play, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
@@ -42,34 +42,26 @@ export function DriverActionToolbar({
   showTestingTools = false,
   className,
 }: DriverActionToolbarProps) {
-  // Determine which actions to show based on status
+  // Determine which actions to show based on new status model
   const getActions = (): ActionButton[] => {
     switch (status) {
-      case "unassigned":
-      case "scheduled":
+      case "unconfirmed":
         return [
-          { label: "Assign", shortcut: "A", icon: UserPlus, onClick: onAssign, variant: "default" },
+          { label: "Confirm", shortcut: "A", icon: CheckCircle, onClick: onAssign, variant: "default" },
           { label: "Mark OFF", shortcut: "O", icon: Power, onClick: onMarkOff, variant: "outline" },
         ];
-      case "assigned":
+      case "confirmed":
         return [
           { label: "Punch In", shortcut: "P", icon: Clock, onClick: onPunchIn, variant: "default" },
           { label: "Mark OFF", shortcut: "O", icon: Power, onClick: onMarkOff, variant: "outline" },
-          { label: "Unassign", shortcut: "", icon: Undo2, onClick: onUnassign, variant: "outline" },
+          { label: "Unconfirm", shortcut: "", icon: Undo2, onClick: onUnassign, variant: "outline" },
         ];
-      case "working":
-      case "on-route":
+      case "on_the_clock":
         return [
           { label: "Punch Out", shortcut: "D", icon: LogOut, onClick: onPunchOut, variant: "default" },
         ];
-      case "punched-out":
-      case "offline":
+      case "done":
         return [
-          { label: "Reset", shortcut: "", icon: Undo2, onClick: onReset, variant: "outline" },
-        ];
-      case "off":
-        return [
-          { label: "Assign", shortcut: "A", icon: UserPlus, onClick: onAssign, variant: "default" },
           { label: "Reset", shortcut: "", icon: Undo2, onClick: onReset, variant: "outline" },
         ];
       default:
@@ -118,7 +110,7 @@ export function DriverActionToolbar({
             size="sm"
             onClick={onReset}
             className="h-7 gap-1 text-xs text-orange-500 hover:text-orange-600 hover:bg-orange-500/10"
-            title="Reset selected driver to unassigned"
+            title="Reset selected driver to unconfirmed"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             <span>Reset</span>
@@ -129,7 +121,7 @@ export function DriverActionToolbar({
               size="sm"
               onClick={onResetAll}
               className="h-7 gap-1 text-xs text-red-500 hover:text-red-600 hover:bg-red-500/10"
-              title="Reset ALL drivers to unassigned"
+              title="Reset ALL drivers to unconfirmed"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               <span>Reset All</span>
@@ -141,7 +133,7 @@ export function DriverActionToolbar({
               size="sm"
               onClick={onSimulateWorkflow}
               className="h-7 gap-1 text-xs text-violet-500 hover:text-violet-600 hover:bg-violet-500/10"
-              title="Simulate full workflow: unassigned → assigned → working → punched-out"
+              title="Simulate full workflow: unconfirmed → confirmed → on_the_clock → done"
             >
               <Play className="h-3.5 w-3.5" />
               <span>Simulate</span>

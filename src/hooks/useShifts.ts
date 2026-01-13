@@ -42,7 +42,8 @@ export interface Workday {
   created_at: string;
 }
 
-export type ShiftDriverStatus = "unassigned" | "assigned" | "working" | "punched-out";
+// New status model
+export type ShiftDriverStatus = "unconfirmed" | "confirmed" | "on_the_clock" | "done";
 
 export function useShifts(selectedWorkday: Date = new Date()) {
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -158,23 +159,23 @@ export function useShifts(selectedWorkday: Date = new Date()) {
     return data as unknown as Shift | null;
   }, []);
 
-  // Get driver status for selected workday
+  // Get driver status for selected workday using new status model
   const getDriverStatusForWorkday = useCallback((driverId: string): { status: ShiftDriverStatus; shift: Shift | null } => {
     const driverShifts = shifts.filter(s => s.driver_id === driverId);
     
     if (driverShifts.length === 0) {
-      return { status: "unassigned", shift: null };
+      return { status: "unconfirmed", shift: null };
     }
     
     // Check for open shift
     const openShift = driverShifts.find(s => !s.punch_out_at);
     if (openShift) {
-      return { status: "working", shift: openShift };
+      return { status: "on_the_clock", shift: openShift };
     }
     
     // Has closed shifts for this workday
     const latestShift = driverShifts[driverShifts.length - 1];
-    return { status: "punched-out", shift: latestShift };
+    return { status: "done", shift: latestShift };
   }, [shifts]);
 
   // Punch in a driver - creates new shift
@@ -236,15 +237,13 @@ export function useShifts(selectedWorkday: Date = new Date()) {
     const { error: driverUpdateError } = await supabase
       .from("drivers")
       .update({
-        status: "working",
+        status: "on_the_clock",
         vehicle: vehicle || null,
       })
       .eq("id", driverId);
     
     if (driverUpdateError) {
       console.error("Error updating driver row on punch in:", driverUpdateError);
-      // Don't fail the punch-in shift creation — but log it so we know
-    
     }
 
     // Create initial vehicle segment if vehicle assigned
@@ -409,6 +408,15 @@ export function useShifts(selectedWorkday: Date = new Date()) {
       return { success: false, error: error.message };
     }
 
+    // Update driver status to done
+    await supabase
+      .from("drivers")
+      .update({
+        status: "done",
+        vehicle: null,
+      })
+      .eq("id", shift.driver_id);
+
     // Close any open vehicle segments
     await supabase
       .from("shift_vehicle_segments")
@@ -427,7 +435,7 @@ export function useShifts(selectedWorkday: Date = new Date()) {
     });
 
     return { success: true };
-  }, [shifts]);
+  }, []);
 
   // Change vehicle during shift (ends current segment, starts new)
   const changeVehicle = useCallback(async (
@@ -500,7 +508,8 @@ export function useShifts(selectedWorkday: Date = new Date()) {
   // Force close shift (admin only)
   const forceCloseShift = useCallback(async (
     shiftId: string,
-    closeTime?: string
+    punchOutTime: string,
+    reason: string
   ): Promise<{ success: boolean; error?: string }> => {
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -509,28 +518,36 @@ export function useShifts(selectedWorkday: Date = new Date()) {
       return { success: false, error: "Shift not found" };
     }
 
-    let closeAt: string;
-    if (closeTime && /^\d{2}:\d{2}$/.test(closeTime)) {
-      const shiftDate = parseISO(shift.punch_in_at);
-      const [hours, minutes] = closeTime.split(":").map(Number);
-      shiftDate.setHours(hours, minutes, 0, 0);
-      closeAt = shiftDate.toISOString();
-    } else if (closeTime) {
-      closeAt = closeTime;
-    } else {
-      closeAt = new Date().toISOString();
+    if (shift.punch_out_at) {
+      return { success: false, error: "Shift is already closed" };
     }
 
+    // Build punch out timestamp
+    let punchOutAt: string;
+    if (/^\d{2}:\d{2}$/.test(punchOutTime)) {
+      const shiftDate = parseISO(shift.punch_in_at);
+      const [hours, minutes] = punchOutTime.split(":").map(Number);
+      shiftDate.setHours(hours, minutes, 0, 0);
+      punchOutAt = shiftDate.toISOString();
+    } else {
+      punchOutAt = punchOutTime;
+    }
+
+    // Update the shift with force close flags
     const { error } = await supabase
       .from("shifts")
       .update({
-        punch_out_at: closeAt,
-        updated_by: user?.id || null,
+        punch_out_at: punchOutAt,
+        workday_override: true,
+        workday_override_reason: reason,
+        workday_override_by: user?.id,
+        workday_override_at: new Date().toISOString(),
+        updated_by: user?.id,
         exception_flags: {
           ...shift.exception_flags,
-          forced_closed: true,
-          forced_closed_by: user?.id,
-          forced_closed_at: new Date().toISOString(),
+          force_closed: true,
+          force_closed_reason: reason,
+          force_closed_at: new Date().toISOString(),
         },
       })
       .eq("id", shiftId);
@@ -539,12 +556,31 @@ export function useShifts(selectedWorkday: Date = new Date()) {
       return { success: false, error: error.message };
     }
 
+    // Update driver status to done
+    await supabase
+      .from("drivers")
+      .update({
+        status: "done",
+        vehicle: null,
+      })
+      .eq("id", shift.driver_id);
+
     // Close any open vehicle segments
     await supabase
       .from("shift_vehicle_segments")
-      .update({ segment_out_at: closeAt })
+      .update({ segment_out_at: punchOutAt })
       .eq("shift_id", shiftId)
       .is("segment_out_at", null);
+
+    // Log to status_history
+    await supabase.from("status_history").insert({
+      entity_type: "driver",
+      entity_id: shift.driver_id,
+      entity_name: shift.driver_name,
+      field_changed: "shift_force_closed",
+      old_value: `Open shift from ${shift.workday_date}`,
+      new_value: `Force closed: ${reason}`,
+    });
 
     return { success: true };
   }, [shifts]);
@@ -553,68 +589,66 @@ export function useShifts(selectedWorkday: Date = new Date()) {
   const closeOutWorkday = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
     const { data: { user } } = await supabase.auth.getUser();
     
-    const openShifts = shifts.filter(s => !s.punch_out_at);
-    if (openShifts.length > 0) {
-      return { success: false, error: `Cannot close workday with ${openShifts.length} open shift(s)` };
+    // Check if workday record exists
+    if (workday) {
+      // Update existing
+      const { error } = await supabase
+        .from("workdays")
+        .update({
+          status: "closed",
+          closed_at: new Date().toISOString(),
+          closed_by: user?.id,
+        })
+        .eq("workday_date", workdayDateStr);
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+    } else {
+      // Create new closed workday
+      const { error } = await supabase
+        .from("workdays")
+        .insert({
+          workday_date: workdayDateStr,
+          status: "closed",
+          closed_at: new Date().toISOString(),
+          closed_by: user?.id,
+        });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
     }
 
-    const { error } = await supabase
-      .from("workdays")
-      .upsert({
-        workday_date: workdayDateStr,
-        status: "closed",
-        closed_at: new Date().toISOString(),
-        closed_by: user?.id || null,
-      });
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
-
-    setWorkday({
-      workday_date: workdayDateStr,
-      status: "closed",
-      closed_at: new Date().toISOString(),
-      closed_by: user?.id || null,
-      notes: null,
-      created_at: new Date().toISOString(),
-    });
-
+    await fetchShifts();
     return { success: true };
-  }, [shifts, workdayDateStr]);
-
-  // Get open shifts count for workday
-  const openShiftsCount = shifts.filter(s => !s.punch_out_at).length;
-  const isWorkdayClosed = workday?.status === "closed";
+  }, [workday, workdayDateStr, fetchShifts]);
 
   // Get segments for a shift
   const getSegmentsForShift = useCallback((shiftId: string): ShiftVehicleSegment[] => {
     return vehicleSegments.filter(s => s.shift_id === shiftId);
   }, [vehicleSegments]);
 
-  // Check if punch time is >= 10pm (for override prompt)
-  const isPunchTimeAfter10PM = useCallback((time: string): boolean => {
+  // Check if punch time is after 10pm
+  const isPunchTimeAfter10PM = (time: string): boolean => {
     if (/^\d{2}:\d{2}$/.test(time)) {
       const [hours] = time.split(":").map(Number);
       return hours >= 22;
     }
-    const date = new Date(time);
-    return date.getHours() >= 22;
-  }, []);
+    return false;
+  };
 
   return {
     shifts,
     vehicleSegments,
     workday,
     loading,
-    openShiftsCount,
-    isWorkdayClosed,
     fetchShifts,
-    getDriverStatusForWorkday,
     getOpenShiftForDriver,
+    getDriverStatusForWorkday,
     punchIn,
-    punchOut,
     autoClosePreviousAndPunchIn,
+    punchOut,
     changeVehicle,
     forceCloseShift,
     closeOutWorkday,

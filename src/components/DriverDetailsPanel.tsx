@@ -100,7 +100,7 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
     }
 
     // If still punched in, calculate time up to now
-    if (punchInTime && ["working", "on-route"].includes(driver.status)) {
+    if (punchInTime && driver.status === "on_the_clock") {
       totalMs += Date.now() - punchInTime.getTime();
     }
 
@@ -122,8 +122,8 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
 
   const latestPunchIn = getLatestPunchIn();
   const latestPunchOut = getLatestPunchOut();
-  const isWorking = ["working", "on-route"].includes(driver.status);
-  const isPunchedOut = ["offline", "punched-out"].includes(driver.status);
+  const isOnTheClock = driver.status === "on_the_clock";
+  const isDone = driver.status === "done";
 
   return (
     <div className="fixed right-4 top-20 z-50 w-80 rounded-lg border border-border bg-card shadow-xl animate-in slide-in-from-right-5 duration-200">
@@ -132,12 +132,10 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
         <div className="flex items-center gap-2">
           <div className={cn(
             "h-2.5 w-2.5 rounded-full",
-            driver.status === "scheduled" && "bg-amber-500",
-            driver.status === "unassigned" && "bg-slate-500",
-            driver.status === "assigned" && "bg-emerald-500",
-            isWorking && "bg-status-available",
-            isPunchedOut && "bg-status-offline",
-            driver.status === "off" && "bg-red-500"
+            driver.status === "unconfirmed" && "bg-slate-500",
+            driver.status === "confirmed" && "bg-emerald-500",
+            isOnTheClock && "bg-status-available",
+            isDone && "bg-status-offline"
           )} />
           <h3 className="font-semibold text-foreground">{driver.name}</h3>
         </div>
@@ -198,11 +196,11 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
         {/* Current Assignment / Status Info */}
         <div className="space-y-2">
           <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            {isWorking ? "Currently Working" : isPunchedOut ? "Today's Shift" : "Assignment"}
+            {isOnTheClock ? "Currently Working" : isDone ? "Today's Shift" : "Assignment"}
           </h4>
           <div className="space-y-1.5">
-            {/* Vehicle - show for working, punched-out, and assigned */}
-            {(isWorking || isPunchedOut || driver.status === "assigned") && (
+            {/* Vehicle - show for on_the_clock, done, and confirmed */}
+            {(isOnTheClock || isDone || driver.status === "confirmed") && (
               <div className="flex items-center gap-2 text-sm">
                 <Truck className="h-4 w-4 text-muted-foreground" />
                 <span className="text-foreground">
@@ -212,7 +210,7 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
             )}
 
             {/* Working drivers: Show start time (punch in) */}
-            {isWorking && latestPunchIn && (
+            {isOnTheClock && latestPunchIn && (
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span className="text-foreground font-mono">
@@ -222,7 +220,7 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
             )}
 
             {/* Working drivers: Show current hours */}
-            {isWorking && todayPunches.length > 0 && (
+            {isOnTheClock && todayPunches.length > 0 && (
               <div className="flex items-center gap-2 text-sm">
                 <Timer className="h-4 w-4 text-muted-foreground" />
                 <span className="text-foreground font-mono">
@@ -231,8 +229,8 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
               </div>
             )}
 
-            {/* Punched-out drivers: Show start and end times */}
-            {isPunchedOut && latestPunchIn && (
+            {/* Done drivers: Show start and end times */}
+            {isDone && latestPunchIn && (
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span className="text-foreground font-mono">
@@ -241,7 +239,7 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
               </div>
             )}
 
-            {isPunchedOut && latestPunchOut && (
+            {isDone && latestPunchOut && (
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span className="text-foreground font-mono">
@@ -250,8 +248,8 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
               </div>
             )}
 
-            {/* Punched-out drivers: Show total hours */}
-            {isPunchedOut && todayPunches.length > 0 && (
+            {/* Done drivers: Show total hours */}
+            {isDone && todayPunches.length > 0 && (
               <div className="flex items-center gap-2 text-sm bg-muted/50 rounded px-2 py-1 -mx-2">
                 <Timer className="h-4 w-4 text-primary" />
                 <span className="text-foreground font-semibold">
@@ -260,8 +258,8 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
               </div>
             )}
 
-            {/* Assigned/unassigned drivers: Show report time */}
-            {!isWorking && !isPunchedOut && (
+            {/* Unconfirmed/confirmed drivers: Show report time */}
+            {!isOnTheClock && !isDone && (
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span className="text-foreground font-mono">
@@ -270,8 +268,8 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
               </div>
             )}
 
-            {/* Assigned/unassigned drivers: Show vehicle */}
-            {!isWorking && !isPunchedOut && driver.status !== "off" && (
+            {/* Unconfirmed/confirmed drivers: Show vehicle */}
+            {!isOnTheClock && !isDone && (
               <div className="flex items-center gap-2 text-sm">
                 <Truck className="h-4 w-4 text-muted-foreground" />
                 <span className="text-foreground">
