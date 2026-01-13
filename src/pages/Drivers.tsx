@@ -242,32 +242,32 @@ const Drivers = () => {
         }));
       
       // Build a map of driver shift status from shifts table
-      const driverShiftStatusMap = new Map<string, { status: "working" | "punched-out"; shift: typeof shifts[0] }>();
+      const driverShiftStatusMap = new Map<string, { status: "on_the_clock" | "done"; shift: typeof shifts[0] }>();
       shifts.forEach((shift) => {
-        // Prioritize open shifts (working) over closed shifts
+        // Prioritize open shifts (on_the_clock) over closed shifts
         const existing = driverShiftStatusMap.get(shift.driver_id);
         if (!shift.punch_out_at) {
-          // Open shift = working
-          driverShiftStatusMap.set(shift.driver_id, { status: "working", shift });
-        } else if (!existing || existing.status !== "working") {
-          // Closed shift = punched-out (only if no open shift)
-          driverShiftStatusMap.set(shift.driver_id, { status: "punched-out", shift });
+          // Open shift = on_the_clock
+          driverShiftStatusMap.set(shift.driver_id, { status: "on_the_clock", shift });
+        } else if (!existing || existing.status !== "on_the_clock") {
+          // Closed shift = done (only if no open shift)
+          driverShiftStatusMap.set(shift.driver_id, { status: "done", shift });
         }
       });
       
       // Include drivers who are scheduled for today OR who have shift activity for today
-      // Also include drivers with base status of assigned
+      // Also include drivers with base status of confirmed
       const todayDrivers = drivers
         .filter((d) => {
           const hasSchedule = scheduledDriverMap.has(d.id);
           const hasShiftActivity = driverShiftStatusMap.has(d.id);
-          const isAssigned = d.status === "assigned";
-          return (hasSchedule || hasShiftActivity || isAssigned) && d.status !== "off";
+          const isConfirmed = d.status === "confirmed";
+          return (hasSchedule || hasShiftActivity || isConfirmed);
         })
         .map((d) => {
           // Derive status from shifts table if available
           const shiftData = driverShiftStatusMap.get(d.id);
-          let derivedStatus = d.status;
+          let derivedStatus: "unconfirmed" | "confirmed" | "on_the_clock" | "done" = d.status;
           let vehicleFromShift = d.vehicle;
           
           if (shiftData) {
@@ -291,10 +291,10 @@ const Drivers = () => {
       
       // Define status priority order
       const statusOrder: Record<string, number> = {
-        "assigned": 1,
-        "working": 2,
-        "punched-out": 3,
-        "unassigned": 4,
+        "confirmed": 1,
+        "on_the_clock": 2,
+        "done": 3,
+        "unconfirmed": 4,
       };
       
       // Sort by status first, then by start time within each status group
@@ -325,7 +325,7 @@ const Drivers = () => {
         if (assignment) {
           return {
             ...driver,
-            status: "assigned" as const,
+            status: "confirmed" as const,
             vehicle: assignment.vehicle,
             report_time: assignment.report_time,
             isAnyHours: driver.schedule?.is_any_hours || false,
@@ -333,7 +333,7 @@ const Drivers = () => {
         }
         return {
           ...driver,
-          status: "unassigned" as const,
+          status: "unconfirmed" as const,
           vehicle: null,
           report_time: null,
           isAnyHours: driver.schedule?.is_any_hours || false,
@@ -342,8 +342,8 @@ const Drivers = () => {
 
     // Define status priority order for future dates
     const statusOrder: Record<string, number> = {
-      "assigned": 1,
-      "unassigned": 2,
+      "confirmed": 1,
+      "unconfirmed": 2,
     };
 
     // Sort by status first, then by start time within each status group
@@ -411,7 +411,7 @@ const Drivers = () => {
     } else {
       // Today: update driver status directly
       const vehicleValue = assignVehicle === "__none__" ? undefined : assignVehicle;
-      await updateDriverStatus(assigningDriver.id, "assigned", assignReportTime || undefined, vehicleValue);
+      await updateDriverStatus(assigningDriver.id, "confirmed", assignReportTime || undefined, vehicleValue);
       toast({
         title: "Driver assigned",
         description: `${assigningDriver.name} has been assigned`,
@@ -528,12 +528,8 @@ const Drivers = () => {
     const driver = drivers.find(d => d.id === driverId);
     const defaultVehicle = (driver as any)?.default_vehicle;
     
-    // Check if driver is marked off - show confirmation first
-    if (driver?.status === "off") {
-      setPendingOffDriver({ id: driverId, name: driverName });
-      setShowOffDriverConfirm(true);
-      return;
-    }
+    // Check if driver is done (punched out) - might need confirmation
+    // Note: "off" status no longer exists, drivers are either unconfirmed, confirmed, on_the_clock, or done
     
     setAssigningDriver({ id: driverId, name: driverName });
     setAssignReportTime("");
@@ -651,8 +647,9 @@ const Drivers = () => {
     }
 
     // Only update driver status if marking off for today
+    // Note: We create a call_out record but keep driver status as-is (done or unconfirmed)
     if (!hasFutureDates || includestoday) {
-      updateDriverStatus(offDriver.id, "off");
+      // Driver remains in their current status, call_out record tracks the absence
     } else {
       const futureDatesStr = offDates.map(d => format(d, "EEE, MMM d")).join(", ");
       toast({
@@ -673,10 +670,10 @@ const Drivers = () => {
     const driver = drivers.find(d => d.id === driverId);
     if (!driver) return;
     
-    // Allow from unassigned, scheduled, or assigned
-    if (["unassigned", "scheduled", "assigned"].includes(driver.status)) {
+    // Allow from unconfirmed or confirmed
+    if (["unconfirmed", "confirmed"].includes(driver.status)) {
       openAssignDialog(driver.id, driver.name);
-    } else if (["working", "on-route"].includes(driver.status)) {
+    } else if (driver.status === "on_the_clock") {
       toast({
         title: "Driver is working",
         description: "Punch out first before reassigning",
@@ -772,11 +769,11 @@ const Drivers = () => {
       return;
     }
     
-    // Require vehicle selection for unassigned drivers
-    if (driver.status === "unassigned" && (punchInVehicle === "__none__" || !punchInVehicle)) {
+    // Require vehicle selection for unconfirmed drivers
+    if (driver.status === "unconfirmed" && (punchInVehicle === "__none__" || !punchInVehicle)) {
       toast({
         title: "Vehicle required",
-        description: "Please select a vehicle for this unassigned driver",
+        description: "Please select a vehicle for this unconfirmed driver",
         variant: "destructive",
       });
       return;
@@ -889,7 +886,8 @@ const Drivers = () => {
     const driver = drivers.find(d => d.id === driverId);
     if (!driver) return;
     
-    if (driver.status === "off") {
+    // Check if already has a call-out for today
+    if (todayCallOuts.some(c => c.driver_id === driverId)) {
       toast({
         title: "Already OFF",
         description: `${driver.name} is already marked OFF`,
@@ -897,7 +895,7 @@ const Drivers = () => {
       return;
     }
     
-    if (["working", "on-route"].includes(driver.status)) {
+    if (driver.status === "on_the_clock") {
       toast({
         title: "Driver is working",
         description: "Punch out first before marking OFF",
@@ -907,17 +905,17 @@ const Drivers = () => {
     }
     
     openOffDialog(driver.id, driver.name);
-  }, [drivers, toast]);
+  }, [drivers, todayCallOuts, toast]);
 
-  // Unassign - reset to unassigned
+  // Unassign - reset to unconfirmed
   const executeUnassign = useCallback((driverId: string) => {
     const driver = drivers.find(d => d.id === driverId);
     if (!driver) return;
     
-    if (driver.status !== "assigned") {
+    if (driver.status !== "confirmed") {
       toast({
         title: "Cannot unassign",
-        description: `Driver is not currently assigned`,
+        description: `Driver is not currently confirmed`,
         variant: "destructive",
       });
       return;
@@ -933,14 +931,14 @@ const Drivers = () => {
       actionType: "unassign",
     });
     
-    updateDriverStatus(driverId, "unassigned");
+    updateDriverStatus(driverId, "unconfirmed");
     toast({
       title: "Driver unassigned",
       description: `${driver.name} has been unassigned`,
     });
   }, [drivers, updateDriverStatus, toast]);
 
-  // Reset - set back to unassigned from punched-out/off
+  // Reset - set back to unconfirmed from done
   const executeReset = useCallback((driverId: string) => {
     const driver = drivers.find(d => d.id === driverId);
     if (!driver) return;
@@ -955,31 +953,31 @@ const Drivers = () => {
       actionType: "reset",
     });
     
-    updateDriverStatus(driverId, "unassigned");
+    updateDriverStatus(driverId, "unconfirmed");
     toast({
       title: "Driver reset",
-      description: `${driver.name} reset to unassigned`,
+      description: `${driver.name} reset to unconfirmed`,
     });
   }, [drivers, updateDriverStatus, toast]);
 
-  // Reset all drivers to unassigned (testing utility)
+  // Reset all drivers to unconfirmed (testing utility)
   const executeResetAll = useCallback(async () => {
-    const activeDrivers = drivers.filter(d => d.is_active && d.status !== "unassigned");
+    const activeDrivers = drivers.filter(d => d.is_active && d.status !== "unconfirmed");
     
     if (activeDrivers.length === 0) {
       toast({
         title: "Nothing to reset",
-        description: "All drivers are already unassigned",
+        description: "All drivers are already unconfirmed",
       });
       return;
     }
     
-    // Reset all drivers to unassigned
+    // Reset all drivers to unconfirmed
     for (const driver of activeDrivers) {
       await supabase
         .from("drivers")
         .update({ 
-          status: "unassigned", 
+          status: "unconfirmed", 
           vehicle: null, 
           report_time: null,
           updated_at: new Date().toISOString()
@@ -989,19 +987,19 @@ const Drivers = () => {
     
     toast({
       title: "All drivers reset",
-      description: `Reset ${activeDrivers.length} drivers to unassigned`,
+      description: `Reset ${activeDrivers.length} drivers to unconfirmed`,
     });
   }, [drivers, toast]);
 
-  // Simulate full workflow: unassigned → assigned → working → punched-out (testing utility)
+  // Simulate full workflow: unconfirmed → confirmed → on_the_clock → done (testing utility)
   const executeSimulateWorkflow = useCallback(async (driverId: string) => {
     const driver = drivers.find(d => d.id === driverId);
     if (!driver) return;
     
-    if (driver.status !== "unassigned") {
+    if (driver.status !== "unconfirmed") {
       toast({
         title: "Cannot simulate",
-        description: "Driver must be unassigned to simulate workflow",
+        description: "Driver must be unconfirmed to simulate workflow",
         variant: "destructive",
       });
       return;
@@ -1030,11 +1028,11 @@ const Drivers = () => {
       description: `${driver.name}: Starting simulation`,
     });
     
-    // Step 1: Assign driver to vehicle
+    // Step 1: Confirm driver with vehicle
     await new Promise(resolve => setTimeout(resolve, 400));
-    await updateDriverStatus(driverId, "assigned", availableVehicle.unit, reportTime);
+    await updateDriverStatus(driverId, "confirmed", availableVehicle.unit, reportTime);
     toast({
-      title: "Step 1: Assigned",
+      title: "Step 1: Confirmed",
       description: `${driver.name} → ${availableVehicle.unit} at ${reportTime}`,
     });
     
@@ -1074,7 +1072,7 @@ const Drivers = () => {
     await new Promise(resolve => setTimeout(resolve, 300));
     toast({
       title: "✓ Simulation complete",
-      description: `${driver.name} is now punched-out. Reset button is available!`,
+      description: `${driver.name} is now done. Reset button is available!`,
     });
   }, [drivers, vehicles, updateDriverStatus, punchIn, punchOut, toast]);
 
@@ -1141,11 +1139,11 @@ const Drivers = () => {
         .map((s) => s.driver_id)
     );
     
-    // Return drivers who are NOT scheduled for today OR have status "off"
+    // Return drivers who are NOT scheduled for today OR have a call-out record
     return drivers.filter(
-      (driver) => !scheduledDriverIds.has(driver.id) || driver.status === "off"
+      (driver) => !scheduledDriverIds.has(driver.id) || todayCallOuts.some(c => c.driver_id === driver.id)
     );
-  }, [drivers, schedules, isToday]);
+  }, [drivers, schedules, isToday, todayCallOuts]);
   
   // Filtered off drivers based on search
   const filteredOffDrivers = useMemo(() => {
@@ -1183,10 +1181,10 @@ const Drivers = () => {
   };
 
   // Calculate stats based on displayed drivers
-  const unassignedDrivers = displayDrivers.filter((d) => d.status === "unassigned" || d.status === "scheduled").length;
-  const assignedDrivers = displayDrivers.filter((d) => d.status === "assigned").length;
-  const workingDrivers = displayDrivers.filter((d) => ["on-route", "working"].includes(d.status)).length;
-  const punchedOutDrivers = displayDrivers.filter((d) => ["offline", "punched-out"].includes(d.status)).length;
+  const unassignedDrivers = displayDrivers.filter((d) => d.status === "unconfirmed").length;
+  const assignedDrivers = displayDrivers.filter((d) => d.status === "confirmed").length;
+  const workingDrivers = displayDrivers.filter((d) => d.status === "on_the_clock").length;
+  const punchedOutDrivers = displayDrivers.filter((d) => d.status === "done").length;
   const offDriverCount = offDrivers.length;
   const calledOutCount = todayCallOuts.length;
 
@@ -1194,15 +1192,15 @@ const Drivers = () => {
   const driverSections = useMemo(() => {
     if (isToday) {
       return {
-        assigned: displayDrivers.filter((d) => d.status === "assigned"),
-        unassigned: displayDrivers.filter((d) => d.status === "unassigned" || d.status === "scheduled"),
-        working: displayDrivers.filter((d) => ["on-route", "working"].includes(d.status)),
-        punchedOut: displayDrivers.filter((d) => ["offline", "punched-out"].includes(d.status)),
+        assigned: displayDrivers.filter((d) => d.status === "confirmed"),
+        unassigned: displayDrivers.filter((d) => d.status === "unconfirmed"),
+        working: displayDrivers.filter((d) => d.status === "on_the_clock"),
+        punchedOut: displayDrivers.filter((d) => d.status === "done"),
       };
     } else {
       return {
-        unassigned: displayDrivers.filter(d => d.status === "unassigned"),
-        assigned: displayDrivers.filter(d => d.status === "assigned"),
+        unassigned: displayDrivers.filter(d => d.status === "unconfirmed"),
+        assigned: displayDrivers.filter(d => d.status === "confirmed"),
         working: [],
         punchedOut: [],
       };
@@ -1228,31 +1226,31 @@ const Drivers = () => {
   // Create ordered list of all selectable drivers for keyboard navigation
   const selectableDrivers = useMemo(() => {
     if (isToday) {
-      // Today: Assigned -> Unassigned -> Working -> Punched Out
+      // Today: Confirmed -> Unconfirmed -> On The Clock -> Done
       return [
-        ...displayDrivers.filter((d) => d.status === "assigned"),
-        ...displayDrivers.filter((d) => d.status === "unassigned" || d.status === "scheduled"),
-        ...displayDrivers.filter((d) => ["on-route", "working"].includes(d.status)),
-        ...displayDrivers.filter((d) => ["offline", "punched-out"].includes(d.status)),
+        ...displayDrivers.filter((d) => d.status === "confirmed"),
+        ...displayDrivers.filter((d) => d.status === "unconfirmed"),
+        ...displayDrivers.filter((d) => d.status === "on_the_clock"),
+        ...displayDrivers.filter((d) => d.status === "done"),
       ];
     } else {
-      // Future: Unassigned -> Assigned
+      // Future: Unconfirmed -> Confirmed
       return [
-        ...displayDrivers.filter(d => d.status === "unassigned"),
-        ...displayDrivers.filter(d => d.status === "assigned"),
+        ...displayDrivers.filter(d => d.status === "unconfirmed"),
+        ...displayDrivers.filter(d => d.status === "confirmed"),
       ];
     }
   }, [displayDrivers, isToday]);
 
-  // Auto-select first unassigned driver on page load or when drivers change
+  // Auto-select first unconfirmed driver on page load or when drivers change
   useEffect(() => {
     if (!loading && !schedulesLoading && selectableDrivers.length > 0) {
       // Only auto-select if no driver is currently selected or selected driver no longer exists
       if (!selectedDriverId || !selectableDrivers.find(d => d.id === selectedDriverId)) {
-        // Prefer first unassigned driver
-        const firstUnassigned = displayDrivers.find((d) => d.status === "unassigned" || d.status === "scheduled");
-        if (firstUnassigned) {
-          setSelectedDriverId(firstUnassigned.id);
+        // Prefer first unconfirmed driver
+        const firstUnconfirmed = displayDrivers.find((d) => d.status === "unconfirmed");
+        if (firstUnconfirmed) {
+          setSelectedDriverId(firstUnconfirmed.id);
         } else if (selectableDrivers.length > 0) {
           setSelectedDriverId(selectableDrivers[0].id);
         }
@@ -1654,12 +1652,12 @@ const Drivers = () => {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-6">
-              {/* Left Column - Scheduled/Unassigned */}
+              {/* Left Column - Scheduled/Unconfirmed */}
               <div className="space-y-2">
                 <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
                   <span>Scheduled</span>
                   <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                    {displayDrivers.filter(d => d.status === "unassigned").filter(d => {
+                    {displayDrivers.filter(d => d.status === "unconfirmed").filter(d => {
                       if (globalCdlFilter === "cdl") return (d as any).has_cdl;
                       if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
                       return true;
@@ -1668,7 +1666,7 @@ const Drivers = () => {
                 </h3>
                 <div className="flex flex-col gap-1">
                   {displayDrivers
-                    .filter(d => d.status === "unassigned")
+                    .filter(d => d.status === "unconfirmed")
                     .filter(d => {
                       if (globalCdlFilter === "cdl") return (d as any).has_cdl;
                       if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
@@ -1692,11 +1690,11 @@ const Drivers = () => {
                         {(driver as any).has_cdl && (
                           <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
                         )}
-                        {driver.schedule && (
+                        {(driver as any).schedule && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
                             <Clock className="h-3 w-3" />
                             <span>
-                              {driver.schedule.start_time?.slice(0, 5) || "--:--"}
+                              {(driver as any).schedule.start_time?.slice(0, 5) || "--:--"}
                             </span>
                           </div>
                         )}
@@ -1716,18 +1714,18 @@ const Drivers = () => {
                         )}
                       </div>
                     ))}
-                  {displayDrivers.filter(d => d.status === "unassigned").length === 0 && (
+                  {displayDrivers.filter(d => d.status === "unconfirmed").length === 0 && (
                     <p className="text-xs text-muted-foreground italic py-2">No drivers scheduled for this day</p>
                   )}
                 </div>
               </div>
 
-              {/* Right Column - Assigned */}
+              {/* Right Column - Confirmed */}
               <div className="space-y-2">
                 <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                  <span>Assigned</span>
+                  <span>Confirmed</span>
                   <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                    {displayDrivers.filter(d => d.status === "assigned").filter(d => {
+                    {displayDrivers.filter(d => d.status === "confirmed").filter(d => {
                       if (globalCdlFilter === "cdl") return (d as any).has_cdl;
                       if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
                       return true;
@@ -1736,7 +1734,7 @@ const Drivers = () => {
                 </h3>
                 <div className="flex flex-col gap-1">
                   {displayDrivers
-                    .filter(d => d.status === "assigned")
+                    .filter(d => d.status === "confirmed")
                     .filter(d => {
                       if (globalCdlFilter === "cdl") return (d as any).has_cdl;
                       if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
@@ -1756,10 +1754,10 @@ const Drivers = () => {
                         {(driver as any).has_cdl && (
                           <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
                         )}
-                        {driver.report_time && (
+                        {(driver as any).report_time && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
                             <Clock className="h-3 w-3" />
-                            <span>{driver.report_time.slice(0, 5)}</span>
+                            <span>{(driver as any).report_time.slice(0, 5)}</span>
                           </div>
                         )}
                         {driver.vehicle && (
@@ -1783,8 +1781,8 @@ const Drivers = () => {
                         )}
                       </div>
                     ))}
-                  {displayDrivers.filter(d => d.status === "assigned").length === 0 && (
-                    <p className="text-xs text-muted-foreground italic py-2">No drivers assigned yet</p>
+                  {displayDrivers.filter(d => d.status === "confirmed").length === 0 && (
+                    <p className="text-xs text-muted-foreground italic py-2">No drivers confirmed yet</p>
                   )}
                 </div>
               </div>
@@ -1873,11 +1871,11 @@ const Drivers = () => {
               <div className="grid grid-cols-2 gap-6">
               {/* Left Column */}
               <div className="flex flex-col gap-5">
-                {/* Assigned */}
+                {/* Confirmed */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
                     <span className="flex items-center gap-2">
-                      Assigned
+                      Confirmed
                       <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
                         {assignedDrivers}
                       </span>
@@ -1885,7 +1883,7 @@ const Drivers = () => {
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {displayDrivers
-                      .filter((d) => d.status === "assigned")
+                      .filter((d) => d.status === "confirmed")
                       .filter((d) => {
                         if (globalCdlFilter === "cdl") return d.has_cdl;
                         if (globalCdlFilter === "non-cdl") return !d.has_cdl;
@@ -1913,16 +1911,16 @@ const Drivers = () => {
                         />
                       ))}
                     {assignedDrivers === 0 && (
-                      <p className="text-sm text-muted-foreground italic py-3">No assigned drivers</p>
+                      <p className="text-sm text-muted-foreground italic py-3">No confirmed drivers</p>
                     )}
                   </div>
                 </div>
 
-                {/* Unassigned */}
+                {/* Unconfirmed */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
                     <span className="flex items-center gap-2">
-                      Unassigned
+                      Unconfirmed
                       <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
                         {unassignedDrivers}
                       </span>
@@ -1930,7 +1928,7 @@ const Drivers = () => {
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {displayDrivers
-                      .filter((d) => d.status === "unassigned" || d.status === "scheduled")
+                      .filter((d) => d.status === "unconfirmed")
                       .filter((d) => {
                         if (globalCdlFilter === "cdl") return d.has_cdl;
                         if (globalCdlFilter === "non-cdl") return !d.has_cdl;
@@ -1959,7 +1957,7 @@ const Drivers = () => {
                         />
                       ))}
                     {unassignedDrivers === 0 && (
-                      <p className="text-sm text-muted-foreground italic py-3">No unassigned drivers</p>
+                      <p className="text-sm text-muted-foreground italic py-3">No unconfirmed drivers</p>
                     )}
                   </div>
                 </div>
@@ -2063,7 +2061,7 @@ const Drivers = () => {
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {displayDrivers
-                      .filter((d) => ["on-route", "working"].includes(d.status))
+                      .filter((d) => d.status === "on_the_clock")
                       .filter((d) => {
                         if (globalCdlFilter === "cdl") return d.has_cdl;
                         if (globalCdlFilter === "non-cdl") return !d.has_cdl;
@@ -2106,7 +2104,7 @@ const Drivers = () => {
                   </h3>
                   <div className="flex flex-wrap gap-1.5">
                     {displayDrivers
-                      .filter((d) => ["offline", "punched-out"].includes(d.status))
+                      .filter((d) => d.status === "done")
                       .map((driver) => (
                         <DriverRow
                           key={driver.id}
@@ -2214,7 +2212,6 @@ const Drivers = () => {
                     .map((driver) => (
                       <SelectItem key={driver.id} value={driver.id}>
                         {driver.name}
-                        {driver.status === "off" && <span className="ml-2 text-muted-foreground">(OFF)</span>}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -2299,7 +2296,7 @@ const Drivers = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {drivers
-                    .filter((d) => d.is_active && d.status !== "off" && !["working", "on-route"].includes(d.status))
+                    .filter((d) => d.is_active && d.status !== "on_the_clock")
                     .map((driver) => (
                       <SelectItem key={driver.id} value={driver.id}>
                         {driver.name}
@@ -2560,7 +2557,7 @@ const Drivers = () => {
                     .map((driver) => (
                       <SelectItem key={driver.id} value={driver.id}>
                         {driver.name}
-                        {driver.status !== "assigned" && (
+                        {driver.status !== "confirmed" && (
                           <span className="text-muted-foreground ml-2 text-xs">
                             ({driver.status})
                           </span>
@@ -2572,11 +2569,11 @@ const Drivers = () => {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="punch-in-vehicle" className={
-                punchInDriver && drivers.find(d => d.id === punchInDriver.id)?.status === "unassigned"
+                punchInDriver && drivers.find(d => d.id === punchInDriver.id)?.status === "unconfirmed"
                   ? "text-amber-400 font-medium"
                   : ""
               }>
-                Vehicle {punchInDriver && drivers.find(d => d.id === punchInDriver.id)?.status === "unassigned" && (
+                Vehicle {punchInDriver && drivers.find(d => d.id === punchInDriver.id)?.status === "unconfirmed" && (
                   <span className="text-amber-400 text-xs ml-1">(required)</span>
                 )}
               </Label>
@@ -2596,7 +2593,7 @@ const Drivers = () => {
                   ref={punchInVehicleRef}
                   tabIndex={punchInTabStage === 2 || (punchInVehicle === "__none__" || !punchInVehicle) ? 0 : -1}
                   className={
-                    punchInDriver && drivers.find(d => d.id === punchInDriver.id)?.status === "unassigned" && (punchInVehicle === "__none__" || !punchInVehicle)
+                    punchInDriver && drivers.find(d => d.id === punchInDriver.id)?.status === "unconfirmed" && (punchInVehicle === "__none__" || !punchInVehicle)
                       ? "ring-2 ring-amber-400 border-amber-400"
                       : ""
                   }
