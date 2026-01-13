@@ -1,79 +1,72 @@
 import { cn } from "@/lib/utils";
-type DriverStatus = "available" | "on-route" | "break" | "offline" | "off" | "scheduled" | "assigned" | "working" | "unassigned" | "punched-out";
+
+// New driver status model
+type DriverStatus = "unconfirmed" | "confirmed" | "on_the_clock" | "done" | "off";
 type VehicleStatus = "active" | "out-of-service" | "maintenance" | "returned";
 type CleanStatus = "clean" | "dirty" | "unknown";
+
+// Subcategory for unconfirmed drivers
+export type UnconfirmedSubcategory = "has_vehicle" | "reporting_to_office";
+
 interface StatusBadgeProps {
   status: DriverStatus | VehicleStatus | CleanStatus;
   label?: string;
   showPulse?: boolean;
   size?: "sm" | "md" | "lg";
+  subcategory?: UnconfirmedSubcategory;
 }
+
 const statusConfig: Record<string, {
   bg: string;
   text: string;
   border: string;
   glow: string;
 }> = {
-  available: {
+  // New driver statuses
+  unconfirmed: {
+    bg: "bg-slate-500/20",
+    text: "text-slate-400",
+    border: "border-slate-500/50",
+    glow: "status-glow-offline"
+  },
+  confirmed: {
+    bg: "bg-emerald-500/20",
+    text: "text-emerald-500",
+    border: "border-emerald-500/50",
+    glow: "status-glow-available"
+  },
+  on_the_clock: {
     bg: "bg-status-available/20",
     text: "text-status-available",
     border: "border-status-available/50",
     glow: "status-glow-available"
   },
-  "on-route": {
-    bg: "bg-status-on-route/20",
-    text: "text-status-on-route",
-    border: "border-status-on-route/50",
-    glow: "status-glow-on-route"
-  },
-  break: {
-    bg: "bg-status-break/20",
-    text: "text-status-break",
-    border: "border-status-break/50",
-    glow: "status-glow-break"
-  },
-  offline: {
+  done: {
     bg: "bg-status-offline/20",
     text: "text-status-offline",
     border: "border-status-offline/50",
     glow: "status-glow-offline"
   },
   off: {
-    bg: "bg-status-offline/20",
-    text: "text-status-offline",
-    border: "border-status-offline/50",
-    glow: "status-glow-offline"
+    bg: "bg-red-500/20",
+    text: "text-red-500",
+    border: "border-red-500/50",
+    glow: "status-glow-out-of-service"
   },
-  scheduled: {
-    bg: "bg-status-available/20",
-    text: "text-status-available",
-    border: "border-status-available/50",
-    glow: "status-glow-available"
-  },
-  assigned: {
+  // Subcategories for unconfirmed
+  has_vehicle: {
     bg: "bg-blue-500/20",
     text: "text-blue-500",
     border: "border-blue-500/50",
     glow: "status-glow-on-route"
   },
-  working: {
-    bg: "bg-status-on-route/20",
-    text: "text-status-on-route",
-    border: "border-status-on-route/50",
-    glow: "status-glow-on-route"
+  reporting_to_office: {
+    bg: "bg-amber-500/20",
+    text: "text-amber-500",
+    border: "border-amber-500/50",
+    glow: "status-glow-break"
   },
-  unassigned: {
-    bg: "bg-slate-500/20",
-    text: "text-slate-400",
-    border: "border-slate-500/50",
-    glow: "status-glow-offline"
-  },
-  "punched-out": {
-    bg: "bg-status-offline/20",
-    text: "text-status-offline",
-    border: "border-status-offline/50",
-    glow: "status-glow-offline"
-  },
+  // Vehicle statuses
   active: {
     bg: "bg-status-active/20",
     text: "text-status-active",
@@ -98,6 +91,7 @@ const statusConfig: Record<string, {
     border: "border-status-available/50",
     glow: "status-glow-available"
   },
+  // Clean statuses
   clean: {
     bg: "bg-status-clean/20",
     text: "text-status-clean",
@@ -117,28 +111,44 @@ const statusConfig: Record<string, {
     glow: "status-glow-offline"
   }
 };
+
 const sizeConfig = {
   sm: "px-2 py-0.5 text-xs",
   md: "px-3 py-1 text-sm",
   lg: "px-4 py-1.5 text-base"
 };
+
 const statusLabels: Record<string, string> = {
-  "on-route": "PUNCHED IN",
-  "offline": "PUNCHED OUT",
-  "scheduled": "NOT ASSIGNED",
-  "assigned": "ASSIGNED",
-  "unassigned": "UNASSIGNED",
-  "punched-out": "PUNCHED OUT",
-  "working": "WORKING"
+  unconfirmed: "UNCONFIRMED",
+  confirmed: "CONFIRMED",
+  on_the_clock: "ON THE CLOCK",
+  done: "DONE",
+  off: "OFF",
+  has_vehicle: "HAS VEHICLE",
+  reporting_to_office: "REPORTING TO OFFICE",
 };
+
 export function StatusBadge({
   status,
   label,
   showPulse = false,
-  size = "md"
+  size = "md",
+  subcategory,
 }: StatusBadgeProps) {
-  const config = statusConfig[status];
-  const displayLabel = label || statusLabels[status] || status.replace("-", " ").toUpperCase();
+  // Use subcategory config if provided for unconfirmed status
+  const configKey = status === "unconfirmed" && subcategory ? subcategory : status;
+  const config = statusConfig[configKey];
+  
+  // Get display label
+  let displayLabel = label;
+  if (!displayLabel) {
+    if (status === "unconfirmed" && subcategory) {
+      displayLabel = statusLabels[subcategory];
+    } else {
+      displayLabel = statusLabels[status] || status.replace(/_/g, " ").toUpperCase();
+    }
+  }
+
   return (
     <span
       className={cn(

@@ -1015,17 +1015,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "dispatcher"
       clean_status: "clean" | "dirty" | "unknown"
-      driver_status:
-        | "available"
-        | "on-route"
-        | "break"
-        | "offline"
-        | "off"
-        | "scheduled"
-        | "assigned"
-        | "working"
-        | "unassigned"
-        | "punched-out"
+      driver_status: "unconfirmed" | "confirmed" | "on_the_clock" | "done"
       maintenance_category:
         | "mechanical"
         | "electrical"
@@ -1180,18 +1170,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "dispatcher"],
       clean_status: ["clean", "dirty", "unknown"],
-      driver_status: [
-        "available",
-        "on-route",
-        "break",
-        "offline",
-        "off",
-        "scheduled",
-        "assigned",
-        "working",
-        "unassigned",
-        "punched-out",
-      ],
+      driver_status: ["unconfirmed", "confirmed", "on_the_clock", "done"],
       maintenance_category: [
         "mechanical",
         "electrical",
