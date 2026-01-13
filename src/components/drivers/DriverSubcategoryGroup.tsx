@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Truck, Clock, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type SubcategoryType = "has_vehicle" | "reporting_to_office" | "dispatched" | "needs_vehicle";
+type SubcategoryType = "has_vehicle" | "dispatched" | "report_time";
 
 interface DriverSubcategoryGroupProps {
   type: SubcategoryType;
@@ -23,20 +23,14 @@ const subcategoryConfig: Record<SubcategoryType, {
     color: "text-blue-400",
     bgColor: "bg-blue-500/10",
   },
-  reporting_to_office: {
-    label: "Reporting to Office",
-    icon: MapPin,
-    color: "text-slate-400",
-    bgColor: "bg-slate-500/10",
-  },
   dispatched: {
     label: "Dispatched",
     icon: Truck,
     color: "text-emerald-400",
     bgColor: "bg-emerald-500/10",
   },
-  needs_vehicle: {
-    label: "Needs Vehicle",
+  report_time: {
+    label: "Report Time",
     icon: Clock,
     color: "text-amber-400",
     bgColor: "bg-amber-500/10",

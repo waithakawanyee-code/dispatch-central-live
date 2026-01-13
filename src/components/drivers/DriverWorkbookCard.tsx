@@ -22,7 +22,7 @@ interface DriverWorkbookCardProps {
   isSelected?: boolean;
   isUpdated?: boolean;
   onClick?: () => void;
-  subcategory?: "has_vehicle" | "reporting_to_office" | "dispatched" | "needs_vehicle";
+  subcategory?: "has_vehicle" | "dispatched" | "report_time";
 }
 
 export function DriverWorkbookCard({
@@ -157,8 +157,8 @@ export function DriverWorkbookCard({
           </div>
         )}
 
-        {/* Needs vehicle indicator for confirmed without vehicle */}
-        {driver.status === "confirmed" && !hasVehicle && (
+        {/* Report time indicator for confirmed drivers needing vehicle */}
+        {subcategory === "report_time" && driver.report_time && (
           <div className="flex items-center gap-1 text-xs text-amber-500">
             <Truck className="h-3 w-3" />
             <span className="text-[10px] font-medium">Needs</span>
