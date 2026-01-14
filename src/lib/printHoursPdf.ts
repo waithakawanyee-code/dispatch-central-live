@@ -67,10 +67,15 @@ function createHoursPdf(drivers: DriverHoursData[], date: Date): jsPDF {
   doc.setFont("helvetica", "bold");
   doc.text(`Driver Hours - ${dateStr}`, pageWidth / 2, 40, { align: "center" });
 
-  // Sort drivers alphabetically by name
-  const sortedDrivers = [...drivers].sort((a, b) =>
-    a.driverName.localeCompare(b.driverName)
-  );
+  // Sort drivers alphabetically by code, then by name as fallback
+  const sortedDrivers = [...drivers].sort((a, b) => {
+    const aCode = a.driverCode || "zzz";
+    const bCode = b.driverCode || "zzz";
+    if (aCode !== bCode) {
+      return aCode.localeCompare(bCode);
+    }
+    return a.driverName.localeCompare(b.driverName);
+  });
 
   // Prepare table data with calculated hours
   const tableData = sortedDrivers.map((driver) => {
