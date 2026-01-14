@@ -21,11 +21,17 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Secret protection
+    // Skip secret check for cron jobs - they're authenticated via JWT Authorization header
+    // Only require secret for external/manual calls without proper auth
+    const authHeader = req.headers.get("authorization");
     const expectedSecret = Deno.env.get("WASH_EVENTS_SECRET");
     const providedSecret = req.headers.get("x-lovable-secret");
-
-    if (expectedSecret && providedSecret !== expectedSecret) {
+    
+    // Allow if: has valid auth header (from cron), OR has correct secret (for external calls)
+    const hasValidAuth = authHeader && authHeader.startsWith("Bearer ");
+    const hasValidSecret = expectedSecret && providedSecret === expectedSecret;
+    
+    if (!hasValidAuth && !hasValidSecret) {
       return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
