@@ -1532,6 +1532,33 @@ const Drivers = () => {
       setShowDetailsPanel(prev => !prev);
     }
     
+    // Enter key progresses driver through workflow
+    if (e.key === "Enter" && selectedDriverId) {
+      e.preventDefault();
+      const driver = drivers.find(d => d.id === selectedDriverId);
+      if (!driver) return;
+      
+      switch (driver.status) {
+        case "unconfirmed":
+          // Unconfirmed → Open assign/confirm dialog
+          executeAssign(selectedDriverId);
+          break;
+        case "confirmed":
+          // Confirmed → Open punch-in dialog
+          executePunchIn(selectedDriverId);
+          break;
+        case "on_the_clock":
+          // On the clock → Open punch-out dialog
+          executePunchOut(selectedDriverId);
+          break;
+        case "done":
+          // Done → Show details panel
+          setShowDetailsPanel(true);
+          break;
+      }
+      return;
+    }
+    
     // === SHORTCUT KEYS (A, P, D, O) ===
     // Only work when not in future date mode (today only)
     if (!isToday) return;
@@ -1592,7 +1619,8 @@ const Drivers = () => {
     getCurrentSection, 
     driverSections, 
     sectionOrder, 
-    isToday, 
+    isToday,
+    drivers,
     executeAssign, 
     executePunchIn, 
     executeQuickPunchIn,
