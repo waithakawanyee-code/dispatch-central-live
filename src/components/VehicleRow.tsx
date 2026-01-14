@@ -153,19 +153,6 @@ export function VehicleRow({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>}
-            {vehicle.classification === "take_home" && <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400">
-                      <Home className="h-2.5 w-2.5" />
-                      ​
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <span className="text-xs">Take Home Vehicle - Assigned to specific driver</span>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>}
             {vehicle.primary_category === "specialty" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400">
                 Specialty
               </span>}
@@ -186,8 +173,18 @@ export function VehicleRow({
           </div>
           {vehicle.vehicle_type && <p className="text-[10px] text-muted-foreground">{VEHICLE_TYPE_LABELS[vehicle.vehicle_type]}</p>}
           {/* Show Owner for Take Home vehicles */}
-          {vehicle.classification === "take_home" && vehicle.assigned_driver_id && <p className="text-[10px] text-muted-foreground">
-              ​ <span className="font-medium">{drivers.find(d => d.id === vehicle.assigned_driver_id)?.name || "Unknown"}</span>
+          {vehicle.classification === "take_home" && vehicle.assigned_driver_id && <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Home className="h-2.5 w-2.5 text-blue-600 dark:text-blue-400" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <span className="text-xs">Take Home Vehicle</span>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <span className="font-medium">{drivers.find(d => d.id === vehicle.assigned_driver_id)?.name || "Unknown"}</span>
             </p>}
           {/* Show currently assigned driver if different from owner */}
           {vehicle.driver && <TooltipProvider delayDuration={1000}>
