@@ -116,7 +116,16 @@ const Vehicles = () => {
     );
   };
 
-  // Helper to split vehicles into unassigned/assigned columns or flat grid
+  // Get drivers who are currently on the clock (punched in)
+  const driversOnTheClock = useMemo(() => {
+    return new Set(
+      drivers
+        .filter((d) => d.status === "on_the_clock")
+        .map((d) => d.name)
+    );
+  }, [drivers]);
+
+  // Helper to split vehicles into unassigned/assigned/on-the-road columns or flat grid
   const renderVehicleColumns = (vehicleList: typeof vehicles) => {
     if (compactView) {
       // Compact view: single flat 2-column grid, no headers
@@ -131,12 +140,16 @@ const Vehicles = () => {
     }
     
     const unassigned = vehicleList.filter((v) => !v.driver);
-    const assigned = vehicleList.filter((v) => v.driver);
+    // Assigned = has driver but driver is NOT on the clock
+    const assigned = vehicleList.filter((v) => v.driver && !driversOnTheClock.has(v.driver));
+    // On the road = has driver AND driver IS on the clock
+    const onTheRoad = vehicleList.filter((v) => v.driver && driversOnTheClock.has(v.driver));
     
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {renderVehicleGrid(unassigned, true, "Unassigned")}
         {renderVehicleGrid(assigned, true, "Assigned")}
+        {renderVehicleGrid(onTheRoad, true, "On The Road")}
       </div>
     );
   };
