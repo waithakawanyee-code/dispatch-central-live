@@ -1660,33 +1660,6 @@ const Drivers = () => {
 
         {/* Driver Status */}
         <section className="rounded-xl border border-border bg-card/30 p-6 mb-6 min-h-[500px]">
-          <div className="mb-6 flex items-center justify-between">
-            
-            <div className="flex items-center gap-3">
-              {/* Quick Stats Pills */}
-              <div className="hidden md:flex items-center gap-2 text-xs">
-                <span className="flex items-center gap-1.5 bg-slate-500/20 text-slate-400 px-2.5 py-1 rounded-full">
-                  <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />
-                  {unassignedDrivers} Unconfirmed
-                </span>
-                <span className="flex items-center gap-1.5 bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  {assignedDrivers} Confirmed
-                </span>
-                <span className="flex items-center gap-1.5 bg-status-active/20 text-status-active px-2.5 py-1 rounded-full">
-                  <span className="h-1.5 w-1.5 rounded-full bg-status-active" />
-                  {workingDrivers} Working
-                </span>
-                <span className="flex items-center gap-1.5 bg-muted text-muted-foreground px-2.5 py-1 rounded-full">
-                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-                  {punchedOutDrivers} Done
-                </span>
-              </div>
-              <span className="rounded-full bg-secondary px-3 py-1 font-mono text-xs text-muted-foreground">
-                {displayDrivers.length} TOTAL
-              </span>
-            </div>
-          </div>
 
           {isFutureDate ? (/* Future Date View - Use same DriverWorkbookPanel as today for consistency */
         <div className="space-y-4">
@@ -1827,24 +1800,30 @@ const Drivers = () => {
             </div>)}
         </section>
 
-        {/* Stats Overview - Collapsible */}
-        <Collapsible open={statsOpen} onOpenChange={setStatsOpen}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-border bg-card/50 px-3 py-2 hover:bg-card/80 transition-colors">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-primary" />
-              <span className="text-sm font-semibold text-foreground">Stats Overview</span>
-            </div>
-            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${statsOpen ? 'rotate-180' : ''}`} />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-3">
-            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-              <StatsCard title="Unassigned" value={unassignedDrivers} subtitle="Waiting" icon={Users} accentColor="accent" />
-              <StatsCard title="Assigned" value={assignedDrivers} subtitle="Ready" icon={Users} accentColor="primary" />
-              <StatsCard title="Working" value={workingDrivers} subtitle="Active" icon={Users} accentColor="primary" />
-              <StatsCard title="Punched Out" value={punchedOutDrivers} subtitle="Done" icon={Users} accentColor="accent" />
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+        {/* Quick Stats Pills - Bottom of Page */}
+        <div className="flex items-center justify-center gap-3 py-4 border-t border-border">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="flex items-center gap-1.5 bg-slate-500/20 text-slate-400 px-2.5 py-1 rounded-full">
+              <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />
+              {unassignedDrivers} Unconfirmed
+            </span>
+            <span className="flex items-center gap-1.5 bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              {assignedDrivers} Confirmed
+            </span>
+            <span className="flex items-center gap-1.5 bg-status-active/20 text-status-active px-2.5 py-1 rounded-full">
+              <span className="h-1.5 w-1.5 rounded-full bg-status-active" />
+              {workingDrivers} Working
+            </span>
+            <span className="flex items-center gap-1.5 bg-muted text-muted-foreground px-2.5 py-1 rounded-full">
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+              {punchedOutDrivers} Done
+            </span>
+          </div>
+          <span className="rounded-full bg-secondary px-3 py-1 font-mono text-xs text-muted-foreground">
+            {displayDrivers.length} TOTAL
+          </span>
+        </div>
       </main>
 
       {/* Assign Dialog */}
