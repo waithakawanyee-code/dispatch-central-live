@@ -1,4 +1,4 @@
-import { Clock, Truck, Home, CheckCircle2 } from "lucide-react";
+import { Clock, Home, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/integrations/supabase/types";
@@ -135,13 +135,21 @@ export function DriverWorkbookCard({
         )}
       </div>
 
-      {/* Driver name */}
-      <span className={cn(
-        "font-medium text-xs flex-1 truncate",
-        driver.status === "done" ? "text-muted-foreground" : "text-foreground"
-      )}>
-        {driver.name}
-      </span>
+      {/* Driver name and vehicle */}
+      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+        <span className={cn(
+          "font-medium text-xs truncate",
+          driver.status === "done" ? "text-muted-foreground" : "text-foreground"
+        )}>
+          {driver.name}
+        </span>
+        {/* Vehicle ID next to name */}
+        {vehicleUnit && (driver.status === "on_the_clock" || driver.status === "confirmed" || subcategory === "has_vehicle") && (
+          <span className="text-[10px] font-mono text-primary shrink-0">
+            {vehicleUnit}
+          </span>
+        )}
+      </div>
 
       {/* Badges and info */}
       <div className="flex items-center gap-1.5 shrink-0">
@@ -168,20 +176,9 @@ export function DriverWorkbookCard({
           </span>
         )}
 
-        {/* Vehicle indicator - show for unconfirmed with vehicle, confirmed dispatched, or on_the_clock */}
-        {vehicleUnit && (driver.status === "on_the_clock" || driver.status === "confirmed" || subcategory === "has_vehicle") && (
-          <div className="flex items-center gap-0.5 text-[10px] font-mono text-primary">
-            <Truck className="h-2.5 w-2.5" />
-            <span>{vehicleUnit}</span>
-          </div>
-        )}
-
         {/* Report time indicator for confirmed drivers needing vehicle */}
         {subcategory === "report_time" && driver.report_time && (
-          <div className="flex items-center gap-0.5 text-[10px] text-amber-500">
-            <Truck className="h-2.5 w-2.5" />
-            <span className="text-[9px] font-medium">Needs</span>
-          </div>
+          <span className="text-[9px] font-medium text-amber-500">Needs Vehicle</span>
         )}
 
         {/* Report time for unconfirmed/confirmed */}
