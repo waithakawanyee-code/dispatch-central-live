@@ -85,9 +85,8 @@ export function DriverWorkbookPanel({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* LEFT COLUMN */}
+      {/* LEFT COLUMN - UNCONFIRMED */}
       <div className="space-y-6">
-        {/* UNCONFIRMED Section */}
         <DriverStatusSection
           title="Unconfirmed"
           count={categorizedDrivers.unconfirmed.total}
@@ -138,7 +137,10 @@ export function DriverWorkbookPanel({
             </div>
           )}
         </DriverStatusSection>
+      </div>
 
+      {/* RIGHT COLUMN - CONFIRMED + ON THE CLOCK */}
+      <div className="space-y-6">
         {/* CONFIRMED Section */}
         <DriverStatusSection
           title="Confirmed"
@@ -194,10 +196,7 @@ export function DriverWorkbookPanel({
             </div>
           )}
         </DriverStatusSection>
-      </div>
 
-      {/* RIGHT COLUMN */}
-      <div className="space-y-6">
         {/* ON THE CLOCK Section */}
         <DriverStatusSection
           title="On the Clock"
