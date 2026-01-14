@@ -158,27 +158,7 @@ export function DriverWorkbookPanel({
             </p>
           ) : (
             <div className="space-y-4">
-              {/* Dispatched - confirmed with vehicle assigned */}
-              {categorizedDrivers.confirmed.dispatched.length > 0 && (
-                <DriverSubcategoryGroup
-                  type="dispatched"
-                  count={categorizedDrivers.confirmed.dispatched.length}
-                >
-                  {categorizedDrivers.confirmed.dispatched.map((driver) => (
-                    <DriverWorkbookCard
-                      key={driver.id}
-                      driver={driver}
-                      shiftData={driver.shiftData}
-                      isSelected={selectedDriverId === driver.id}
-                      isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                      onClick={() => onDriverSelect(driver.id)}
-                      subcategory="dispatched"
-                    />
-                  ))}
-                </DriverSubcategoryGroup>
-              )}
-
-              {/* Report Time - confirmed but needs vehicle */}
+              {/* Report Time - confirmed but needs vehicle (on top) */}
               {categorizedDrivers.confirmed.reportTime.length > 0 && (
                 <DriverSubcategoryGroup
                   type="report_time"
@@ -193,6 +173,26 @@ export function DriverWorkbookPanel({
                       isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                       onClick={() => onDriverSelect(driver.id)}
                       subcategory="report_time"
+                    />
+                  ))}
+                </DriverSubcategoryGroup>
+              )}
+
+              {/* Dispatched - confirmed with vehicle assigned (below) */}
+              {categorizedDrivers.confirmed.dispatched.length > 0 && (
+                <DriverSubcategoryGroup
+                  type="dispatched"
+                  count={categorizedDrivers.confirmed.dispatched.length}
+                >
+                  {categorizedDrivers.confirmed.dispatched.map((driver) => (
+                    <DriverWorkbookCard
+                      key={driver.id}
+                      driver={driver}
+                      shiftData={driver.shiftData}
+                      isSelected={selectedDriverId === driver.id}
+                      isUpdated={recentlyUpdatedDrivers.has(driver.id)}
+                      onClick={() => onDriverSelect(driver.id)}
+                      subcategory="dispatched"
                     />
                   ))}
                 </DriverSubcategoryGroup>
