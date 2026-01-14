@@ -7,6 +7,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { getDay } from "date-fns";
 
 type DriverRowType = Database["public"]["Tables"]["drivers"]["Row"];
+type VehicleRowType = Database["public"]["Tables"]["vehicles"]["Row"];
 
 interface TimePunch {
   id: string;
@@ -22,6 +23,7 @@ interface DriverDetailsPanelProps {
 export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps) {
   const [todayPunches, setTodayPunches] = useState<TimePunch[]>([]);
   const [isAnyHours, setIsAnyHours] = useState(false);
+  const [assignedVehicle, setAssignedVehicle] = useState<VehicleRowType | null>(null);
 
   useEffect(() => {
     if (!driver) return;
@@ -32,10 +34,11 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
       const todayEnd = new Date();
       todayEnd.setHours(23, 59, 59, 999);
 
-      // Fetch punches and today's schedule in parallel
+      // Fetch punches, today's schedule, and vehicle info in parallel
       const dayOfWeek = getDay(new Date());
+      const vehicleUnit = driver.vehicle || driver.default_vehicle;
       
-      const [punchesRes, scheduleRes] = await Promise.all([
+      const [punchesRes, scheduleRes, vehicleRes] = await Promise.all([
         supabase
           .from("time_punches")
           .select("id, punch_type, punch_time")
@@ -49,6 +52,13 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
           .eq("driver_id", driver.id)
           .eq("day_of_week", dayOfWeek)
           .maybeSingle(),
+        vehicleUnit
+          ? supabase
+              .from("vehicles")
+              .select("*")
+              .eq("unit", vehicleUnit)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
       ]);
 
       if (punchesRes.data) {
@@ -60,10 +70,16 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
       } else {
         setIsAnyHours(false);
       }
+
+      if (vehicleRes.data) {
+        setAssignedVehicle(vehicleRes.data);
+      } else {
+        setAssignedVehicle(null);
+      }
     };
 
     fetchDriverData();
-  }, [driver?.id]);
+  }, [driver?.id, driver?.vehicle, driver?.default_vehicle]);
 
   if (!driver) return null;
 
@@ -139,9 +155,18 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
           )} />
           <h3 className="font-semibold text-foreground">{driver.name}</h3>
         </div>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Punched In badge - show for on_the_clock drivers */}
+          {isOnTheClock && latestPunchIn && (
+            <div className="flex items-center gap-1.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2 py-1 rounded text-xs font-medium">
+              <Clock className="h-3 w-3" />
+              <span>In: {formatPunchTime(latestPunchIn.punch_time)}</span>
+            </div>
+          )}
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Content */}
@@ -199,16 +224,27 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
             {isOnTheClock ? "Currently Working" : isDone ? "Today's Shift" : "Assignment"}
           </h4>
           <div className="space-y-1.5">
-            {/* Vehicle - always show, use default_vehicle for take-home drivers if no current vehicle */}
-            <div className="flex items-center gap-2 text-sm">
-              <Truck className="h-4 w-4 text-muted-foreground" />
-              <span className="text-foreground">
-                {driver.vehicle || driver.default_vehicle || <span className="text-muted-foreground">No vehicle</span>}
-              </span>
-            </div>
+          {/* Vehicle - always show, use default_vehicle for take-home drivers if no current vehicle */}
+          <div className="flex items-center gap-2 text-sm">
+            <Truck className="h-4 w-4 text-muted-foreground" />
+            <span className="text-foreground">
+              {driver.vehicle || driver.default_vehicle || <span className="text-muted-foreground">No vehicle</span>}
+            </span>
+          </div>
 
-            {/* Working drivers: Show start time (punch in) */}
-            {isOnTheClock && latestPunchIn && (
+          {/* Vehicle phone - show if available */}
+          {assignedVehicle?.phone && (
+            <a 
+              href={`tel:${assignedVehicle.phone}`}
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors ml-6"
+            >
+              <Phone className="h-3.5 w-3.5" />
+              <span className="font-mono text-xs">{assignedVehicle.phone}</span>
+            </a>
+          )}
+
+          {/* Working drivers: Show start time (punch in) */}
+          {isOnTheClock && latestPunchIn && (
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span className="text-foreground font-mono">
