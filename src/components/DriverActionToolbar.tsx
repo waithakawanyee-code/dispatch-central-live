@@ -10,6 +10,7 @@ interface DriverActionToolbarProps {
   status: DriverStatus;
   onAssign: () => void;
   onPunchIn: () => void;
+  onQuickPunchIn?: () => void;
   onPunchOut: () => void;
   onMarkOff: () => void;
   onUnassign: () => void;
@@ -33,6 +34,7 @@ export function DriverActionToolbar({
   status,
   onAssign,
   onPunchIn,
+  onQuickPunchIn,
   onPunchOut,
   onMarkOff,
   onUnassign,
@@ -51,11 +53,17 @@ export function DriverActionToolbar({
           { label: "Mark OFF", shortcut: "O", icon: Power, onClick: onMarkOff, variant: "outline" },
         ];
       case "confirmed":
-        return [
+        const actions: ActionButton[] = [
           { label: "Punch In", shortcut: "P", icon: Clock, onClick: onPunchIn, variant: "default" },
+        ];
+        if (onQuickPunchIn) {
+          actions.push({ label: "Quick", shortcut: "⇧P", icon: Clock, onClick: onQuickPunchIn, variant: "secondary" });
+        }
+        actions.push(
           { label: "Mark OFF", shortcut: "O", icon: Power, onClick: onMarkOff, variant: "outline" },
           { label: "Unconfirm", shortcut: "", icon: Undo2, onClick: onUnassign, variant: "outline" },
-        ];
+        );
+        return actions;
       case "on_the_clock":
         return [
           { label: "Punch Out", shortcut: "D", icon: LogOut, onClick: onPunchOut, variant: "default" },

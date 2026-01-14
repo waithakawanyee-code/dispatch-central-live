@@ -784,6 +784,74 @@ const Drivers = () => {
     setShowPunchOutDialog(true);
   }, [drivers]);
 
+  // Quick punch-in without dialog (Shift+P)
+  const executeQuickPunchIn = useCallback(async (driverId: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver) return;
+
+    // Only allow for confirmed drivers (not unconfirmed - they need vehicle selection)
+    if (driver.status !== "confirmed") {
+      toast({
+        title: "Cannot quick punch-in",
+        description: driver.status === "unconfirmed" 
+          ? "Unconfirmed drivers must be punched in via dialog to select a vehicle"
+          : driver.status === "on_the_clock"
+          ? `${driver.name} is already on the clock`
+          : `${driver.name} has already completed their shift`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if driver already has an open shift for today
+    const existingShift = await getOpenShiftForDriver(driverId);
+    if (existingShift) {
+      toast({
+        title: "Already punched in",
+        description: `${driver.name} is already on the clock`,
+      });
+      return;
+    }
+
+    // Get the vehicle (current or default)
+    const vehicleUnit = getDriverDefaultVehicle(driverId);
+    const vehicleToAssign = vehicleUnit === "__none__" ? null : vehicleUnit;
+
+    // Store previous state for undo
+    setLastAction({
+      driverId: driver.id,
+      driverName: driver.name,
+      previousStatus: driver.status,
+      previousVehicle: driver.vehicle,
+      previousReportTime: driver.report_time,
+      actionType: "punch-in",
+    });
+
+    // Get current time
+    const now = new Date();
+    const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+
+    const result = await punchIn(
+      driverId,
+      driver.name,
+      currentTime,
+      vehicleToAssign
+    );
+
+    if (result.success) {
+      toast({
+        title: "Punched In",
+        description: `${driver.name} is now working${vehicleToAssign ? ` on ${vehicleToAssign}` : ""}`,
+      });
+    } else {
+      toast({
+        title: "Error punching in",
+        description: result.error || "Failed to punch in",
+        variant: "destructive",
+      });
+    }
+  }, [drivers, getDriverDefaultVehicle, punchIn, toast, setLastAction]);
+
   const handleConfirmPunchIn = async () => {
     if (!punchInDriver) return;
     
@@ -1431,8 +1499,15 @@ const Drivers = () => {
       }
     }
     
+    // Shift+P → Quick Punch In (no dialog, uses current time and default vehicle)
+    if (e.key === "P" && e.shiftKey && selectedDriverId) {
+      e.preventDefault();
+      executeQuickPunchIn(selectedDriverId);
+      return;
+    }
+    
     // P → Punch In - always opens dialog, validates on submit
-    if (e.key === "p" || e.key === "P") {
+    if ((e.key === "p" || e.key === "P") && !e.shiftKey) {
       e.preventDefault();
       executePunchIn(selectedDriverId || undefined);
     }
@@ -1465,6 +1540,7 @@ const Drivers = () => {
     isToday, 
     executeAssign, 
     executePunchIn, 
+    executeQuickPunchIn,
     executePunchOut, 
     executeOff,
     executeUndo
@@ -1567,6 +1643,7 @@ const Drivers = () => {
                   status={selectedDriver.status}
                   onAssign={() => executeAssign(selectedDriverId)}
                   onPunchIn={() => executePunchIn(selectedDriverId)}
+                  onQuickPunchIn={() => executeQuickPunchIn(selectedDriverId)}
                   onPunchOut={() => executePunchOut(selectedDriverId)}
                   onMarkOff={() => executeOff(selectedDriverId)}
                   onUnassign={() => executeUnassign(selectedDriverId)}
