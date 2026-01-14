@@ -51,10 +51,7 @@ function formatHours(hours: number | null): string {
   return hours.toFixed(2);
 }
 
-export function generateHoursPdf(
-  drivers: DriverHoursData[],
-  date: Date
-): void {
+function createHoursPdf(drivers: DriverHoursData[], date: Date): jsPDF {
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "pt",
@@ -130,6 +127,12 @@ export function generateHoursPdf(
     },
   });
 
+  return doc;
+}
+
+export function printHoursPdf(drivers: DriverHoursData[], date: Date): void {
+  const doc = createHoursPdf(drivers, date);
+  
   // Create blob URL and use iframe for printing to avoid popup blocker
   const pdfBlob = doc.output("blob");
   const blobUrl = URL.createObjectURL(pdfBlob);
@@ -153,8 +156,14 @@ export function generateHoursPdf(
     setTimeout(() => {
       document.body.removeChild(iframe);
       URL.revokeObjectURL(blobUrl);
-    }, 60000); // Keep for 1 minute in case print dialog is open
+    }, 60000);
   };
   
   document.body.appendChild(iframe);
+}
+
+export function downloadHoursPdf(drivers: DriverHoursData[], date: Date): void {
+  const doc = createHoursPdf(drivers, date);
+  const dateStr = format(date, "yyyy-MM-dd");
+  doc.save(`driver-hours-${dateStr}.pdf`);
 }
