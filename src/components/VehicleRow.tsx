@@ -158,7 +158,7 @@ export function VehicleRow({
                   <TooltipTrigger asChild>
                     <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400">
                       <Home className="h-2.5 w-2.5" />
-                      Take Home
+                      ​
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="top">
