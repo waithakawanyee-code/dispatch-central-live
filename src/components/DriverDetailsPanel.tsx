@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { getDay } from "date-fns";
+import { getDay, format } from "date-fns";
 
 type DriverRowType = Database["public"]["Tables"]["drivers"]["Row"];
 type VehicleRowType = Database["public"]["Tables"]["vehicles"]["Row"];
+type ShiftRowType = Database["public"]["Tables"]["shifts"]["Row"];
 
 interface TimePunch {
   id: string;
@@ -24,6 +25,7 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
   const [todayPunches, setTodayPunches] = useState<TimePunch[]>([]);
   const [isAnyHours, setIsAnyHours] = useState(false);
   const [assignedVehicle, setAssignedVehicle] = useState<VehicleRowType | null>(null);
+  const [currentShift, setCurrentShift] = useState<ShiftRowType | null>(null);
 
   useEffect(() => {
     if (!driver) return;
@@ -33,12 +35,13 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
       todayStart.setHours(0, 0, 0, 0);
       const todayEnd = new Date();
       todayEnd.setHours(23, 59, 59, 999);
+      const todayDate = format(new Date(), "yyyy-MM-dd");
 
-      // Fetch punches, today's schedule, and vehicle info in parallel
+      // Fetch punches, today's schedule, vehicle info, and current shift in parallel
       const dayOfWeek = getDay(new Date());
       const vehicleUnit = driver.vehicle || driver.default_vehicle;
       
-      const [punchesRes, scheduleRes, vehicleRes] = await Promise.all([
+      const [punchesRes, scheduleRes, vehicleRes, shiftRes] = await Promise.all([
         supabase
           .from("time_punches")
           .select("id, punch_type, punch_time")
@@ -59,6 +62,14 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
               .eq("unit", vehicleUnit)
               .maybeSingle()
           : Promise.resolve({ data: null }),
+        supabase
+          .from("shifts")
+          .select("*")
+          .eq("driver_id", driver.id)
+          .eq("workday_date", todayDate)
+          .order("punch_in_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
 
       if (punchesRes.data) {
@@ -75,6 +86,12 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
         setAssignedVehicle(vehicleRes.data);
       } else {
         setAssignedVehicle(null);
+      }
+
+      if (shiftRes.data) {
+        setCurrentShift(shiftRes.data);
+      } else {
+        setCurrentShift(null);
       }
     };
 
@@ -156,11 +173,11 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
           <h3 className="font-semibold text-foreground">{driver.name}</h3>
         </div>
         <div className="flex items-center gap-2">
-          {/* Punched In badge - show for on_the_clock drivers */}
-          {isOnTheClock && latestPunchIn && (
+          {/* Punched In badge - show for on_the_clock drivers using shift data */}
+          {isOnTheClock && currentShift?.punch_in_at && (
             <div className="flex items-center gap-1.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2 py-1 rounded text-xs font-medium">
               <Clock className="h-3 w-3" />
-              <span>In: {formatPunchTime(latestPunchIn.punch_time)}</span>
+              <span>In: {formatPunchTime(currentShift.punch_in_at)}</span>
             </div>
           )}
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
