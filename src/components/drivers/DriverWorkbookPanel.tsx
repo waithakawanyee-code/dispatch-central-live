@@ -1,9 +1,10 @@
-import { useMemo } from "react";
-import { Users, Truck, Clock, CheckCircle2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Users, Clock, CheckCircle2, ChevronDown } from "lucide-react";
 import { DriverWorkbookCard } from "./DriverWorkbookCard";
 import { DriverStatusSection } from "./DriverStatusSection";
 import { DriverSubcategoryGroup } from "./DriverSubcategoryGroup";
 import { cn } from "@/lib/utils";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriverStatus = Database["public"]["Enums"]["driver_status"];
@@ -224,33 +225,75 @@ export function DriverWorkbookPanel({
           )}
         </DriverStatusSection>
 
-        {/* DONE Section */}
-        <DriverStatusSection
-          title="Done"
-          count={categorizedDrivers.done.length}
-          icon={<CheckCircle2 className="h-4 w-4" />}
-          variant="muted"
-        >
-          {categorizedDrivers.done.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic py-4 text-center">
-              No drivers done for the day
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 gap-1.5">
-              {categorizedDrivers.done.map((driver) => (
-                <DriverWorkbookCard
-                  key={driver.id}
-                  driver={driver}
-                  shiftData={driver.shiftData}
-                  isSelected={selectedDriverId === driver.id}
-                  isUpdated={recentlyUpdatedDrivers.has(driver.id)}
-                  onClick={() => onDriverSelect(driver.id)}
-                />
-              ))}
-            </div>
-          )}
-        </DriverStatusSection>
+        {/* DONE Section - Collapsible */}
+        <DoneSection
+          drivers={categorizedDrivers.done}
+          selectedDriverId={selectedDriverId}
+          recentlyUpdatedDrivers={recentlyUpdatedDrivers}
+          onDriverSelect={onDriverSelect}
+        />
       </div>
     </div>
+  );
+}
+
+// Separate collapsible Done section component
+function DoneSection({
+  drivers,
+  selectedDriverId,
+  recentlyUpdatedDrivers,
+  onDriverSelect,
+}: {
+  drivers: DisplayDriver[];
+  selectedDriverId: string | null;
+  recentlyUpdatedDrivers: Set<string>;
+  onDriverSelect: (driverId: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <div className="rounded-lg border bg-card">
+        <CollapsibleTrigger asChild>
+          <button className="flex w-full items-center justify-between p-3 hover:bg-muted/50 transition-colors rounded-lg">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium text-sm">Done</span>
+              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                {drivers.length}
+              </span>
+            </div>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                isOpen && "rotate-180"
+              )}
+            />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="px-3 pb-3">
+            {drivers.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic py-4 text-center">
+                No drivers done for the day
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-1.5">
+                {drivers.map((driver) => (
+                  <DriverWorkbookCard
+                    key={driver.id}
+                    driver={driver}
+                    shiftData={driver.shiftData}
+                    isSelected={selectedDriverId === driver.id}
+                    isUpdated={recentlyUpdatedDrivers.has(driver.id)}
+                    onClick={() => onDriverSelect(driver.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
   );
 }
