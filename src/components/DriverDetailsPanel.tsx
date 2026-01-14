@@ -199,15 +199,13 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
             {isOnTheClock ? "Currently Working" : isDone ? "Today's Shift" : "Assignment"}
           </h4>
           <div className="space-y-1.5">
-            {/* Vehicle - show for on_the_clock, done, and confirmed */}
-            {(isOnTheClock || isDone || driver.status === "confirmed") && (
-              <div className="flex items-center gap-2 text-sm">
-                <Truck className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground">
-                  {driver.vehicle || <span className="text-muted-foreground">No vehicle</span>}
-                </span>
-              </div>
-            )}
+            {/* Vehicle - always show, use default_vehicle for take-home drivers if no current vehicle */}
+            <div className="flex items-center gap-2 text-sm">
+              <Truck className="h-4 w-4 text-muted-foreground" />
+              <span className="text-foreground">
+                {driver.vehicle || driver.default_vehicle || <span className="text-muted-foreground">No vehicle</span>}
+              </span>
+            </div>
 
             {/* Working drivers: Show start time (punch in) */}
             {isOnTheClock && latestPunchIn && (
@@ -264,16 +262,6 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span className="text-foreground font-mono">
                   {driver.report_time ? formatTime(driver.report_time) : <span className="text-muted-foreground">No report time</span>}
-                </span>
-              </div>
-            )}
-
-            {/* Unconfirmed/confirmed drivers: Show vehicle */}
-            {!isOnTheClock && !isDone && (
-              <div className="flex items-center gap-2 text-sm">
-                <Truck className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground">
-                  {driver.vehicle || <span className="text-muted-foreground">No vehicle</span>}
                 </span>
               </div>
             )}
