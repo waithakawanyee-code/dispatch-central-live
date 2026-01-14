@@ -324,6 +324,7 @@ const Drivers = () => {
     
     // For future dates, return available drivers with their assignment status
     // Exclude drivers who are marked OFF
+    // All scheduled drivers show as "unconfirmed", take-home drivers show their default vehicle
     const futureDrivers = (getAvailableDriversWithSchedule || [])
       .filter((driver) => !offDriverIds.has(driver.id))
       .map((driver) => {
@@ -335,14 +336,18 @@ const Drivers = () => {
             vehicle: assignment.vehicle,
             report_time: assignment.report_time,
             isAnyHours: driver.schedule?.is_any_hours || false,
+            shiftData: null,
           };
         }
+        // All unassigned drivers show as unconfirmed
+        // Take-home drivers keep their default_vehicle so they appear in "has vehicle" group
         return {
           ...driver,
           status: "unconfirmed" as const,
-          vehicle: null,
-          report_time: null,
+          vehicle: driver.default_vehicle || null, // Take-home drivers show their vehicle
+          report_time: driver.schedule?.start_time || null,
           isAnyHours: driver.schedule?.is_any_hours || false,
+          shiftData: null,
         };
       });
 
