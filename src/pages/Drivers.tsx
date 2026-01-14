@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock, PhoneOff, Truck, X, Undo2, Search, UserPlus } from "lucide-react";
+import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock, PhoneOff, Truck, X, Undo2, Search, UserPlus, Printer } from "lucide-react";
+import { generateHoursPdf } from "@/lib/printHoursPdf";
 import { format, addDays, isSameDay, startOfDay, getDay } from "date-fns";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
@@ -1726,19 +1727,52 @@ const Drivers = () => {
                 </div>}
             </div>) : (/* Today View - Modern Workbook Panel */
         <div className="space-y-4">
-              {/* Global CDL Filter */}
-              <div className="flex items-center justify-end gap-2">
-                <span className="text-xs text-muted-foreground uppercase tracking-wide">CDL Filter:</span>
-                <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-0.5">
-                  <Button variant={globalCdlFilter === "all" ? "secondary" : "ghost"} size="sm" className="h-7 px-3 text-xs rounded-md" onClick={() => setGlobalCdlFilter("all")}>
-                    All
-                  </Button>
-                  <Button variant={globalCdlFilter === "non-cdl" ? "secondary" : "ghost"} size="sm" className="h-7 px-3 text-xs rounded-md" onClick={() => setGlobalCdlFilter("non-cdl")}>
-                    Non-CDL
-                  </Button>
-                  <Button variant={globalCdlFilter === "cdl" ? "secondary" : "ghost"} size="sm" className="h-7 px-3 text-xs rounded-md" onClick={() => setGlobalCdlFilter("cdl")}>
-                    CDL
-                  </Button>
+              {/* Global CDL Filter + Print Hours */}
+              <div className="flex items-center justify-between gap-2">
+                {/* Print Hours Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-2 text-xs"
+                  onClick={() => {
+                    // Format punch times for PDF
+                    const formatPunchTime = (isoString: string | null | undefined) => {
+                      if (!isoString) return null;
+                      try {
+                        const date = new Date(isoString);
+                        return format(date, "h:mm a");
+                      } catch {
+                        return null;
+                      }
+                    };
+
+                    const hoursData = displayDrivers.map(d => ({
+                      driverName: d.name,
+                      vehicleId: d.vehicle || (d as any).shiftData?.vehicle_unit || null,
+                      startTime: formatPunchTime((d as any).shiftData?.punch_in_at),
+                      endTime: formatPunchTime((d as any).shiftData?.punch_out_at),
+                    }));
+                    generateHoursPdf(hoursData, selectedDate);
+                  }}
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  Print Hours
+                </Button>
+
+                {/* CDL Filter */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">CDL Filter:</span>
+                  <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-0.5">
+                    <Button variant={globalCdlFilter === "all" ? "secondary" : "ghost"} size="sm" className="h-7 px-3 text-xs rounded-md" onClick={() => setGlobalCdlFilter("all")}>
+                      All
+                    </Button>
+                    <Button variant={globalCdlFilter === "non-cdl" ? "secondary" : "ghost"} size="sm" className="h-7 px-3 text-xs rounded-md" onClick={() => setGlobalCdlFilter("non-cdl")}>
+                      Non-CDL
+                    </Button>
+                    <Button variant={globalCdlFilter === "cdl" ? "secondary" : "ghost"} size="sm" className="h-7 px-3 text-xs rounded-md" onClick={() => setGlobalCdlFilter("cdl")}>
+                      CDL
+                    </Button>
+                  </div>
                 </div>
               </div>
 
