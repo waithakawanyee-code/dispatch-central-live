@@ -186,101 +186,102 @@ export function VehicleRow({
               </TooltipProvider>
               <span className="font-medium">{drivers.find(d => d.id === vehicle.assigned_driver_id)?.name || "Unknown"}</span>
             </p>}
-          {/* Show currently assigned driver if different from owner */}
-          {vehicle.driver && <TooltipProvider delayDuration={1000}>
+        </div>
+
+        {/* Right side: Clean indicator + Driver code */}
+        <div className="flex flex-col items-center gap-0.5">
+          {canEdit ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex cursor-pointer items-center justify-center focus:outline-none">
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={cn(
+                          "flex h-6 w-6 items-center justify-center rounded-full transition-colors",
+                          vehicle.clean_status === "clean" && "text-status-clean",
+                          vehicle.clean_status === "dirty" && "text-status-dirty animate-dirty-pulse",
+                          vehicle.clean_status === "unknown" && "text-muted-foreground"
+                        )}>
+                          {vehicle.clean_status === "clean" && <Sparkles className="h-4 w-4" />}
+                          {vehicle.clean_status === "dirty" && <CircleAlert className="h-4 w-4" />}
+                          {vehicle.clean_status === "unknown" && <CircleHelp className="h-4 w-4" />}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="left">
+                        <span className="text-xs capitalize">{vehicle.clean_status}</span>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[100px]">
+                {cleanStatusOptions.map(option => (
+                  <DropdownMenuItem 
+                    key={option.value} 
+                    onClick={() => onCleanStatusChange?.(option.value)} 
+                    className={cn("cursor-pointer text-xs gap-2", vehicle.clean_status === option.value && "bg-secondary")}
+                  >
+                    <span className={cn(
+                      option.value === "clean" && "text-status-clean",
+                      option.value === "dirty" && "text-status-dirty",
+                      option.value === "unknown" && "text-muted-foreground"
+                    )}>
+                      {option.value === "clean" && <Sparkles className="h-3.5 w-3.5" />}
+                      {option.value === "dirty" && <CircleAlert className="h-3.5 w-3.5" />}
+                      {option.value === "unknown" && <CircleHelp className="h-3.5 w-3.5" />}
+                    </span>
+                    <span>{option.label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <p className="text-[10px] text-muted-foreground cursor-default hover:text-foreground transition-colors">
-                    {vehicle.classification === "take_home" && vehicle.assigned_driver_id ? vehicle.driver !== drivers.find(d => d.id === vehicle.assigned_driver_id)?.name ? `Assigned: ${vehicle.driver}` : null : vehicle.driver}
-                  </p>
+                  <span className={cn(
+                    "flex h-6 w-6 items-center justify-center rounded-full",
+                    vehicle.clean_status === "clean" && "text-status-clean",
+                    vehicle.clean_status === "dirty" && "text-status-dirty animate-dirty-pulse",
+                    vehicle.clean_status === "unknown" && "text-muted-foreground"
+                  )}>
+                    {vehicle.clean_status === "clean" && <Sparkles className="h-4 w-4" />}
+                    {vehicle.clean_status === "dirty" && <CircleAlert className="h-4 w-4" />}
+                    {vehicle.clean_status === "unknown" && <CircleHelp className="h-4 w-4" />}
+                  </span>
                 </TooltipTrigger>
-                <TooltipContent side="top" className="p-3">
-                  <div className="flex flex-col gap-1.5 text-xs">
-                    <div className="font-semibold text-foreground">{vehicle.driver}</div>
-                    {assignedDriver?.code && <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <User className="h-3 w-3" />
-                        <span className="font-mono">{assignedDriver.code}</span>
-                      </div>}
-                    {assignedDriver?.phone && <div className="flex items-center gap-1.5 text-muted-foreground">
+                <TooltipContent side="left">
+                  <span className="text-xs capitalize">{vehicle.clean_status}</span>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          
+          {/* Driver code below clean indicator */}
+          {assignedDriver?.code && (
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="font-mono text-[10px] text-muted-foreground cursor-default hover:text-foreground transition-colors">
+                    {assignedDriver.code}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="p-2">
+                  <div className="flex flex-col gap-1 text-xs">
+                    <span className="font-semibold">{vehicle.driver}</span>
+                    {assignedDriver.phone && (
+                      <span className="flex items-center gap-1 text-muted-foreground">
                         <Phone className="h-3 w-3" />
-                        <span className="font-mono">{assignedDriver.phone}</span>
-                      </div>}
-                    {!assignedDriver?.code && !assignedDriver?.phone && <span className="text-muted-foreground italic">No contact info</span>}
+                        {assignedDriver.phone}
+                      </span>
+                    )}
                   </div>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>}
+            </TooltipProvider>
+          )}
         </div>
-
-        {/* Clean/Dirty Icon Indicator */}
-        {canEdit ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex cursor-pointer items-center justify-center focus:outline-none">
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className={cn(
-                        "flex h-6 w-6 items-center justify-center rounded-full transition-colors",
-                        vehicle.clean_status === "clean" && "text-status-clean",
-                        vehicle.clean_status === "dirty" && "text-status-dirty animate-dirty-pulse",
-                        vehicle.clean_status === "unknown" && "text-muted-foreground"
-                      )}>
-                        {vehicle.clean_status === "clean" && <Sparkles className="h-4 w-4" />}
-                        {vehicle.clean_status === "dirty" && <CircleAlert className="h-4 w-4" />}
-                        {vehicle.clean_status === "unknown" && <CircleHelp className="h-4 w-4" />}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="left">
-                      <span className="text-xs capitalize">{vehicle.clean_status}</span>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[100px]">
-              {cleanStatusOptions.map(option => (
-                <DropdownMenuItem 
-                  key={option.value} 
-                  onClick={() => onCleanStatusChange?.(option.value)} 
-                  className={cn("cursor-pointer text-xs gap-2", vehicle.clean_status === option.value && "bg-secondary")}
-                >
-                  <span className={cn(
-                    option.value === "clean" && "text-status-clean",
-                    option.value === "dirty" && "text-status-dirty",
-                    option.value === "unknown" && "text-muted-foreground"
-                  )}>
-                    {option.value === "clean" && <Sparkles className="h-3.5 w-3.5" />}
-                    {option.value === "dirty" && <CircleAlert className="h-3.5 w-3.5" />}
-                    {option.value === "unknown" && <CircleHelp className="h-3.5 w-3.5" />}
-                  </span>
-                  <span>{option.label}</span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded-full",
-                  vehicle.clean_status === "clean" && "text-status-clean",
-                  vehicle.clean_status === "dirty" && "text-status-dirty animate-dirty-pulse",
-                  vehicle.clean_status === "unknown" && "text-muted-foreground"
-                )}>
-                  {vehicle.clean_status === "clean" && <Sparkles className="h-4 w-4" />}
-                  {vehicle.clean_status === "dirty" && <CircleAlert className="h-4 w-4" />}
-                  {vehicle.clean_status === "unknown" && <CircleHelp className="h-4 w-4" />}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="left">
-                <span className="text-xs capitalize">{vehicle.clean_status}</span>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-
       </div>
 
       {/* Dialogs */}
