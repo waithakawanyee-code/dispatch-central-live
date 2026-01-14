@@ -63,6 +63,13 @@ const Vehicles = () => {
     };
   }, [vehicles]);
 
+  // Create a map of driver IDs to driver names for take home owner lookup
+  const driverIdToName = useMemo(() => {
+    const map = new Map<string, string>();
+    drivers.forEach((d) => map.set(d.id, d.name));
+    return map;
+  }, [drivers]);
+
   // Get drivers who are currently on the clock (punched in)
   const driversOnTheClock = useMemo(() => {
     return new Set(
@@ -71,6 +78,20 @@ const Vehicles = () => {
         .map((d) => d.name)
     );
   }, [drivers]);
+
+  // Helper to get the effective driver name for a vehicle
+  // For take home vehicles, use the owner name if no current driver is assigned
+  const getEffectiveDriver = (vehicle: typeof vehicles[0]): string | null => {
+    // If vehicle has an active driver assigned, use that
+    if (vehicle.driver) return vehicle.driver;
+    
+    // For take home vehicles, use the owner as the effective driver
+    if (vehicle.classification === "take_home" && vehicle.assigned_driver_id) {
+      return driverIdToName.get(vehicle.assigned_driver_id) || null;
+    }
+    
+    return null;
+  };
 
   // Calculate stats
   const cleanVehicles = vehicles.filter((v) => v.clean_status === "clean").length;
@@ -139,11 +160,18 @@ const Vehicles = () => {
       );
     }
     
-    const unassigned = vehicleList.filter((v) => !v.driver);
-    // Assigned = has driver but driver is NOT on the clock
-    const assigned = vehicleList.filter((v) => v.driver && !driversOnTheClock.has(v.driver));
-    // On the road = has driver AND driver IS on the clock
-    const onTheRoad = vehicleList.filter((v) => v.driver && driversOnTheClock.has(v.driver));
+    // Use effective driver (accounts for take home vehicle owners)
+    const unassigned = vehicleList.filter((v) => !getEffectiveDriver(v));
+    // Assigned = has effective driver but driver is NOT on the clock
+    const assigned = vehicleList.filter((v) => {
+      const effectiveDriver = getEffectiveDriver(v);
+      return effectiveDriver && !driversOnTheClock.has(effectiveDriver);
+    });
+    // On the road = has effective driver AND driver IS on the clock
+    const onTheRoad = vehicleList.filter((v) => {
+      const effectiveDriver = getEffectiveDriver(v);
+      return effectiveDriver && driversOnTheClock.has(effectiveDriver);
+    });
     
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
