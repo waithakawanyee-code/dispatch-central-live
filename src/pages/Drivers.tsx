@@ -605,6 +605,7 @@ const Drivers = () => {
 
   const openPunchInDialog = (driverId: string, driverName: string) => {
     setPunchInDriver({ id: driverId, name: driverName });
+    setPunchInVehicle(getDriverDefaultVehicle(driverId));
     setPunchInTime(getCurrentTimeString());
     setShowPunchInDialog(true);
   };
