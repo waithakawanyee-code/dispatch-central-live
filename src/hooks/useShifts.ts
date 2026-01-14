@@ -246,6 +246,18 @@ export function useShifts(selectedWorkday: Date = new Date()) {
       console.error("Error updating driver row on punch in:", driverUpdateError);
     }
 
+    // ✅ Keep vehicles table in sync - set driver name on the vehicle
+    if (vehicle) {
+      const { error: vehicleUpdateError } = await supabase
+        .from("vehicles")
+        .update({ driver: driverName })
+        .eq("unit", vehicle);
+      
+      if (vehicleUpdateError) {
+        console.error("Error updating vehicle driver on punch in:", vehicleUpdateError);
+      }
+    }
+
     // Create initial vehicle segment if vehicle assigned
     if (vehicle && data) {
       // Find vehicle ID
@@ -365,7 +377,7 @@ export function useShifts(selectedWorkday: Date = new Date()) {
     // Always resolve the shift from DB to avoid stale UI state
     const { data: shift, error: shiftLookupError } = await supabase
       .from("shifts")
-      .select("id, driver_id, driver_name, punch_in_at, punch_out_at, workday_date, exception_flags")
+      .select("id, driver_id, driver_name, punch_in_at, punch_out_at, workday_date, exception_flags, vehicle_unit")
       .eq("id", shiftId)
       .maybeSingle();
   
@@ -416,6 +428,76 @@ export function useShifts(selectedWorkday: Date = new Date()) {
         vehicle: null,
       })
       .eq("id", shift.driver_id);
+
+    // ✅ Update vehicle: clear driver and mark dirty for non-take-home vehicles
+    if (shift.vehicle_unit) {
+      // Get the vehicle to check classification
+      const { data: vehicleData } = await supabase
+        .from("vehicles")
+        .select("id, classification, primary_category, always_clean_exempt, clean_status")
+        .eq("unit", shift.vehicle_unit)
+        .maybeSingle();
+
+      if (vehicleData) {
+        const isFleetVehicle = vehicleData.classification === "fleet";
+        const isAboveAll = vehicleData.primary_category === "above_all";
+        const isNotExempt = !vehicleData.always_clean_exempt;
+        const now = new Date().toISOString();
+
+        // For non-take-home vehicles: clear driver AND mark dirty
+        if (isFleetVehicle) {
+          const updateData: Record<string, unknown> = { driver: null };
+          
+          // Mark dirty if above_all and not exempt
+          if (isAboveAll && isNotExempt) {
+            updateData.clean_status = "dirty";
+            updateData.dirty_reason = "PUNCH_OUT_NON_TAKE_HOME";
+            updateData.last_marked_dirty_at = now;
+            updateData.clean_status_updated_at = now;
+            updateData.clean_status_source = "automation";
+          }
+
+          const { error: vehicleUpdateError } = await supabase
+            .from("vehicles")
+            .update(updateData)
+            .eq("id", vehicleData.id);
+
+          if (vehicleUpdateError) {
+            console.error("Error updating vehicle on punch out:", vehicleUpdateError);
+          } else if (isAboveAll && isNotExempt) {
+            // Log the dirty status event
+            await supabase.from("vehicle_status_events").insert({
+              vehicle_id: vehicleData.id,
+              event_type: "CLEAN_STATUS_PUNCH_OUT",
+              occurred_at: now,
+              source: "automation",
+              payload_json: {
+                previous_status: vehicleData.clean_status,
+                new_status: "dirty",
+                reason: "PUNCH_OUT_NON_TAKE_HOME",
+                classification: vehicleData.classification,
+              },
+              idempotency_key: `punch_out_${vehicleData.id}_${now.replace(/[:.]/g, "_")}`,
+            });
+
+            await supabase.from("status_history").insert({
+              entity_type: "vehicle",
+              entity_id: vehicleData.id,
+              entity_name: shift.vehicle_unit,
+              field_changed: "clean_status",
+              old_value: vehicleData.clean_status,
+              new_value: "dirty",
+            });
+          }
+        } else {
+          // Take-home vehicles: just clear the driver assignment (owner remains)
+          await supabase
+            .from("vehicles")
+            .update({ driver: null })
+            .eq("id", vehicleData.id);
+        }
+      }
+    }
 
     // Close any open vehicle segments
     await supabase
@@ -564,6 +646,22 @@ export function useShifts(selectedWorkday: Date = new Date()) {
         vehicle: null,
       })
       .eq("id", shift.driver_id);
+
+    // ✅ Update vehicle: clear driver for fleet vehicles on force close
+    if (shift.vehicle_unit) {
+      const { data: vehicleData } = await supabase
+        .from("vehicles")
+        .select("id, classification")
+        .eq("unit", shift.vehicle_unit)
+        .maybeSingle();
+
+      if (vehicleData && vehicleData.classification === "fleet") {
+        await supabase
+          .from("vehicles")
+          .update({ driver: null })
+          .eq("id", vehicleData.id);
+      }
+    }
 
     // Close any open vehicle segments
     await supabase
