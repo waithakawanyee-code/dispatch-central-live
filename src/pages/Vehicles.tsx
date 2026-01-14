@@ -63,6 +63,15 @@ const Vehicles = () => {
     };
   }, [vehicles]);
 
+  // Get drivers who are currently on the clock (punched in)
+  const driversOnTheClock = useMemo(() => {
+    return new Set(
+      drivers
+        .filter((d) => d.status === "on_the_clock")
+        .map((d) => d.name)
+    );
+  }, [drivers]);
+
   // Calculate stats
   const cleanVehicles = vehicles.filter((v) => v.clean_status === "clean").length;
   const dirtyVehicles = vehicles.filter((v) => v.clean_status === "dirty").length;
@@ -115,15 +124,6 @@ const Vehicles = () => {
       </div>
     );
   };
-
-  // Get drivers who are currently on the clock (punched in)
-  const driversOnTheClock = useMemo(() => {
-    return new Set(
-      drivers
-        .filter((d) => d.status === "on_the_clock")
-        .map((d) => d.name)
-    );
-  }, [drivers]);
 
   // Helper to split vehicles into unassigned/assigned/on-the-road columns or flat grid
   const renderVehicleColumns = (vehicleList: typeof vehicles) => {
