@@ -180,6 +180,15 @@ export function useDispatchData() {
     } else {
       await logStatusChange("driver", driverId, driver.name, "status", oldStatus, newStatus);
       
+      // ✅ Sync vehicle's driver field
+      if ((newStatus === "confirmed" || newStatus === "on_the_clock") && vehicle) {
+        // Set driver on the vehicle
+        await supabase
+          .from("vehicles")
+          .update({ driver: driver.name })
+          .eq("unit", vehicle);
+      }
+      
       // Record vehicle assignment history
       if ((newStatus === "confirmed" || newStatus === "on_the_clock") && vehicle) {
         // Find the vehicle to get its ID and unit
@@ -200,6 +209,7 @@ export function useDispatchData() {
         await recordTimePunch(driverId, driver.name, "out", punchTime);
         
         // Rule B: Mark vehicle dirty on punch-out for non-take-home vehicles
+        // This also clears the driver field on the vehicle
         if (oldVehicle) {
           await markVehicleDirtyOnPunchOut(oldVehicle);
         }
@@ -274,6 +284,7 @@ export function useDispatchData() {
   };
 
   // Rule B: Mark vehicle dirty on punch-out for non-take-home vehicles
+  // Also clears the driver field for fleet vehicles
   const markVehicleDirtyOnPunchOut = async (vehicleUnit: string) => {
     // Find the vehicle by unit
     const vehicle = vehicles.find(v => v.unit === vehicleUnit);
@@ -282,70 +293,83 @@ export function useDispatchData() {
       return;
     }
 
-    // Check conditions:
-    // - primary_category = 'above_all' (no automation for specialty)
-    // - always_clean_exempt = false
-    // - classification = 'fleet' (non-take-home)
+    // Check conditions
     const isAboveAll = vehicle.primary_category === "above_all";
     const isNotExempt = !(vehicle as any).always_clean_exempt;
     const isFleetVehicle = vehicle.classification === "fleet";
 
     console.log(`[Rule B] Checking vehicle ${vehicle.unit}: above_all=${isAboveAll}, not_exempt=${isNotExempt}, fleet=${isFleetVehicle}`);
 
-    if (!isAboveAll || !isNotExempt || !isFleetVehicle) {
-      console.log(`[Rule B] Skipping ${vehicle.unit} - conditions not met`);
-      return;
+    // For fleet vehicles, always clear the driver (return to unassigned)
+    // and mark dirty if above_all and not exempt
+    if (isFleetVehicle) {
+      const now = new Date().toISOString();
+      const idempotencyKey = `punch_out_${vehicle.id}_${now.replace(/[:.]/g, "_")}`;
+
+      const updateData: Record<string, unknown> = {
+        driver: null, // Always clear driver for fleet vehicles
+      };
+
+      // Only mark dirty if above_all and not exempt
+      if (isAboveAll && isNotExempt) {
+        // Skip if already dirty with this reason
+        if (vehicle.clean_status === "dirty" && (vehicle as any).dirty_reason === "PUNCH_OUT_NON_TAKE_HOME") {
+          console.log(`[Rule B] Skipping dirty status for ${vehicle.unit} - already dirty with PUNCH_OUT_NON_TAKE_HOME`);
+        } else {
+          updateData.clean_status = "dirty";
+          updateData.dirty_reason = "PUNCH_OUT_NON_TAKE_HOME";
+          updateData.last_marked_dirty_at = now;
+          updateData.clean_status_updated_at = now;
+          updateData.clean_status_source = "automation";
+        }
+      }
+
+      // Update the vehicle
+      const { error: updateError } = await supabase
+        .from("vehicles")
+        .update(updateData)
+        .eq("id", vehicle.id);
+
+      if (updateError) {
+        console.error(`[Rule B] Error updating ${vehicle.unit}:`, updateError);
+        return;
+      }
+
+      // Log the event if we marked it dirty
+      if (updateData.clean_status === "dirty") {
+        const { error: eventError } = await supabase
+          .from("vehicle_status_events")
+          .insert({
+            vehicle_id: vehicle.id,
+            event_type: "CLEAN_STATUS_PUNCH_OUT",
+            occurred_at: now,
+            source: "automation",
+            payload_json: {
+              previous_status: vehicle.clean_status,
+              new_status: "dirty",
+              reason: "PUNCH_OUT_NON_TAKE_HOME",
+              classification: vehicle.classification,
+            },
+            idempotency_key: idempotencyKey,
+          });
+
+        if (eventError) {
+          console.error(`[Rule B] Error logging event for ${vehicle.unit}:`, eventError);
+        }
+
+        await logStatusChange("vehicle", vehicle.id, vehicle.unit, "clean_status", vehicle.clean_status, "dirty");
+      }
+
+      console.log(`[Rule B] Updated ${vehicle.unit}: driver=null, dirty=${updateData.clean_status === "dirty"}`);
+    } else if (vehicle.classification === "take_home") {
+      // Take-home vehicles: just clear the driver (owner remains via assigned_driver_id)
+      await supabase
+        .from("vehicles")
+        .update({ driver: null })
+        .eq("id", vehicle.id);
+      
+      console.log(`[Rule B] Take-home vehicle ${vehicle.unit}: cleared driver, keeping owner`);
     }
-
-    // Skip if already dirty with this reason
-    if (vehicle.clean_status === "dirty" && (vehicle as any).dirty_reason === "PUNCH_OUT_NON_TAKE_HOME") {
-      console.log(`[Rule B] Skipping ${vehicle.unit} - already dirty with PUNCH_OUT_NON_TAKE_HOME`);
-      return;
-    }
-
-    const now = new Date().toISOString();
-    const idempotencyKey = `punch_out_${vehicle.id}_${new Date().toISOString().replace(/[:.]/g, "_")}`;
-
-    // Update the vehicle
-    const { error: updateError } = await supabase
-      .from("vehicles")
-      .update({
-        clean_status: "dirty",
-        dirty_reason: "PUNCH_OUT_NON_TAKE_HOME",
-        last_marked_dirty_at: now,
-        clean_status_updated_at: now,
-        clean_status_source: "automation",
-      })
-      .eq("id", vehicle.id);
-
-    if (updateError) {
-      console.error(`[Rule B] Error updating ${vehicle.unit}:`, updateError);
-      return;
-    }
-
-    // Log the event
-    const { error: eventError } = await supabase
-      .from("vehicle_status_events")
-      .insert({
-        vehicle_id: vehicle.id,
-        event_type: "CLEAN_STATUS_PUNCH_OUT",
-        occurred_at: now,
-        source: "automation",
-        payload_json: {
-          previous_status: vehicle.clean_status,
-          new_status: "dirty",
-          reason: "PUNCH_OUT_NON_TAKE_HOME",
-          classification: vehicle.classification,
-        },
-        idempotency_key: idempotencyKey,
-      });
-
-    if (eventError) {
-      console.error(`[Rule B] Error logging event for ${vehicle.unit}:`, eventError);
-    }
-
-    console.log(`[Rule B] Marked ${vehicle.unit} as dirty (PUNCH_OUT_NON_TAKE_HOME)`);
-    await logStatusChange("vehicle", vehicle.id, vehicle.unit, "clean_status", vehicle.clean_status, "dirty");
   };
 
   const updateVehicleStatus = async (vehicleId: string, newStatus: VehicleStatus) => {
