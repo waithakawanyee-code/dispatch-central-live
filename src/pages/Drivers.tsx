@@ -1652,9 +1652,24 @@ const Drivers = () => {
                 </Button>}
             </div>
 
-            {isFutureDate && <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">
-                Showing {getAvailableDriversWithSchedule?.length || 0} scheduled drivers as unassigned
-              </span>}
+            {/* CDL Filter - right side */}
+            <div className="flex items-center gap-2">
+              {isFutureDate && <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">
+                  Showing {getAvailableDriversWithSchedule?.length || 0} scheduled drivers as unassigned
+                </span>}
+              <span className="text-xs text-muted-foreground uppercase tracking-wide">CDL:</span>
+              <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-0.5">
+                <Button variant={globalCdlFilter === "all" ? "secondary" : "ghost"} size="sm" className="h-7 px-3 text-xs rounded-md" onClick={() => setGlobalCdlFilter("all")}>
+                  All
+                </Button>
+                <Button variant={globalCdlFilter === "non-cdl" ? "secondary" : "ghost"} size="sm" className="h-7 px-3 text-xs rounded-md" onClick={() => setGlobalCdlFilter("non-cdl")}>
+                  Non-CDL
+                </Button>
+                <Button variant={globalCdlFilter === "cdl" ? "secondary" : "ghost"} size="sm" className="h-7 px-3 text-xs rounded-md" onClick={() => setGlobalCdlFilter("cdl")}>
+                  CDL
+                </Button>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -1663,21 +1678,6 @@ const Drivers = () => {
 
           {isFutureDate ? (/* Future Date View - Use same DriverWorkbookPanel as today for consistency */
         <div className="space-y-4">
-              {/* CDL Filter for Future Dates */}
-              <div className="flex items-center justify-end gap-2">
-                <span className="text-xs text-muted-foreground uppercase tracking-wide">CDL Filter:</span>
-                <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-0.5">
-                  <Button variant={globalCdlFilter === "all" ? "secondary" : "ghost"} size="sm" className="h-7 px-3 text-xs rounded-md" onClick={() => setGlobalCdlFilter("all")}>
-                    All
-                  </Button>
-                  <Button variant={globalCdlFilter === "non-cdl" ? "secondary" : "ghost"} size="sm" className="h-7 px-3 text-xs rounded-md" onClick={() => setGlobalCdlFilter("non-cdl")}>
-                    Non-CDL
-                  </Button>
-                  <Button variant={globalCdlFilter === "cdl" ? "secondary" : "ghost"} size="sm" className="h-7 px-3 text-xs rounded-md" onClick={() => setGlobalCdlFilter("cdl")}>
-                    CDL
-                  </Button>
-                </div>
-              </div>
               
               {/* Use the same DriverWorkbookPanel for future dates */}
               <DriverWorkbookPanel drivers={displayDrivers.map(d => ({
