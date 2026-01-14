@@ -117,7 +117,7 @@ export function DriverWorkbookCard({
     <div
       onClick={onClick}
       className={cn(
-        "group relative flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200 cursor-pointer",
+        "group relative flex items-center gap-2 rounded-md border px-2 py-1.5 transition-all duration-200 cursor-pointer",
         styles.border,
         styles.bg,
         styles.hover,
@@ -127,74 +127,74 @@ export function DriverWorkbookCard({
       )}
     >
       {/* Status indicator */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center shrink-0">
         {hasTakeHome ? (
-          <Home className={cn("h-3.5 w-3.5", driver.status === "done" ? "text-muted-foreground" : "text-primary")} />
+          <Home className={cn("h-3 w-3", driver.status === "done" ? "text-muted-foreground" : "text-primary")} />
         ) : (
-          <span className={cn("h-2 w-2 rounded-full", styles.dot)} />
+          <span className={cn("h-1.5 w-1.5 rounded-full", styles.dot)} />
         )}
       </div>
 
       {/* Driver name */}
       <span className={cn(
-        "font-medium text-sm flex-1 truncate",
+        "font-medium text-xs flex-1 truncate",
         driver.status === "done" ? "text-muted-foreground" : "text-foreground"
       )}>
         {driver.name}
       </span>
 
       {/* Badges and info */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-1.5 shrink-0">
         {/* Confirm button for unconfirmed drivers with vehicle */}
         {subcategory === "has_vehicle" && driver.status === "unconfirmed" && onConfirm && (
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 px-2 text-xs text-blue-500 hover:text-blue-600 hover:bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="h-5 px-1.5 text-[10px] text-blue-500 hover:text-blue-600 hover:bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={(e) => {
               e.stopPropagation();
               onConfirm(driver.id);
             }}
           >
-            <CheckCircle2 className="h-3 w-3 mr-1" />
+            <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
             Confirm
           </Button>
         )}
 
         {/* CDL Badge */}
         {driver.has_cdl && (
-          <span className="text-[9px] font-bold tracking-wide text-primary bg-primary/15 px-1.5 py-0.5 rounded uppercase">
+          <span className="text-[8px] font-bold tracking-wide text-primary bg-primary/15 px-1 py-0.5 rounded uppercase">
             CDL
           </span>
         )}
 
         {/* Vehicle indicator - show for unconfirmed with vehicle, confirmed dispatched, or on_the_clock */}
         {vehicleUnit && (driver.status === "on_the_clock" || driver.status === "confirmed" || subcategory === "has_vehicle") && (
-          <div className="flex items-center gap-1 text-xs font-mono text-primary">
-            <Truck className="h-3 w-3" />
+          <div className="flex items-center gap-0.5 text-[10px] font-mono text-primary">
+            <Truck className="h-2.5 w-2.5" />
             <span>{vehicleUnit}</span>
           </div>
         )}
 
         {/* Report time indicator for confirmed drivers needing vehicle */}
         {subcategory === "report_time" && driver.report_time && (
-          <div className="flex items-center gap-1 text-xs text-amber-500">
-            <Truck className="h-3 w-3" />
-            <span className="text-[10px] font-medium">Needs</span>
+          <div className="flex items-center gap-0.5 text-[10px] text-amber-500">
+            <Truck className="h-2.5 w-2.5" />
+            <span className="text-[9px] font-medium">Needs</span>
           </div>
         )}
 
         {/* Report time for unconfirmed/confirmed */}
         {(driver.status === "unconfirmed" || driver.status === "confirmed") && driver.report_time && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
-            <Clock className="h-3 w-3" />
+          <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground font-mono">
+            <Clock className="h-2.5 w-2.5" />
             <span>{driver.report_time.slice(0, 5)}</span>
           </div>
         )}
 
         {/* Punch-in time for on_the_clock */}
         {driver.status === "on_the_clock" && punchInTime && (
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
+          <div className="flex items-center gap-0.5 text-[9px] text-muted-foreground font-mono">
             <span className="text-status-active">IN</span>
             <span>{punchInTime}</span>
           </div>
@@ -202,7 +202,7 @@ export function DriverWorkbookCard({
 
         {/* Punch times for done */}
         {driver.status === "done" && (punchInTime || punchOutTime) && (
-          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-mono">
+          <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-mono">
             {punchInTime && <span>{punchInTime}</span>}
             {punchInTime && punchOutTime && <span>→</span>}
             {punchOutTime && <span>{punchOutTime}</span>}
