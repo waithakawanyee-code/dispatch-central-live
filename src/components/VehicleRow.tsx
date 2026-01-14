@@ -171,7 +171,7 @@ export function VehicleRow({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <span className="font-medium">{drivers.find(d => d.id === vehicle.assigned_driver_id)?.name || "Unknown"}</span>
+              <span className="font-medium">{drivers.find(d => d.id === vehicle.assigned_driver_id)?.code || "Unknown"}</span>
             </p>}
         </div>
 
