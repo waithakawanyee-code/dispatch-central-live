@@ -1858,16 +1858,16 @@ const Drivers = () => {
           </div>
 
           {isFutureDate ? (
-            /* Future Date View - Two Column Layout */
+            /* Future Date View - Use same DriverWorkbookPanel as today for consistency */
             <div className="space-y-4">
               {/* CDL Filter for Future Dates */}
               <div className="flex items-center justify-end gap-2">
                 <span className="text-xs text-muted-foreground uppercase tracking-wide">CDL Filter:</span>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-0.5">
                   <Button
                     variant={globalCdlFilter === "all" ? "secondary" : "ghost"}
                     size="sm"
-                    className="h-6 px-2 text-xs"
+                    className="h-7 px-3 text-xs rounded-md"
                     onClick={() => setGlobalCdlFilter("all")}
                   >
                     All
@@ -1875,7 +1875,7 @@ const Drivers = () => {
                   <Button
                     variant={globalCdlFilter === "non-cdl" ? "secondary" : "ghost"}
                     size="sm"
-                    className="h-6 px-2 text-xs"
+                    className="h-7 px-3 text-xs rounded-md"
                     onClick={() => setGlobalCdlFilter("non-cdl")}
                   >
                     Non-CDL
@@ -1883,149 +1883,39 @@ const Drivers = () => {
                   <Button
                     variant={globalCdlFilter === "cdl" ? "secondary" : "ghost"}
                     size="sm"
-                    className="h-6 px-2 text-xs"
+                    className="h-7 px-3 text-xs rounded-md"
                     onClick={() => setGlobalCdlFilter("cdl")}
                   >
                     CDL
                   </Button>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-6">
-              {/* Left Column - Scheduled/Unconfirmed */}
-              <div className="space-y-2">
-                <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                  <span>Scheduled</span>
-                  <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                    {displayDrivers.filter(d => d.status === "unconfirmed").filter(d => {
-                      if (globalCdlFilter === "cdl") return (d as any).has_cdl;
-                      if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
-                      return true;
-                    }).length}
-                  </span>
-                </h3>
-                <div className="flex flex-col gap-1">
-                  {displayDrivers
-                    .filter(d => d.status === "unconfirmed")
-                    .filter(d => {
-                      if (globalCdlFilter === "cdl") return (d as any).has_cdl;
-                      if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
-                      return true;
-                    })
-                    .map((driver) => (
-                      <div
-                        key={driver.id}
-                        className={cn(
-                          "flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-sm transition-all duration-200 group",
-                          isAdmin && "cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-500/5",
-                          selectedDriverId === driver.id && "ring-2 ring-primary ring-offset-1 ring-offset-background border-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
-                        )}
-                        onClick={() => {
-                          handleDriverSelect(driver.id);
-                          if (isAdmin) openAssignDialog(driver.id, driver.name);
-                        }}
-                      >
-                        <span className="h-2 w-2 rounded-full bg-slate-500 shrink-0" />
-                        <span className="font-medium text-foreground flex-1">{driver.name}</span>
-                        {(driver as any).has_cdl && (
-                          <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
-                        )}
-                        {(driver as any).schedule && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
-                            <Clock className="h-3 w-3" />
-                            <span>
-                              {(driver as any).schedule.start_time?.slice(0, 5) || "--:--"}
-                            </span>
-                          </div>
-                        )}
-                        {isAdmin && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                            title="Mark OFF"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMarkOffFutureDriver(driver.id, driver.name);
-                            }}
-                          >
-                            <PhoneOff className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  {displayDrivers.filter(d => d.status === "unconfirmed").length === 0 && (
-                    <p className="text-xs text-muted-foreground italic py-2">No drivers scheduled for this day</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Right Column - Confirmed */}
-              <div className="space-y-2">
-                <h3 className="flex items-center justify-between text-sm font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                  <span>Confirmed</span>
-                  <span className="rounded bg-secondary px-2 py-0.5 font-mono text-xs">
-                    {displayDrivers.filter(d => d.status === "confirmed").filter(d => {
-                      if (globalCdlFilter === "cdl") return (d as any).has_cdl;
-                      if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
-                      return true;
-                    }).length}
-                  </span>
-                </h3>
-                <div className="flex flex-col gap-1">
-                  {displayDrivers
-                    .filter(d => d.status === "confirmed")
-                    .filter(d => {
-                      if (globalCdlFilter === "cdl") return (d as any).has_cdl;
-                      if (globalCdlFilter === "non-cdl") return !(d as any).has_cdl;
-                      return true;
-                    })
-                    .map((driver) => (
-                      <div
-                        key={driver.id}
-                        onClick={() => handleDriverSelect(driver.id)}
-                        className={cn(
-                          "flex items-center gap-3 rounded border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm group cursor-pointer transition-all duration-200",
-                          selectedDriverId === driver.id && "ring-2 ring-primary ring-offset-1 ring-offset-background border-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
-                        )}
-                      >
-                        <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                        <span className="font-medium text-foreground flex-1">{driver.name}</span>
-                        {(driver as any).has_cdl && (
-                          <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">CDL</span>
-                        )}
-                        {(driver as any).report_time && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
-                            <Clock className="h-3 w-3" />
-                            <span>{(driver as any).report_time.slice(0, 5)}</span>
-                          </div>
-                        )}
-                        {driver.vehicle && (
-                          <div className="flex items-center gap-1 text-xs text-primary font-mono">
-                            <Truck className="h-3 w-3" />
-                            <span>{driver.vehicle}</span>
-                          </div>
-                        )}
-                        {isAdmin && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUnassignFutureDriver(driver.id, driver.name);
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  {displayDrivers.filter(d => d.status === "confirmed").length === 0 && (
-                    <p className="text-xs text-muted-foreground italic py-2">No drivers confirmed yet</p>
-                  )}
-                </div>
-              </div>
-              </div>
+              
+              {/* Use the same DriverWorkbookPanel for future dates */}
+              <DriverWorkbookPanel
+                drivers={displayDrivers.map(d => ({
+                  ...d,
+                  has_cdl: (d as any).has_cdl || false,
+                  default_vehicle: (d as any).default_vehicle || d.vehicle || null,
+                  shiftData: (d as any).shiftData || null,
+                }))}
+                selectedDriverId={selectedDriverId}
+                recentlyUpdatedDrivers={recentlyUpdatedDrivers}
+                onDriverSelect={(driverId) => {
+                  handleDriverSelect(driverId);
+                  const driver = displayDrivers.find(d => d.id === driverId);
+                  if (isAdmin && driver && driver.status === "unconfirmed") {
+                    openAssignDialog(driverId, driver.name);
+                  }
+                }}
+                onConfirmDriver={isAdmin ? (driverId) => {
+                  const driver = displayDrivers.find(d => d.id === driverId);
+                  if (driver) openAssignDialog(driverId, driver.name);
+                } : undefined}
+                cdlFilter={globalCdlFilter}
+                isAdmin={isAdmin}
+              />
+              
               {/* OFF Drivers Section for Future Dates */}
               {selectedDateCallOuts.length > 0 && (
                 <div className="space-y-2 mt-4">
