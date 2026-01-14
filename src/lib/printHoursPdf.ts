@@ -130,7 +130,31 @@ export function generateHoursPdf(
     },
   });
 
-  // Open print dialog
-  doc.autoPrint();
-  window.open(doc.output("bloburl"), "_blank");
+  // Create blob URL and use iframe for printing to avoid popup blocker
+  const pdfBlob = doc.output("blob");
+  const blobUrl = URL.createObjectURL(pdfBlob);
+  
+  // Create hidden iframe for printing
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "none";
+  iframe.src = blobUrl;
+  
+  iframe.onload = () => {
+    setTimeout(() => {
+      iframe.contentWindow?.print();
+    }, 100);
+    
+    // Clean up after printing
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+      URL.revokeObjectURL(blobUrl);
+    }, 60000); // Keep for 1 minute in case print dialog is open
+  };
+  
+  document.body.appendChild(iframe);
 }
