@@ -118,9 +118,7 @@ export function VehicleRow({
   };
   return <>
       <div className={cn("flex items-center gap-2 rounded border border-border bg-card px-2 py-1.5 transition-all duration-200", "hover:border-primary/30", getBorderClass(), isUpdated && "animate-row-flash")}>
-        <div className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded", getStatusBgClass())}>
-          {getStatusIcon()}
-        </div>
+        
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -190,19 +188,13 @@ export function VehicleRow({
 
         {/* Right side: Clean indicator + Driver code */}
         <div className="flex flex-col items-center gap-0.5">
-          {canEdit ? (
-            <DropdownMenu>
+          {canEdit ? <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex cursor-pointer items-center justify-center focus:outline-none">
                   <TooltipProvider delayDuration={300}>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className={cn(
-                          "flex h-6 w-6 items-center justify-center rounded-full transition-colors",
-                          vehicle.clean_status === "clean" && "text-status-clean",
-                          vehicle.clean_status === "dirty" && "text-status-dirty animate-dirty-pulse",
-                          vehicle.clean_status === "unknown" && "text-muted-foreground"
-                        )}>
+                        <span className={cn("flex h-6 w-6 items-center justify-center rounded-full transition-colors", vehicle.clean_status === "clean" && "text-status-clean", vehicle.clean_status === "dirty" && "text-status-dirty animate-dirty-pulse", vehicle.clean_status === "unknown" && "text-muted-foreground")}>
                           {vehicle.clean_status === "clean" && <Sparkles className="h-4 w-4" />}
                           {vehicle.clean_status === "dirty" && <CircleAlert className="h-4 w-4" />}
                           {vehicle.clean_status === "unknown" && <CircleHelp className="h-4 w-4" />}
@@ -216,36 +208,19 @@ export function VehicleRow({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-[100px]">
-                {cleanStatusOptions.map(option => (
-                  <DropdownMenuItem 
-                    key={option.value} 
-                    onClick={() => onCleanStatusChange?.(option.value)} 
-                    className={cn("cursor-pointer text-xs gap-2", vehicle.clean_status === option.value && "bg-secondary")}
-                  >
-                    <span className={cn(
-                      option.value === "clean" && "text-status-clean",
-                      option.value === "dirty" && "text-status-dirty",
-                      option.value === "unknown" && "text-muted-foreground"
-                    )}>
+                {cleanStatusOptions.map(option => <DropdownMenuItem key={option.value} onClick={() => onCleanStatusChange?.(option.value)} className={cn("cursor-pointer text-xs gap-2", vehicle.clean_status === option.value && "bg-secondary")}>
+                    <span className={cn(option.value === "clean" && "text-status-clean", option.value === "dirty" && "text-status-dirty", option.value === "unknown" && "text-muted-foreground")}>
                       {option.value === "clean" && <Sparkles className="h-3.5 w-3.5" />}
                       {option.value === "dirty" && <CircleAlert className="h-3.5 w-3.5" />}
                       {option.value === "unknown" && <CircleHelp className="h-3.5 w-3.5" />}
                     </span>
                     <span>{option.label}</span>
-                  </DropdownMenuItem>
-                ))}
+                  </DropdownMenuItem>)}
               </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <TooltipProvider delayDuration={300}>
+            </DropdownMenu> : <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className={cn(
-                    "flex h-6 w-6 items-center justify-center rounded-full",
-                    vehicle.clean_status === "clean" && "text-status-clean",
-                    vehicle.clean_status === "dirty" && "text-status-dirty animate-dirty-pulse",
-                    vehicle.clean_status === "unknown" && "text-muted-foreground"
-                  )}>
+                  <span className={cn("flex h-6 w-6 items-center justify-center rounded-full", vehicle.clean_status === "clean" && "text-status-clean", vehicle.clean_status === "dirty" && "text-status-dirty animate-dirty-pulse", vehicle.clean_status === "unknown" && "text-muted-foreground")}>
                     {vehicle.clean_status === "clean" && <Sparkles className="h-4 w-4" />}
                     {vehicle.clean_status === "dirty" && <CircleAlert className="h-4 w-4" />}
                     {vehicle.clean_status === "unknown" && <CircleHelp className="h-4 w-4" />}
@@ -255,12 +230,10 @@ export function VehicleRow({
                   <span className="text-xs capitalize">{vehicle.clean_status}</span>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-          )}
+            </TooltipProvider>}
           
           {/* Driver code below clean indicator */}
-          {assignedDriver?.code && (
-            <TooltipProvider delayDuration={300}>
+          {assignedDriver?.code && <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="font-mono text-[10px] text-muted-foreground cursor-default hover:text-foreground transition-colors">
@@ -270,17 +243,14 @@ export function VehicleRow({
                 <TooltipContent side="left" className="p-2">
                   <div className="flex flex-col gap-1 text-xs">
                     <span className="font-semibold">{vehicle.driver}</span>
-                    {assignedDriver.phone && (
-                      <span className="flex items-center gap-1 text-muted-foreground">
+                    {assignedDriver.phone && <span className="flex items-center gap-1 text-muted-foreground">
                         <Phone className="h-3 w-3" />
                         {assignedDriver.phone}
-                      </span>
-                    )}
+                      </span>}
                   </div>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-          )}
+            </TooltipProvider>}
         </div>
       </div>
 
