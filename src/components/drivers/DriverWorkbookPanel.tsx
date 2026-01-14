@@ -29,6 +29,7 @@ interface DriverWorkbookPanelProps {
   selectedDriverId: string | null;
   recentlyUpdatedDrivers: Set<string>;
   onDriverSelect: (driverId: string) => void;
+  onConfirmDriver?: (driverId: string) => void;
   cdlFilter: "all" | "cdl" | "non-cdl";
   isAdmin?: boolean;
 }
@@ -38,6 +39,7 @@ export function DriverWorkbookPanel({
   selectedDriverId,
   recentlyUpdatedDrivers,
   onDriverSelect,
+  onConfirmDriver,
   cdlFilter,
   isAdmin,
 }: DriverWorkbookPanelProps) {
@@ -114,6 +116,7 @@ export function DriverWorkbookPanel({
                       isSelected={selectedDriverId === driver.id}
                       isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                       onClick={() => onDriverSelect(driver.id)}
+                      onConfirm={onConfirmDriver}
                       subcategory="has_vehicle"
                     />
                   ))}

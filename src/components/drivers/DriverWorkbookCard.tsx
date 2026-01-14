@@ -1,5 +1,6 @@
-import { Clock, Truck, MapPin, Home } from "lucide-react";
+import { Clock, Truck, Home, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriverStatus = Database["public"]["Enums"]["driver_status"];
@@ -22,6 +23,7 @@ interface DriverWorkbookCardProps {
   isSelected?: boolean;
   isUpdated?: boolean;
   onClick?: () => void;
+  onConfirm?: (driverId: string) => void;
   subcategory?: "has_vehicle" | "dispatched" | "report_time";
 }
 
@@ -31,6 +33,7 @@ export function DriverWorkbookCard({
   isSelected,
   isUpdated,
   onClick,
+  onConfirm,
   subcategory,
 }: DriverWorkbookCardProps) {
   const hasVehicle = !!driver.vehicle || !!shiftData?.vehicle_unit;
@@ -142,6 +145,22 @@ export function DriverWorkbookCard({
 
       {/* Badges and info */}
       <div className="flex items-center gap-2 shrink-0">
+        {/* Confirm button for unconfirmed drivers with vehicle */}
+        {subcategory === "has_vehicle" && driver.status === "unconfirmed" && onConfirm && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-xs text-blue-500 hover:text-blue-600 hover:bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              onConfirm(driver.id);
+            }}
+          >
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Confirm
+          </Button>
+        )}
+
         {/* CDL Badge */}
         {driver.has_cdl && (
           <span className="text-[9px] font-bold tracking-wide text-primary bg-primary/15 px-1.5 py-0.5 rounded uppercase">
