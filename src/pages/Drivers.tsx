@@ -311,7 +311,7 @@ const Drivers = () => {
         "unconfirmed": 4
       };
 
-      // Sort by status first, then by start time within each status group
+      // Sort by status first, then by start time, then by driver code alphabetically
       return todayDrivers.sort((a, b) => {
         const aStatusOrder = statusOrder[a.status] ?? 99;
         const bStatusOrder = statusOrder[b.status] ?? 99;
@@ -320,7 +320,13 @@ const Drivers = () => {
         }
         const aTime = a.scheduledStartTime || "99:99";
         const bTime = b.scheduledStartTime || "99:99";
-        return aTime.localeCompare(bTime);
+        if (aTime !== bTime) {
+          return aTime.localeCompare(bTime);
+        }
+        // Final sort by driver code alphabetically
+        const aCode = a.code || "zzz";
+        const bCode = b.code || "zzz";
+        return aCode.localeCompare(bCode);
       });
     }
 
@@ -364,7 +370,7 @@ const Drivers = () => {
       "unconfirmed": 2
     };
 
-    // Sort by status first, then by start time within each status group
+    // Sort by status first, then by start time, then by driver code alphabetically
     return futureDrivers.sort((a, b) => {
       const aStatusOrder = statusOrder[a.status] ?? 99;
       const bStatusOrder = statusOrder[b.status] ?? 99;
@@ -373,7 +379,13 @@ const Drivers = () => {
       }
       const aTime = a.schedule?.start_time || "99:99";
       const bTime = b.schedule?.start_time || "99:99";
-      return aTime.localeCompare(bTime);
+      if (aTime !== bTime) {
+        return aTime.localeCompare(bTime);
+      }
+      // Final sort by driver code alphabetically
+      const aCode = a.code || "zzz";
+      const bCode = b.code || "zzz";
+      return aCode.localeCompare(bCode);
     });
   }, [isToday, getAvailableDriversWithSchedule, drivers, futureAssignments, schedules, selectedDateCallOuts, shifts]);
 

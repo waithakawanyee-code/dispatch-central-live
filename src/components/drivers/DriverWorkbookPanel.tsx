@@ -12,6 +12,7 @@ type DriverStatus = Database["public"]["Enums"]["driver_status"];
 interface DisplayDriver {
   id: string;
   name: string;
+  code?: string | null;
   status: DriverStatus;
   vehicle?: string | null;
   report_time?: string | null;
@@ -23,6 +24,15 @@ interface DisplayDriver {
     vehicle_unit?: string | null;
   } | null;
 }
+
+// Helper to sort drivers by code alphabetically as final sort
+const sortByCode = (drivers: DisplayDriver[]) => {
+  return [...drivers].sort((a, b) => {
+    const aCode = a.code || "zzz";
+    const bCode = b.code || "zzz";
+    return aCode.localeCompare(bCode);
+  });
+};
 
 interface DriverWorkbookPanelProps {
   drivers: DisplayDriver[];
@@ -52,23 +62,23 @@ export function DriverWorkbookPanel({
     });
   };
 
-  // Categorize drivers
+  // Categorize drivers and sort each group by code
   const categorizedDrivers = useMemo(() => {
     // UNCONFIRMED - split by has vehicle vs no vehicle
     const unconfirmed = filterByCdl(drivers.filter((d) => d.status === "unconfirmed"));
-    const unconfirmedWithVehicle = unconfirmed.filter((d) => d.vehicle || d.default_vehicle);
-    const unconfirmedNoVehicle = unconfirmed.filter((d) => !d.vehicle && !d.default_vehicle);
+    const unconfirmedWithVehicle = sortByCode(unconfirmed.filter((d) => d.vehicle || d.default_vehicle));
+    const unconfirmedNoVehicle = sortByCode(unconfirmed.filter((d) => !d.vehicle && !d.default_vehicle));
 
     // CONFIRMED - split by dispatched (has vehicle) vs report time (needs vehicle)
     const confirmed = filterByCdl(drivers.filter((d) => d.status === "confirmed"));
-    const confirmedDispatched = confirmed.filter((d) => d.vehicle || d.shiftData?.vehicle_unit);
-    const confirmedReportTime = confirmed.filter((d) => !d.vehicle && !d.shiftData?.vehicle_unit);
+    const confirmedDispatched = sortByCode(confirmed.filter((d) => d.vehicle || d.shiftData?.vehicle_unit));
+    const confirmedReportTime = sortByCode(confirmed.filter((d) => !d.vehicle && !d.shiftData?.vehicle_unit));
 
-    // ON THE CLOCK
-    const onTheClock = filterByCdl(drivers.filter((d) => d.status === "on_the_clock"));
+    // ON THE CLOCK - sorted by code
+    const onTheClock = sortByCode(filterByCdl(drivers.filter((d) => d.status === "on_the_clock")));
 
-    // DONE
-    const done = filterByCdl(drivers.filter((d) => d.status === "done"));
+    // DONE - sorted by code
+    const done = sortByCode(filterByCdl(drivers.filter((d) => d.status === "done")));
 
     return {
       unconfirmed: {
