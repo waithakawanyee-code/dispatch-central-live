@@ -8,6 +8,7 @@ import { DriverDetailsPanel } from "@/components/DriverDetailsPanel";
 import { DriverPicker } from "@/components/DriverPicker";
 import { DriverActionToolbar } from "@/components/DriverActionToolbar";
 import { DriverWorkbookPanel } from "@/components/drivers";
+import { QuickVehiclePickerDialog } from "@/components/QuickVehiclePickerDialog";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useShifts } from "@/hooks/useShifts";
@@ -116,6 +117,10 @@ const Drivers = () => {
   // Driver picker state (for keyboard shortcuts when no driver selected)
   const [showDriverPicker, setShowDriverPicker] = useState(false);
   const [pendingAction, setPendingAction] = useState<"confirm" | "off" | null>(null);
+  
+  // Quick vehicle picker for Shift+P when no vehicle assigned
+  const [showQuickVehiclePicker, setShowQuickVehiclePicker] = useState(false);
+  const [quickPunchInDriver, setQuickPunchInDriver] = useState<{ id: string; name: string } | null>(null);
   
   // Off driver assignment confirmation state
   const [showOffDriverConfirm, setShowOffDriverConfirm] = useState(false);
@@ -815,7 +820,13 @@ const Drivers = () => {
 
     // Get the vehicle (current or default)
     const vehicleUnit = getDriverDefaultVehicle(driverId);
-    const vehicleToAssign = vehicleUnit === "__none__" ? null : vehicleUnit;
+    
+    // If no vehicle assigned, show vehicle picker dialog
+    if (vehicleUnit === "__none__") {
+      setQuickPunchInDriver({ id: driver.id, name: driver.name });
+      setShowQuickVehiclePicker(true);
+      return;
+    }
 
     // Store previous state for undo
     setLastAction({
@@ -835,13 +846,13 @@ const Drivers = () => {
       driverId,
       driver.name,
       currentTime,
-      vehicleToAssign
+      vehicleUnit
     );
 
     if (result.success) {
       toast({
         title: "Punched In",
-        description: `${driver.name} is now working${vehicleToAssign ? ` on ${vehicleToAssign}` : ""}`,
+        description: `${driver.name} is now working on ${vehicleUnit}`,
       });
     } else {
       toast({
@@ -850,7 +861,51 @@ const Drivers = () => {
         variant: "destructive",
       });
     }
-  }, [drivers, getDriverDefaultVehicle, punchIn, toast, setLastAction]);
+  }, [drivers, getDriverDefaultVehicle, punchIn, toast, setLastAction, getOpenShiftForDriver]);
+
+  // Handle quick vehicle picker selection for punch-in
+  const handleQuickVehicleSelect = useCallback(async (vehicleUnit: string) => {
+    if (!quickPunchInDriver) return;
+    
+    const driver = drivers.find(d => d.id === quickPunchInDriver.id);
+    if (!driver) return;
+
+    // Store previous state for undo
+    setLastAction({
+      driverId: driver.id,
+      driverName: driver.name,
+      previousStatus: driver.status,
+      previousVehicle: driver.vehicle,
+      previousReportTime: driver.report_time,
+      actionType: "punch-in",
+    });
+
+    // Get current time
+    const now = new Date();
+    const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+
+    const result = await punchIn(
+      quickPunchInDriver.id,
+      quickPunchInDriver.name,
+      currentTime,
+      vehicleUnit
+    );
+
+    if (result.success) {
+      toast({
+        title: "Punched In",
+        description: `${quickPunchInDriver.name} is now working on ${vehicleUnit}`,
+      });
+    } else {
+      toast({
+        title: "Error punching in",
+        description: result.error || "Failed to punch in",
+        variant: "destructive",
+      });
+    }
+
+    setQuickPunchInDriver(null);
+  }, [quickPunchInDriver, drivers, punchIn, toast, setLastAction]);
 
   const handleConfirmPunchIn = async () => {
     if (!punchInDriver) return;
@@ -2854,6 +2909,18 @@ const Drivers = () => {
           pendingAction === "off" ? "Select Driver to Mark OFF" :
           "Select Driver"
         }
+      />
+
+      {/* Quick Vehicle Picker for Shift+P */}
+      <QuickVehiclePickerDialog
+        open={showQuickVehiclePicker}
+        onOpenChange={(open) => {
+          setShowQuickVehiclePicker(open);
+          if (!open) setQuickPunchInDriver(null);
+        }}
+        driverName={quickPunchInDriver?.name || ""}
+        vehicles={vehicles}
+        onConfirm={handleQuickVehicleSelect}
       />
 
       {/* Driver Details Panel */}
