@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Truck, Wrench, Droplets, User, Phone, Home, Unlock, Building2 } from "lucide-react";
+import { Truck, Wrench, Droplets, User, Phone, Home, Unlock, Building2, Sparkles, CircleAlert, CircleHelp } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { ServiceTicketDialog } from "./ServiceTicketDialog";
 import { VehicleTicketsSheet } from "./VehicleTicketsSheet";
@@ -212,19 +212,74 @@ export function VehicleRow({
             </TooltipProvider>}
         </div>
 
-        {canEdit ? <DropdownMenu>
+        {/* Clean/Dirty Icon Indicator */}
+        {canEdit ? (
+          <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex cursor-pointer items-center gap-1.5 focus:outline-none">
-                <StatusBadge status={vehicle.clean_status} size="sm" />
+              <button className="flex cursor-pointer items-center justify-center focus:outline-none">
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className={cn(
+                        "flex h-6 w-6 items-center justify-center rounded-full transition-colors",
+                        vehicle.clean_status === "clean" && "text-status-clean",
+                        vehicle.clean_status === "dirty" && "text-status-dirty animate-dirty-pulse",
+                        vehicle.clean_status === "unknown" && "text-muted-foreground"
+                      )}>
+                        {vehicle.clean_status === "clean" && <Sparkles className="h-4 w-4" />}
+                        {vehicle.clean_status === "dirty" && <CircleAlert className="h-4 w-4" />}
+                        {vehicle.clean_status === "unknown" && <CircleHelp className="h-4 w-4" />}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">
+                      <span className="text-xs capitalize">{vehicle.clean_status}</span>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[100px]">
-              {cleanStatusOptions.map(option => <DropdownMenuItem key={option.value} onClick={() => onCleanStatusChange?.(option.value)} className={cn("cursor-pointer text-xs", vehicle.clean_status === option.value && "bg-secondary")}>
-                  <StatusBadge status={option.value} size="sm" />
-                  <span className="ml-2">{option.label}</span>
-                </DropdownMenuItem>)}
+              {cleanStatusOptions.map(option => (
+                <DropdownMenuItem 
+                  key={option.value} 
+                  onClick={() => onCleanStatusChange?.(option.value)} 
+                  className={cn("cursor-pointer text-xs gap-2", vehicle.clean_status === option.value && "bg-secondary")}
+                >
+                  <span className={cn(
+                    option.value === "clean" && "text-status-clean",
+                    option.value === "dirty" && "text-status-dirty",
+                    option.value === "unknown" && "text-muted-foreground"
+                  )}>
+                    {option.value === "clean" && <Sparkles className="h-3.5 w-3.5" />}
+                    {option.value === "dirty" && <CircleAlert className="h-3.5 w-3.5" />}
+                    {option.value === "unknown" && <CircleHelp className="h-3.5 w-3.5" />}
+                  </span>
+                  <span>{option.label}</span>
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
-          </DropdownMenu> : <StatusBadge status={vehicle.clean_status} size="sm" />}
+          </DropdownMenu>
+        ) : (
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className={cn(
+                  "flex h-6 w-6 items-center justify-center rounded-full",
+                  vehicle.clean_status === "clean" && "text-status-clean",
+                  vehicle.clean_status === "dirty" && "text-status-dirty animate-dirty-pulse",
+                  vehicle.clean_status === "unknown" && "text-muted-foreground"
+                )}>
+                  {vehicle.clean_status === "clean" && <Sparkles className="h-4 w-4" />}
+                  {vehicle.clean_status === "dirty" && <CircleAlert className="h-4 w-4" />}
+                  {vehicle.clean_status === "unknown" && <CircleHelp className="h-4 w-4" />}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <span className="text-xs capitalize">{vehicle.clean_status}</span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
 
       </div>
 

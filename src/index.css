@@ -122,3 +122,17 @@
 .animate-scan-line {
   animation: scan-line 8s linear infinite;
 }
+
+/* Subtle dirty pulse animation - very low frequency */
+@keyframes dirty-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.animate-dirty-pulse {
+  animation: dirty-pulse 4s ease-in-out infinite;
+}
