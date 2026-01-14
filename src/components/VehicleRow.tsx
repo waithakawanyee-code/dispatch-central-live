@@ -140,19 +140,6 @@ export function VehicleRow({
                 </TooltipProvider>}
             </p>
             {/* Classification badges */}
-            {vehicle.classification === "fleet" && <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-500/20 text-slate-600 dark:text-slate-400">
-                      <Building2 className="h-2.5 w-2.5" />
-                      Fleet
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <span className="text-xs">Fleet Vehicle - Available for any driver</span>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>}
             {vehicle.primary_category === "specialty" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400">
                 Specialty
               </span>}
