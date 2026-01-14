@@ -47,7 +47,7 @@ export function DriverActionToolbar({
     switch (status) {
       case "unconfirmed":
         return [
-          { label: "Confirm", shortcut: "A", icon: CheckCircle, onClick: onAssign, variant: "default" },
+          { label: "Confirm", shortcut: "C", icon: CheckCircle, onClick: onAssign, variant: "default" },
           { label: "Mark OFF", shortcut: "O", icon: Power, onClick: onMarkOff, variant: "outline" },
         ];
       case "confirmed":

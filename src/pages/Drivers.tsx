@@ -115,7 +115,7 @@ const Drivers = () => {
   
   // Driver picker state (for keyboard shortcuts when no driver selected)
   const [showDriverPicker, setShowDriverPicker] = useState(false);
-  const [pendingAction, setPendingAction] = useState<"assign" | "off" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"confirm" | "off" | null>(null);
   
   // Off driver assignment confirmation state
   const [showOffDriverConfirm, setShowOffDriverConfirm] = useState(false);
@@ -1146,7 +1146,7 @@ const Drivers = () => {
       // Small delay to let selection settle
       setTimeout(() => {
         switch (pendingAction) {
-          case "assign":
+          case "confirm":
             executeAssign(driver.id);
             break;
           case "off":
@@ -1419,11 +1419,11 @@ const Drivers = () => {
       return;
     }
     
-    // A → Assign
-    if (e.key === "a" || e.key === "A") {
+    // C → Confirm
+    if (e.key === "c" || e.key === "C") {
       e.preventDefault();
       if (!selectedDriverId) {
-        setPendingAction("assign");
+        setPendingAction("confirm");
         setShowDriverPicker(true);
       } else {
         executeAssign(selectedDriverId);
@@ -2772,7 +2772,7 @@ const Drivers = () => {
         drivers={selectableDrivers}
         onSelect={handleDriverPickerSelect}
         title={
-          pendingAction === "assign" ? "Select Driver to Assign" :
+          pendingAction === "confirm" ? "Select Driver to Confirm" :
           pendingAction === "off" ? "Select Driver to Mark OFF" :
           "Select Driver"
         }
