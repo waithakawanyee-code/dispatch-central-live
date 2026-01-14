@@ -194,59 +194,16 @@ export function VehicleRow({
           </div>
           {vehicle.vehicle_type && <p className="text-[10px] text-muted-foreground">{VEHICLE_TYPE_LABELS[vehicle.vehicle_type]}</p>}
           {/* Show Owner for Take Home vehicles */}
-          {vehicle.classification === "take_home" && vehicle.assigned_driver_id && (() => {
-            const ownerName = drivers.find(d => d.id === vehicle.assigned_driver_id)?.name || "Unknown";
-            const isOwnerDriving = vehicle.driver === ownerName;
-            const hasTempDriver = vehicle.driver && vehicle.driver !== ownerName;
-            
-            return (
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <Home className="h-2.5 w-2.5 text-blue-500" />
-                <span>Owner: <span className="font-medium text-blue-600 dark:text-blue-400">{ownerName}</span></span>
-                {isOwnerDriving && (
-                  <span className="ml-1 px-1 py-0.5 rounded text-[8px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400">
-                    Driving
-                  </span>
-                )}
-              </div>
-            );
-          })()}
-          {/* Show temp driver for take home vehicles */}
-          {vehicle.classification === "take_home" && vehicle.driver && vehicle.driver !== drivers.find(d => d.id === vehicle.assigned_driver_id)?.name && (
-            <TooltipProvider delayDuration={1000}>
+          {vehicle.classification === "take_home" && vehicle.assigned_driver_id && <p className="text-[10px] text-muted-foreground">
+              Owner: <span className="font-medium">{drivers.find(d => d.id === vehicle.assigned_driver_id)?.name || "Unknown"}</span>
+            </p>}
+          {/* Show currently assigned driver if different from owner */}
+          {vehicle.driver && <TooltipProvider delayDuration={1000}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 cursor-default hover:text-amber-700 transition-colors">
-                    <User className="h-2.5 w-2.5" />
-                    <span>Temp: <span className="font-medium">{vehicle.driver}</span></span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="p-3">
-                  <div className="flex flex-col gap-1.5 text-xs">
-                    <div className="font-semibold text-foreground">{vehicle.driver}</div>
-                    <div className="text-amber-600 dark:text-amber-400">Temporary Assignment</div>
-                    {assignedDriver?.code && <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <User className="h-3 w-3" />
-                        <span className="font-mono">{assignedDriver.code}</span>
-                      </div>}
-                    {assignedDriver?.phone && <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Phone className="h-3 w-3" />
-                        <span className="font-mono">{assignedDriver.phone}</span>
-                      </div>}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          {/* Show driver for fleet vehicles */}
-          {vehicle.classification !== "take_home" && vehicle.driver && (
-            <TooltipProvider delayDuration={1000}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-default hover:text-foreground transition-colors">
-                    <User className="h-2.5 w-2.5" />
-                    <span>{vehicle.driver}</span>
-                  </div>
+                  <p className="text-[10px] text-muted-foreground cursor-default hover:text-foreground transition-colors">
+                    {vehicle.classification === "take_home" && vehicle.assigned_driver_id ? vehicle.driver !== drivers.find(d => d.id === vehicle.assigned_driver_id)?.name ? `Assigned: ${vehicle.driver}` : null : vehicle.driver}
+                  </p>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="p-3">
                   <div className="flex flex-col gap-1.5 text-xs">
@@ -263,8 +220,7 @@ export function VehicleRow({
                   </div>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-          )}
+            </TooltipProvider>}
         </div>
 
         {canEdit ? <DropdownMenu>
