@@ -1475,6 +1475,41 @@ const Drivers = () => {
     setShowDetailsPanel(true);
   }, []);
 
+  // Handler for confirming unconfirmed drivers with vehicles
+  const handleConfirmDriver = useCallback(async (driverId: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver) return;
+    
+    // Store previous state for undo
+    setLastAction({
+      driverId: driver.id,
+      driverName: driver.name,
+      previousStatus: driver.status,
+      previousVehicle: driver.vehicle,
+      previousReportTime: driver.report_time,
+      actionType: "confirm",
+    });
+    
+    const { error } = await supabase
+      .from("drivers")
+      .update({ status: "confirmed" })
+      .eq("id", driverId);
+    
+    if (error) {
+      toast({
+        title: "Error confirming driver",
+        description: error.message,
+        variant: "destructive",
+      });
+      setLastAction(null);
+    } else {
+      toast({
+        title: "Driver confirmed",
+        description: `${driver.name} has been confirmed`,
+      });
+    }
+  }, [drivers, toast]);
+
   // Attach keyboard listener
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
@@ -1916,6 +1951,7 @@ const Drivers = () => {
                 selectedDriverId={selectedDriverId}
                 recentlyUpdatedDrivers={recentlyUpdatedDrivers}
                 onDriverSelect={handleDriverSelect}
+                onConfirmDriver={handleConfirmDriver}
                 cdlFilter={globalCdlFilter}
                 isAdmin={isAdmin}
               />
