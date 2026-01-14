@@ -4,10 +4,11 @@ import { format } from "date-fns";
 
 interface DriverHoursData {
   driverName: string;
+  driverCode: string | null;
   vehicleId: string | null;
   startTime: string | null;
   endTime: string | null;
-  weekHours: number | null; // Hours worked since Monday
+  weekHours: number | null;
 }
 
 // Calculate hours between two time strings (e.g., "8:30 AM" and "5:00 PM")
@@ -74,8 +75,11 @@ function createHoursPdf(drivers: DriverHoursData[], date: Date): jsPDF {
   // Prepare table data with calculated hours
   const tableData = sortedDrivers.map((driver) => {
     const dailyHours = calculateHoursBetween(driver.startTime, driver.endTime);
+    const nameWithCode = driver.driverCode 
+      ? `${driver.driverName} (${driver.driverCode})`
+      : driver.driverName;
     return [
-      driver.driverName,
+      nameWithCode,
       driver.vehicleId || "",
       driver.startTime || "",
       driver.endTime || "",

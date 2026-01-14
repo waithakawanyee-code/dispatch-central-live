@@ -1776,6 +1776,7 @@ const Drivers = () => {
 
                     const hoursData = displayDrivers.map(d => ({
                       driverName: d.name,
+                      driverCode: d.code || null,
                       vehicleId: d.vehicle || (d as any).shiftData?.vehicle_unit || null,
                       startTime: formatPunchTime((d as any).shiftData?.punch_in_at),
                       endTime: formatPunchTime((d as any).shiftData?.punch_out_at),
@@ -1830,6 +1831,7 @@ const Drivers = () => {
 
                     const hoursData = displayDrivers.map(d => ({
                       driverName: d.name,
+                      driverCode: d.code || null,
                       vehicleId: d.vehicle || (d as any).shiftData?.vehicle_unit || null,
                       startTime: formatPunchTime((d as any).shiftData?.punch_in_at),
                       endTime: formatPunchTime((d as any).shiftData?.punch_out_at),
