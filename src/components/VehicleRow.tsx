@@ -1,18 +1,15 @@
 import { useState } from "react";
-import { Truck, Wrench, Droplets, User, Phone, Home, Unlock, Building2 } from "lucide-react";
+import { Wrench, Droplets, User, Phone, Home, Unlock, Building2 } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
-
 import { ServiceTicketDialog } from "./ServiceTicketDialog";
 import { VehicleTicketsSheet } from "./VehicleTicketsSheet";
 import { MarkOOSDialog } from "./MarkOOSDialog";
 import { MaintenanceEventSheet } from "./MaintenanceEventSheet";
 import { cn } from "@/lib/utils";
-
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Database } from "@/integrations/supabase/types";
 import { useOpenMaintenanceEvent } from "@/hooks/useMaintenanceEvents";
-
 type CleanStatus = Database["public"]["Enums"]["clean_status"];
 type VehicleType = Database["public"]["Enums"]["vehicle_type"];
 type VehicleRowType = Database["public"]["Tables"]["vehicles"]["Row"];
@@ -40,7 +37,6 @@ interface VehicleRowProps {
   openTicketCount?: number;
   hasAnyTickets?: boolean;
 }
-
 const cleanStatusOptions: {
   value: CleanStatus;
   label: string;
@@ -73,7 +69,7 @@ export function VehicleRow({
 
   // Find the driver details if the vehicle has a driver assigned
   const assignedDriver = vehicle.driver ? drivers.find(d => d.name === vehicle.driver) : null;
-  
+
   // Icon color based on clean status for active vehicles, or status for OOS
   const getIconColor = () => {
     if (vehicle.status === "out-of-service") {
@@ -81,22 +77,22 @@ export function VehicleRow({
     }
     switch (vehicle.clean_status) {
       case "clean":
-        return "text-status-active"; // Green
+        return "text-status-active";
+      // Green
       case "dirty":
-        return "text-amber-500"; // Yellow
+        return "text-amber-500";
+      // Yellow
       default:
         return "text-muted-foreground";
     }
   };
-  
   const getStatusIcon = () => {
     const iconColor = getIconColor();
     if (vehicle.status === "out-of-service") {
       return <Wrench className={cn("h-3 w-3", iconColor)} />;
     }
-    return <Truck className={cn("h-3 w-3", iconColor)} />;
+    return;
   };
-  
   const getStatusBgClass = () => {
     if (vehicle.status === "out-of-service") {
       return "bg-status-out-of-service/20";
@@ -122,9 +118,7 @@ export function VehicleRow({
   };
   return <>
       <div className={cn("flex items-center gap-2 rounded border border-border bg-card px-2 py-1.5 transition-all duration-200", "hover:border-primary/30", getBorderClass(), isUpdated && "animate-row-flash")}>
-        <div className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded", getStatusBgClass())}>
-          {getStatusIcon()}
-        </div>
+        
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -144,8 +138,7 @@ export function VehicleRow({
                 </TooltipProvider>}
             </p>
             {/* Classification badges */}
-            {vehicle.classification === "fleet" && (
-              <TooltipProvider delayDuration={300}>
+            {vehicle.classification === "fleet" && <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-500/20 text-slate-600 dark:text-slate-400">
@@ -157,23 +150,20 @@ export function VehicleRow({
                     <span className="text-xs">Fleet Vehicle - Available for any driver</span>
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
-            )}
-            {vehicle.classification === "take_home" && (
-              <TooltipProvider delayDuration={300}>
+              </TooltipProvider>}
+            {vehicle.classification === "take_home" && <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400">
                       <Home className="h-2.5 w-2.5" />
-                      Take Home
+                      ​
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="top">
                     <span className="text-xs">Take Home Vehicle - Assigned to specific driver</span>
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
-            )}
+              </TooltipProvider>}
             {vehicle.primary_category === "specialty" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400">
                 Specialty
               </span>}
@@ -195,7 +185,7 @@ export function VehicleRow({
           {vehicle.vehicle_type && <p className="text-[10px] text-muted-foreground">{VEHICLE_TYPE_LABELS[vehicle.vehicle_type]}</p>}
           {/* Show Owner for Take Home vehicles */}
           {vehicle.classification === "take_home" && vehicle.assigned_driver_id && <p className="text-[10px] text-muted-foreground">
-              Owner: <span className="font-medium">{drivers.find(d => d.id === vehicle.assigned_driver_id)?.name || "Unknown"}</span>
+              ​ <span className="font-medium">{drivers.find(d => d.id === vehicle.assigned_driver_id)?.name || "Unknown"}</span>
             </p>}
           {/* Show currently assigned driver if different from owner */}
           {vehicle.driver && <TooltipProvider delayDuration={1000}>
