@@ -127,7 +127,7 @@ export function AssignDriverDialog({
         onKeyDown={handleKeyDown}
       >
         <DialogHeader>
-          <DialogTitle>Assign {currentDriverName}</DialogTitle>
+          <DialogTitle>Confirm {currentDriverName}</DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
@@ -208,7 +208,7 @@ export function AssignDriverDialog({
             onClick={handleAssign}
             onKeyDown={handleAssignButtonKeyDown}
           >
-            Assign
+            Confirm
           </Button>
         </DialogFooter>
       </DialogContent>
