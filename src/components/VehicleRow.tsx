@@ -255,22 +255,6 @@ export function VehicleRow({
             </TooltipProvider>
           )}
           
-          {/* Take Home vehicle owner indicator */}
-          {vehicle.classification === "take_home" && vehicle.assigned_driver_id && (
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground cursor-default hover:text-foreground transition-colors">
-                    <Home className="h-2.5 w-2.5 text-blue-600 dark:text-blue-400" />
-                    <span className="font-mono">{drivers.find(d => d.id === vehicle.assigned_driver_id)?.code || "?"}</span>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  <span className="text-xs">Take Home: {drivers.find(d => d.id === vehicle.assigned_driver_id)?.name || "Unknown"}</span>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
         </div>
       </div>
 
