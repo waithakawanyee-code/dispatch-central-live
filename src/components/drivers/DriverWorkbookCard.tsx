@@ -1,6 +1,7 @@
-import { Clock, Home, CheckCircle2 } from "lucide-react";
+import { Clock, Home, CheckCircle2, User, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriverStatus = Database["public"]["Enums"]["driver_status"];
@@ -9,6 +10,7 @@ interface DriverWorkbookCardProps {
   driver: {
     id: string;
     name: string;
+    code?: string | null;
     status: DriverStatus;
     vehicle?: string | null;
     report_time?: string | null;
@@ -54,156 +56,162 @@ export function DriverWorkbookCard({
   const punchInTime = formatTime(shiftData?.punch_in_at);
   const punchOutTime = formatTime(shiftData?.punch_out_at);
 
-  // Determine visual style based on status
-  const getStatusStyles = () => {
+  // Get icon color based on status (matches VehicleRow pattern)
+  const getIconColor = () => {
     switch (driver.status) {
-      case "unconfirmed":
-        if (subcategory === "has_vehicle") {
-          return {
-            border: "border-blue-500/30",
-            bg: "bg-blue-500/5",
-            dot: "bg-blue-500",
-            hover: "hover:border-blue-500/50 hover:bg-blue-500/10",
-          };
-        }
-        return {
-          border: "border-slate-500/30",
-          bg: "bg-card",
-          dot: "bg-slate-500",
-          hover: "hover:border-primary/30 hover:bg-card/80",
-        };
-      case "confirmed":
-        if (subcategory === "dispatched" || hasVehicle) {
-          return {
-            border: "border-emerald-500/40",
-            bg: "bg-emerald-500/10",
-            dot: "bg-emerald-500",
-            hover: "hover:border-emerald-500/60 hover:bg-emerald-500/15",
-          };
-        }
-        return {
-          border: "border-amber-500/30",
-          bg: "bg-amber-500/5",
-          dot: "bg-amber-500",
-          hover: "hover:border-amber-500/50 hover:bg-amber-500/10",
-        };
       case "on_the_clock":
-        return {
-          border: "border-status-active/40",
-          bg: "bg-status-active/10",
-          dot: "bg-status-active",
-          hover: "hover:border-status-active/60 hover:bg-status-active/15",
-        };
+        return "text-status-active";
+      case "confirmed":
+        return hasVehicle ? "text-emerald-500" : "text-amber-500";
       case "done":
-        return {
-          border: "border-muted/50",
-          bg: "bg-muted/20",
-          dot: "bg-muted-foreground",
-          hover: "hover:border-muted-foreground/30",
-        };
+        return "text-muted-foreground";
+      case "unconfirmed":
+        return subcategory === "has_vehicle" ? "text-blue-500" : "text-slate-500";
       default:
-        return {
-          border: "border-border",
-          bg: "bg-card",
-          dot: "bg-muted-foreground",
-          hover: "hover:border-primary/30",
-        };
+        return "text-muted-foreground";
     }
   };
 
-  const styles = getStatusStyles();
+  const getStatusBgClass = () => {
+    switch (driver.status) {
+      case "on_the_clock":
+        return "bg-status-active/20";
+      case "confirmed":
+        return hasVehicle ? "bg-emerald-500/20" : "bg-amber-500/20";
+      case "done":
+        return "bg-muted/20";
+      case "unconfirmed":
+        return subcategory === "has_vehicle" ? "bg-blue-500/20" : "bg-muted/20";
+      default:
+        return "bg-muted/20";
+    }
+  };
+
+  const getBorderClass = () => {
+    switch (driver.status) {
+      case "on_the_clock":
+        return "border-l-4 border-l-status-active";
+      case "confirmed":
+        return hasVehicle ? "border-l-4 border-l-emerald-500" : "border-l-4 border-l-amber-500";
+      case "unconfirmed":
+        return subcategory === "has_vehicle" ? "border-l-4 border-l-blue-500" : "";
+      case "done":
+        return "border-l-4 border-l-muted-foreground";
+      default:
+        return "";
+    }
+  };
 
   return (
     <div
       onClick={onClick}
       className={cn(
-        "group relative flex items-center gap-2 rounded-md border px-2 py-1.5 transition-all duration-200 cursor-pointer",
-        styles.border,
-        styles.bg,
-        styles.hover,
+        "flex items-center gap-2 rounded border border-border bg-card px-2 py-1.5 transition-all duration-200 cursor-pointer",
+        "hover:border-primary/30",
+        getBorderClass(),
         isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background shadow-[0_0_12px_hsl(var(--primary)/0.3)]",
         isUpdated && "animate-row-flash",
         driver.status === "done" && "opacity-60"
       )}
     >
-      {/* Status indicator */}
-      <div className="flex items-center shrink-0">
+      {/* Left icon - matches VehicleRow style */}
+      <div className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded", getStatusBgClass())}>
         {hasTakeHome ? (
-          <Home className={cn("h-3 w-3", driver.status === "done" ? "text-muted-foreground" : "text-primary")} />
+          <Home className={cn("h-3 w-3", getIconColor())} />
         ) : (
-          <span className={cn("h-1.5 w-1.5 rounded-full", styles.dot)} />
+          <User className={cn("h-3 w-3", getIconColor())} />
         )}
       </div>
 
-      {/* Driver name and vehicle */}
-      <div className="flex items-center gap-1.5 flex-1 min-w-0">
-        <span className={cn(
-          "font-medium text-xs truncate",
-          driver.status === "done" ? "text-muted-foreground" : "text-foreground"
-        )}>
-          {driver.name}
-        </span>
-        {/* Vehicle ID next to name */}
-        {vehicleUnit && (driver.status === "on_the_clock" || driver.status === "confirmed" || subcategory === "has_vehicle") && (
-          <span className="text-[10px] font-mono text-primary shrink-0">
-            {vehicleUnit}
-          </span>
-        )}
-      </div>
-
-      {/* Badges and info */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        {/* Confirm button for unconfirmed drivers with vehicle */}
-        {subcategory === "has_vehicle" && driver.status === "unconfirmed" && onConfirm && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-5 px-1.5 text-[10px] text-blue-500 hover:text-blue-600 hover:bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={(e) => {
-              e.stopPropagation();
-              onConfirm(driver.id);
-            }}
-          >
-            <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
-            Confirm
-          </Button>
-        )}
-
-        {/* CDL Badge */}
-        {driver.has_cdl && (
-          <span className="text-[8px] font-bold tracking-wide text-primary bg-primary/15 px-1 py-0.5 rounded uppercase">
-            CDL
-          </span>
-        )}
-
-        {/* Report time indicator for confirmed drivers needing vehicle */}
-        {subcategory === "report_time" && driver.report_time && (
-          <span className="text-[9px] font-medium text-amber-500">Needs Vehicle</span>
-        )}
-
-        {/* Report time for unconfirmed/confirmed */}
+      {/* Middle content - name and subtitle */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <p className={cn(
+            "font-mono text-sm font-medium",
+            driver.status === "done" ? "text-muted-foreground" : "text-foreground"
+          )}>
+            {driver.code || driver.name.split(' ')[0]}
+          </p>
+          {/* CDL Badge */}
+          {driver.has_cdl && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/20 text-primary">
+              CDL
+            </span>
+          )}
+          {/* Confirm button for unconfirmed drivers with vehicle */}
+          {subcategory === "has_vehicle" && driver.status === "unconfirmed" && onConfirm && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-5 px-1.5 text-[10px] text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+              onClick={(e) => {
+                e.stopPropagation();
+                onConfirm(driver.id);
+              }}
+            >
+              <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
+              Confirm
+            </Button>
+          )}
+        </div>
+        {/* Report time or status subtitle */}
         {(driver.status === "unconfirmed" || driver.status === "confirmed") && driver.report_time && (
-          <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground font-mono">
+          <p className="text-[10px] text-muted-foreground flex items-center gap-0.5">
             <Clock className="h-2.5 w-2.5" />
-            <span>{driver.report_time.slice(0, 5)}</span>
-          </div>
+            {driver.report_time.slice(0, 5)}
+            {subcategory === "report_time" && (
+              <span className="ml-1 text-amber-500">Needs Vehicle</span>
+            )}
+          </p>
         )}
-
-        {/* Punch-in time for on_the_clock */}
         {driver.status === "on_the_clock" && punchInTime && (
-          <div className="flex items-center gap-0.5 text-[9px] text-muted-foreground font-mono">
-            <span className="text-status-active">IN</span>
-            <span>{punchInTime}</span>
-          </div>
+          <p className="text-[10px] text-muted-foreground">
+            <span className="text-status-active">IN</span> {punchInTime}
+          </p>
         )}
-
-        {/* Punch times for done */}
         {driver.status === "done" && (punchInTime || punchOutTime) && (
-          <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-mono">
+          <p className="text-[10px] text-muted-foreground font-mono">
             {punchInTime && <span>{punchInTime}</span>}
-            {punchInTime && punchOutTime && <span>→</span>}
+            {punchInTime && punchOutTime && <span> → </span>}
             {punchOutTime && <span>{punchOutTime}</span>}
-          </div>
+          </p>
+        )}
+      </div>
+
+      {/* Right side - Vehicle indicator (matches VehicleRow right column pattern) */}
+      <div className="flex flex-col items-end gap-0.5 shrink-0">
+        {/* Vehicle unit if assigned */}
+        {vehicleUnit && (driver.status === "on_the_clock" || driver.status === "confirmed" || subcategory === "has_vehicle") && (
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground cursor-default hover:text-foreground transition-colors">
+                  <Truck className="h-2.5 w-2.5 text-primary" />
+                  <span className="font-mono">{vehicleUnit}</span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <span className="text-xs">Assigned Vehicle: {vehicleUnit}</span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+        
+        {/* Take Home vehicle indicator */}
+        {hasTakeHome && !vehicleUnit && (
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground cursor-default hover:text-foreground transition-colors">
+                  <Home className="h-2.5 w-2.5 text-blue-600 dark:text-blue-400" />
+                  <span className="font-mono">{driver.default_vehicle}</span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <span className="text-xs">Take Home: {driver.default_vehicle}</span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
     </div>
