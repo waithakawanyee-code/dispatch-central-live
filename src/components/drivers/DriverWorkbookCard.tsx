@@ -138,21 +138,6 @@ export function DriverWorkbookCard({
               CDL
             </span>
           )}
-          {/* Confirm button for unconfirmed drivers with vehicle */}
-          {subcategory === "has_vehicle" && driver.status === "unconfirmed" && onConfirm && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-5 px-1.5 text-[10px] text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
-              onClick={(e) => {
-                e.stopPropagation();
-                onConfirm(driver.id);
-              }}
-            >
-              <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
-              Confirm
-            </Button>
-          )}
         </div>
         {/* Report time or status subtitle */}
         {(driver.status === "unconfirmed" || driver.status === "confirmed") && driver.report_time && (
