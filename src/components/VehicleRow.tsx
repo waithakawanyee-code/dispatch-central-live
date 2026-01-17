@@ -117,20 +117,20 @@ export function VehicleRow({
     }
   };
   return <>
-      <div className={cn("flex items-center gap-2 rounded border border-border bg-card px-2 py-1.5 transition-all duration-200", "hover:border-primary/30", getBorderClass(), isUpdated && "animate-row-flash")}>
-        <div className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded", getStatusBgClass())}>
-          {getStatusIcon()}
+      <div className={cn("flex items-center gap-1.5 rounded border border-border bg-card px-1.5 py-1 transition-all duration-200", "hover:border-primary/30", getBorderClass(), isUpdated && "animate-row-flash")}>
+        <div className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded", getStatusBgClass())}>
+          <Truck className={cn("h-2.5 w-2.5", getIconColor())} />
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <p className="font-mono text-sm font-medium text-foreground flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
+            <p className="font-mono text-sm font-medium text-foreground flex items-center gap-0.5">
               {vehicle.unit}
               {(vehicle as any).has_car_wash_subscription && <TooltipProvider delayDuration={300}>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span className="text-cyan-500">
-                        <Droplets className="h-3.5 w-3.5" />
+                        <Droplets className="h-3 w-3" />
                       </span>
                     </TooltipTrigger>
                     <TooltipContent side="top">
@@ -140,16 +140,16 @@ export function VehicleRow({
                 </TooltipProvider>}
             </p>
             {/* Classification badges */}
-            {vehicle.primary_category === "specialty" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400">
+            {vehicle.primary_category === "specialty" && <span className="inline-flex items-center gap-0.5 px-1 py-0 rounded text-[9px] font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400">
                 Specialty
               </span>}
             {/* Released as Fleet indicator */}
             {vehicle.classification === "take_home" && vehicle.released_as_fleet_until && new Date(vehicle.released_as_fleet_until) > new Date() && <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/20 text-amber-600 dark:text-amber-400">
-                      <Unlock className="h-2.5 w-2.5" />
-                      Fleet Today
+                    <span className="inline-flex items-center gap-0.5 px-1 py-0 rounded text-[9px] font-medium bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                      <Unlock className="h-2 w-2" />
+                      Fleet
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="top">
@@ -158,11 +158,11 @@ export function VehicleRow({
                 </Tooltip>
               </TooltipProvider>}
           </div>
-          {vehicle.vehicle_type && <p className="text-[10px] text-muted-foreground">{VEHICLE_TYPE_LABELS[vehicle.vehicle_type]}</p>}
+          {vehicle.vehicle_type && <p className="text-[9px] text-muted-foreground leading-tight">{VEHICLE_TYPE_LABELS[vehicle.vehicle_type]}</p>}
         </div>
 
         {/* Right side: Clean indicator + Driver code */}
-        <div className="flex flex-col items-center gap-0.5">
+        <div className="flex flex-col items-center gap-0">
           {canEdit ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -171,14 +171,14 @@ export function VehicleRow({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span className={cn(
-                          "flex h-6 w-6 items-center justify-center rounded-full transition-colors",
+                          "flex h-5 w-5 items-center justify-center rounded-full transition-colors",
                           vehicle.clean_status === "clean" && "text-status-clean",
                           vehicle.clean_status === "dirty" && "text-status-dirty animate-dirty-pulse",
                           vehicle.clean_status === "unknown" && "text-muted-foreground"
                         )}>
-                          {vehicle.clean_status === "clean" && <Sparkles className="h-4 w-4" />}
-                          {vehicle.clean_status === "dirty" && <CircleAlert className="h-4 w-4" />}
-                          {vehicle.clean_status === "unknown" && <CircleHelp className="h-4 w-4" />}
+                          {vehicle.clean_status === "clean" && <Sparkles className="h-3.5 w-3.5" />}
+                          {vehicle.clean_status === "dirty" && <CircleAlert className="h-3.5 w-3.5" />}
+                          {vehicle.clean_status === "unknown" && <CircleHelp className="h-3.5 w-3.5" />}
                         </span>
                       </TooltipTrigger>
                       <TooltipContent side="left">
@@ -214,14 +214,14 @@ export function VehicleRow({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className={cn(
-                    "flex h-6 w-6 items-center justify-center rounded-full",
+                    "flex h-5 w-5 items-center justify-center rounded-full",
                     vehicle.clean_status === "clean" && "text-status-clean",
                     vehicle.clean_status === "dirty" && "text-status-dirty animate-dirty-pulse",
                     vehicle.clean_status === "unknown" && "text-muted-foreground"
                   )}>
-                    {vehicle.clean_status === "clean" && <Sparkles className="h-4 w-4" />}
-                    {vehicle.clean_status === "dirty" && <CircleAlert className="h-4 w-4" />}
-                    {vehicle.clean_status === "unknown" && <CircleHelp className="h-4 w-4" />}
+                    {vehicle.clean_status === "clean" && <Sparkles className="h-3.5 w-3.5" />}
+                    {vehicle.clean_status === "dirty" && <CircleAlert className="h-3.5 w-3.5" />}
+                    {vehicle.clean_status === "unknown" && <CircleHelp className="h-3.5 w-3.5" />}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="left">
@@ -236,7 +236,7 @@ export function VehicleRow({
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="font-mono text-[10px] text-muted-foreground cursor-default hover:text-foreground transition-colors">
+                  <span className="font-mono text-[9px] text-muted-foreground cursor-default hover:text-foreground transition-colors leading-tight">
                     {assignedDriver.code}
                   </span>
                 </TooltipTrigger>
