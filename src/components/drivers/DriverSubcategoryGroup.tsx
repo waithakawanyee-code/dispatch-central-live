@@ -59,8 +59,8 @@ export function DriverSubcategoryGroup({
         <span className="text-xs text-muted-foreground font-mono">({count})</span>
       </div>
 
-      {/* Drivers - 2 column grid */}
-      <div className="grid grid-cols-2 gap-1">
+      {/* Drivers - 3 column grid */}
+      <div className="grid grid-cols-3 gap-1">
         {children}
       </div>
     </div>

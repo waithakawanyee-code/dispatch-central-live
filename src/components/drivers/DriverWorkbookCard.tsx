@@ -106,7 +106,7 @@ export function DriverWorkbookCard({
     <div
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2 rounded border border-border bg-card px-2 py-1.5 transition-all duration-200 cursor-pointer",
+        "flex items-center gap-1.5 rounded border border-border bg-card px-1.5 py-1 transition-all duration-200 cursor-pointer",
         "hover:border-primary/30",
         getBorderClass(),
         isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background shadow-[0_0_12px_hsl(var(--primary)/0.3)]",
@@ -115,88 +115,42 @@ export function DriverWorkbookCard({
       )}
     >
       {/* Left icon - matches VehicleRow style */}
-      <div className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded", getStatusBgClass())}>
+      <div className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded", getStatusBgClass())}>
         {hasTakeHome ? (
-          <Home className={cn("h-3 w-3", getIconColor())} />
+          <Home className={cn("h-2.5 w-2.5", getIconColor())} />
         ) : (
-          <User className={cn("h-3 w-3", getIconColor())} />
+          <User className={cn("h-2.5 w-2.5", getIconColor())} />
         )}
       </div>
 
-      {/* Middle content - name and subtitle */}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <p className={cn(
-            "font-mono text-sm font-medium",
-            driver.status === "done" ? "text-muted-foreground" : "text-foreground"
-          )}>
-            {driver.code || driver.name.split(' ')[0]}
-          </p>
-          {/* CDL Badge */}
-          {driver.has_cdl && (
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/20 text-primary">
-              CDL
-            </span>
-          )}
-        </div>
-        {/* Report time or status subtitle */}
-        {(driver.status === "unconfirmed" || driver.status === "confirmed") && driver.report_time && (
-          <p className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-            <Clock className="h-2.5 w-2.5" />
-            {driver.report_time.slice(0, 5)}
-            {subcategory === "report_time" && (
-              <span className="ml-1 text-amber-500">Needs Vehicle</span>
-            )}
-          </p>
-        )}
-        {driver.status === "on_the_clock" && punchInTime && (
-          <p className="text-[10px] text-muted-foreground">
-            <span className="text-status-active">IN</span> {punchInTime}
-          </p>
-        )}
-        {driver.status === "done" && (punchInTime || punchOutTime) && (
-          <p className="text-[10px] text-muted-foreground font-mono">
-            {punchInTime && <span>{punchInTime}</span>}
-            {punchInTime && punchOutTime && <span> → </span>}
-            {punchOutTime && <span>{punchOutTime}</span>}
-          </p>
-        )}
-      </div>
+      {/* Driver code */}
+      <span className={cn(
+        "font-mono text-xs font-medium truncate",
+        driver.status === "done" ? "text-muted-foreground" : "text-foreground"
+      )}>
+        {driver.code || driver.name.split(' ')[0]}
+      </span>
+      
+      {/* CDL Badge - compact */}
+      {driver.has_cdl && (
+        <span className="px-1 py-0.5 rounded text-[8px] font-bold bg-primary/20 text-primary shrink-0">
+          CDL
+        </span>
+      )}
 
-      {/* Right side - Vehicle indicator (matches VehicleRow right column pattern) */}
-      <div className="flex flex-col items-end gap-0.5 shrink-0">
-        {/* Vehicle unit if assigned */}
+      {/* Right side - Vehicle indicator */}
+      <div className="flex items-center gap-0.5 shrink-0 ml-auto">
         {vehicleUnit && (driver.status === "on_the_clock" || driver.status === "confirmed" || subcategory === "has_vehicle") && (
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground cursor-default hover:text-foreground transition-colors">
-                  <Truck className="h-2.5 w-2.5 text-primary" />
-                  <span className="font-mono">{vehicleUnit}</span>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="left">
-                <span className="text-xs">Assigned Vehicle: {vehicleUnit}</span>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <span className="flex items-center gap-0.5 text-[9px] text-primary font-mono">
+            <Truck className="h-2.5 w-2.5" />
+            {vehicleUnit}
+          </span>
         )}
-        
-        {/* Take Home vehicle indicator */}
         {hasTakeHome && !vehicleUnit && (
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground cursor-default hover:text-foreground transition-colors">
-                  <Home className="h-2.5 w-2.5 text-blue-600 dark:text-blue-400" />
-                  <span className="font-mono">{driver.default_vehicle}</span>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="left">
-                <span className="text-xs">Take Home: {driver.default_vehicle}</span>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <span className="flex items-center gap-0.5 text-[9px] text-blue-500 font-mono">
+            <Home className="h-2.5 w-2.5" />
+            {driver.default_vehicle}
+          </span>
         )}
       </div>
     </div>
