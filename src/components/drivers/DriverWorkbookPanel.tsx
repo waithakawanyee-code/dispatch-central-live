@@ -135,7 +135,7 @@ export function DriverWorkbookPanel({
 
               {/* Regular unconfirmed drivers (no vehicle) - no subcategory label */}
               {categorizedDrivers.unconfirmed.noVehicle.length > 0 && (
-                <div className="grid grid-cols-2 gap-1">
+                <div className="grid grid-cols-3 gap-1">
                   {categorizedDrivers.unconfirmed.noVehicle.map((driver) => (
                     <DriverWorkbookCard
                       key={driver.id}
@@ -223,7 +223,7 @@ export function DriverWorkbookPanel({
               No drivers on the clock
             </p>
           ) : (
-            <div className="grid grid-cols-2 gap-1">
+            <div className="grid grid-cols-3 gap-1">
               {categorizedDrivers.onTheClock.map((driver) => (
                 <DriverWorkbookCard
                   key={driver.id}
@@ -291,7 +291,7 @@ function DoneSection({
                 No drivers done for the day
               </p>
             ) : (
-              <div className="grid grid-cols-2 gap-1">
+              <div className="grid grid-cols-3 gap-1">
                 {drivers.map((driver) => (
                   <DriverWorkbookCard
                     key={driver.id}
