@@ -241,42 +241,11 @@ const Vehicles = () => {
               {groupedVehicles.aboveAllVehicles.length}
             </span>
           </div>
-
-          {/* Sedans Sub-group */}
-          <div className="mb-3">
-            <div className="mb-1 flex items-center justify-between">
-              <h3 className="text-[10px] font-semibold text-primary/80 uppercase tracking-wide flex items-center gap-1">
-                <span className="w-1 h-1 rounded-full bg-primary" />
-                Sedans
-              </h3>
-              <span className="text-[9px] text-muted-foreground">
-                {groupedVehicles.sedanVehicles.length}
-              </span>
-            </div>
-            {groupedVehicles.sedanVehicles.length > 0 ? (
-              renderVehicleColumns(groupedVehicles.sedanVehicles)
-            ) : (
-              <p className="text-xs text-muted-foreground italic py-1">No sedan vehicles</p>
-            )}
-          </div>
-
-          {/* SUVs Sub-group */}
-          <div>
-            <div className="mb-1 flex items-center justify-between">
-              <h3 className="text-[10px] font-semibold text-primary/80 uppercase tracking-wide flex items-center gap-1">
-                <span className="w-1 h-1 rounded-full bg-primary" />
-                SUVs
-              </h3>
-              <span className="text-[9px] text-muted-foreground">
-                {groupedVehicles.suvVehicles.length}
-              </span>
-            </div>
-            {groupedVehicles.suvVehicles.length > 0 ? (
-              renderVehicleColumns(groupedVehicles.suvVehicles)
-            ) : (
-              <p className="text-xs text-muted-foreground italic py-1">No SUV vehicles</p>
-            )}
-          </div>
+          {groupedVehicles.aboveAllVehicles.length > 0 ? (
+            renderVehicleColumns(groupedVehicles.aboveAllVehicles)
+          ) : (
+            <p className="text-xs text-muted-foreground italic py-1">No vehicles</p>
+          )}
         </section>
 
         {/* Specialty Section */}
