@@ -70,9 +70,29 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     /**
+     * Filter: Only process events from "Sonny's Car wash" geofence
+     * Samsara sends the geofence name in data.address.name
+     */
+    const geofenceName: string | undefined = parsedBody?.data?.address?.name;
+    const ALLOWED_GEOFENCE = "Sonny's Car wash";
+
+    if (geofenceName && geofenceName.toLowerCase() !== ALLOWED_GEOFENCE.toLowerCase()) {
+      console.log(`[wash-events] Ignoring geofence: "${geofenceName}" (only processing "${ALLOWED_GEOFENCE}")`);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          ignored: true,
+          message: `Geofence "${geofenceName}" is not a car wash location`,
+          allowed_geofence: ALLOWED_GEOFENCE,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+      );
+    }
+
+    /**
      * We support BOTH:
      * A) Direct calls: { vehicle_identifier, washed_at?, raw_source?, set_clean? }
-     * B) Webhook-ish payloads (best effort until we see exact Samsara payload)
+     * B) Webhook-ish payloads (Samsara GeofenceEntry events)
      */
     const vehicle_identifier: string | undefined =
       parsedBody?.vehicle_identifier ??
@@ -101,6 +121,8 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
       );
     }
+
+    console.log(`[wash-events] Processing wash event for: ${vehicle_identifier} at geofence: ${geofenceName || "direct call"}`);
 
     console.log(`[wash-events] Processing wash event for: ${vehicle_identifier}`);
 
