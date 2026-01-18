@@ -78,6 +78,35 @@ export type Database = {
           },
         ]
       }
+      alert_acknowledgements: {
+        Row: {
+          acknowledged_at: string
+          acknowledged_by: string
+          alert_id: string
+          id: string
+        }
+        Insert: {
+          acknowledged_at?: string
+          acknowledged_by: string
+          alert_id: string
+          id?: string
+        }
+        Update: {
+          acknowledged_at?: string
+          acknowledged_by?: string
+          alert_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_acknowledgements_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: true
+            referencedRelation: "queue_alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       call_outs: {
         Row: {
           call_out_date: string
@@ -107,6 +136,176 @@ export type Database = {
           note?: string | null
         }
         Relationships: []
+      }
+      cleaning_queue_items: {
+        Row: {
+          cleaned_at: string | null
+          cleaned_by: string | null
+          created_at: string
+          created_by: string | null
+          dispatcher_notes: string | null
+          id: string
+          out_at: string | null
+          position: number
+          queue_id: string
+          status: Database["public"]["Enums"]["queue_item_status"]
+          urgency: Database["public"]["Enums"]["queue_item_urgency"]
+          vehicle_id: string
+        }
+        Insert: {
+          cleaned_at?: string | null
+          cleaned_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          dispatcher_notes?: string | null
+          id?: string
+          out_at?: string | null
+          position: number
+          queue_id: string
+          status?: Database["public"]["Enums"]["queue_item_status"]
+          urgency?: Database["public"]["Enums"]["queue_item_urgency"]
+          vehicle_id: string
+        }
+        Update: {
+          cleaned_at?: string | null
+          cleaned_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          dispatcher_notes?: string | null
+          id?: string
+          out_at?: string | null
+          position?: number
+          queue_id?: string
+          status?: Database["public"]["Enums"]["queue_item_status"]
+          urgency?: Database["public"]["Enums"]["queue_item_urgency"]
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cleaning_queue_items_queue_id_fkey"
+            columns: ["queue_id"]
+            isOneToOne: false
+            referencedRelation: "cleaning_queues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cleaning_queue_items_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cleaning_queues: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          queue_date: string
+          queue_type: Database["public"]["Enums"]["queue_type"]
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          queue_date: string
+          queue_type: Database["public"]["Enums"]["queue_type"]
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          queue_date?: string
+          queue_type?: Database["public"]["Enums"]["queue_type"]
+        }
+        Relationships: []
+      }
+      damage_photos: {
+        Row: {
+          damage_report_id: string
+          id: string
+          storage_path: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          damage_report_id: string
+          id?: string
+          storage_path: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          damage_report_id?: string
+          id?: string
+          storage_path?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "damage_photos_damage_report_id_fkey"
+            columns: ["damage_report_id"]
+            isOneToOne: false
+            referencedRelation: "damage_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      damage_reports: {
+        Row: {
+          damage_location: string | null
+          damage_type: Database["public"]["Enums"]["damage_type"]
+          id: string
+          notes: string | null
+          queue_item_id: string | null
+          started_at: string
+          started_by: string
+          status: Database["public"]["Enums"]["damage_status"]
+          submitted_at: string | null
+          vehicle_id: string
+        }
+        Insert: {
+          damage_location?: string | null
+          damage_type: Database["public"]["Enums"]["damage_type"]
+          id?: string
+          notes?: string | null
+          queue_item_id?: string | null
+          started_at?: string
+          started_by: string
+          status?: Database["public"]["Enums"]["damage_status"]
+          submitted_at?: string | null
+          vehicle_id: string
+        }
+        Update: {
+          damage_location?: string | null
+          damage_type?: Database["public"]["Enums"]["damage_type"]
+          id?: string
+          notes?: string | null
+          queue_item_id?: string | null
+          started_at?: string
+          started_by?: string
+          status?: Database["public"]["Enums"]["damage_status"]
+          submitted_at?: string | null
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "damage_reports_queue_item_id_fkey"
+            columns: ["queue_item_id"]
+            isOneToOne: false
+            referencedRelation: "cleaning_queue_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "damage_reports_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       driver_schedules: {
         Row: {
@@ -380,6 +579,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      queue_alerts: {
+        Row: {
+          alert_level: Database["public"]["Enums"]["alert_level"]
+          alert_message: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          queue_item_id: string
+          resolved_at: string | null
+        }
+        Insert: {
+          alert_level?: Database["public"]["Enums"]["alert_level"]
+          alert_message?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          queue_item_id: string
+          resolved_at?: string | null
+        }
+        Update: {
+          alert_level?: Database["public"]["Enums"]["alert_level"]
+          alert_message?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          queue_item_id?: string
+          resolved_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "queue_alerts_queue_item_id_fkey"
+            columns: ["queue_item_id"]
+            isOneToOne: false
+            referencedRelation: "cleaning_queue_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shift_vehicle_segments: {
         Row: {
@@ -1013,8 +1250,11 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "dispatcher"
+      alert_level: "URGENT"
+      app_role: "admin" | "dispatcher" | "washer"
       clean_status: "clean" | "dirty" | "unknown"
+      damage_status: "OPEN" | "SUBMITTED" | "CLOSED"
+      damage_type: "SCRATCH" | "DENT" | "INTERIOR" | "GLASS" | "OTHER"
       driver_status: "unconfirmed" | "confirmed" | "on_the_clock" | "done"
       maintenance_category:
         | "mechanical"
@@ -1024,6 +1264,9 @@ export type Database = {
         | "cleaning"
         | "other"
       maintenance_priority: "low" | "medium" | "high" | "critical"
+      queue_item_status: "PENDING" | "CLEAN"
+      queue_item_urgency: "NORMAL" | "HIGH" | "CRITICAL"
+      queue_type: "SPECIALTY" | "GENERAL"
       ticket_status: "open" | "in_progress" | "waiting_parts" | "closed"
       vehicle_classification: "house" | "take_home" | "fleet"
       vehicle_primary_category: "above_all" | "specialty"
@@ -1168,8 +1411,11 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "dispatcher"],
+      alert_level: ["URGENT"],
+      app_role: ["admin", "dispatcher", "washer"],
       clean_status: ["clean", "dirty", "unknown"],
+      damage_status: ["OPEN", "SUBMITTED", "CLOSED"],
+      damage_type: ["SCRATCH", "DENT", "INTERIOR", "GLASS", "OTHER"],
       driver_status: ["unconfirmed", "confirmed", "on_the_clock", "done"],
       maintenance_category: [
         "mechanical",
@@ -1180,6 +1426,9 @@ export const Constants = {
         "other",
       ],
       maintenance_priority: ["low", "medium", "high", "critical"],
+      queue_item_status: ["PENDING", "CLEAN"],
+      queue_item_urgency: ["NORMAL", "HIGH", "CRITICAL"],
+      queue_type: ["SPECIALTY", "GENERAL"],
       ticket_status: ["open", "in_progress", "waiting_parts", "closed"],
       vehicle_classification: ["house", "take_home", "fleet"],
       vehicle_primary_category: ["above_all", "specialty"],
