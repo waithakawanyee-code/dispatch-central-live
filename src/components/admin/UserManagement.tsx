@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Shield, User } from "lucide-react";
 
-type AppRole = "admin" | "dispatcher";
+type AppRole = "admin" | "dispatcher" | "washer";
 
 interface UserWithRole {
   user_id: string;
@@ -120,6 +120,7 @@ export function UserManagement() {
                       <SelectContent>
                         <SelectItem value="dispatcher">Dispatcher</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="washer">Washer</SelectItem>
                       </SelectContent>
                     </Select>
                   </TableCell>
