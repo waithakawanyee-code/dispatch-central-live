@@ -14,6 +14,7 @@ import Drivers from "./pages/Drivers";
 import Vehicles from "./pages/Vehicles";
 import ServiceTickets from "./pages/ServiceTickets";
 import Display from "./pages/Display";
+import CleaningQueues from "./pages/CleaningQueues";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/display" element={<ProtectedRoute><Display /></ProtectedRoute>} />
             <Route path="/scheduler" element={<ProtectedRoute><Scheduler /></ProtectedRoute>} />
             <Route path="/shuttle-schedules" element={<ProtectedRoute><ShuttleSchedules /></ProtectedRoute>} />
+            <Route path="/cleaning-queues" element={<ProtectedRoute><CleaningQueues /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
