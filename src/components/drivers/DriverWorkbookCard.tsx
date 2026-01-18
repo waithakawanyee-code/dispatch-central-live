@@ -42,19 +42,20 @@ export function DriverWorkbookCard({
   const hasTakeHome = !!driver.default_vehicle;
   const vehicleUnit = shiftData?.vehicle_unit || driver.vehicle;
   
-  // Format time for display
-  const formatTime = (isoString: string | null | undefined) => {
-    if (!isoString) return null;
+  // Format HH:MM:SS time string to readable format (e.g., "3:00p")
+  const formatReportTime = (timeStr: string | null | undefined) => {
+    if (!timeStr) return null;
     try {
-      const date = new Date(isoString);
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      const period = hours >= 12 ? 'p' : 'a';
+      const displayHours = hours % 12 || 12;
+      return `${displayHours}:${minutes.toString().padStart(2, '0')}${period}`;
     } catch {
-      return null;
+      return timeStr; // Return as-is if parsing fails
     }
   };
 
-  const punchInTime = formatTime(shiftData?.punch_in_at);
-  const punchOutTime = formatTime(shiftData?.punch_out_at);
+  const formattedReportTime = formatReportTime(driver.report_time);
 
   // Get icon color based on status (matches VehicleRow pattern)
   const getIconColor = () => {
@@ -141,10 +142,10 @@ export function DriverWorkbookCard({
       {/* Right side - Report time / Vehicle indicator */}
       <div className="flex items-center gap-1 shrink-0 ml-auto">
         {/* Show report time for confirmed drivers */}
-        {driver.status === "confirmed" && driver.report_time && (
+        {driver.status === "confirmed" && formattedReportTime && (
           <span className="flex items-center gap-0.5 text-[9px] text-amber-500 font-mono">
             <Clock className="h-2.5 w-2.5" />
-            {driver.report_time}
+            {formattedReportTime}
           </span>
         )}
         {vehicleUnit && (driver.status === "on_the_clock" || driver.status === "confirmed" || subcategory === "has_vehicle") && (
