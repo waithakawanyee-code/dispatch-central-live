@@ -138,8 +138,15 @@ export function DriverWorkbookCard({
         </span>
       )}
 
-      {/* Right side - Vehicle indicator */}
-      <div className="flex items-center gap-0.5 shrink-0 ml-auto">
+      {/* Right side - Report time / Vehicle indicator */}
+      <div className="flex items-center gap-1 shrink-0 ml-auto">
+        {/* Show report time for confirmed drivers */}
+        {driver.status === "confirmed" && driver.report_time && (
+          <span className="flex items-center gap-0.5 text-[9px] text-amber-500 font-mono">
+            <Clock className="h-2.5 w-2.5" />
+            {driver.report_time}
+          </span>
+        )}
         {vehicleUnit && (driver.status === "on_the_clock" || driver.status === "confirmed" || subcategory === "has_vehicle") && (
           <span className="flex items-center gap-0.5 text-[9px] text-primary font-mono">
             <Truck className="h-2.5 w-2.5" />
