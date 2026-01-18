@@ -310,12 +310,18 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
             )}
 
             {/* Unconfirmed/confirmed drivers: Show report time */}
-            {!isOnTheClock && !isDone && (
+            {!isOnTheClock && !isDone && driver.report_time && (
+              <div className="flex items-center gap-2 text-sm bg-amber-500/10 rounded px-2 py-1 -mx-2">
+                <Clock className="h-4 w-4 text-amber-500" />
+                <span className="text-amber-600 dark:text-amber-400 font-mono font-medium">
+                  Report: {formatTime(driver.report_time)}
+                </span>
+              </div>
+            )}
+            {!isOnTheClock && !isDone && !driver.report_time && (
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground font-mono">
-                  {driver.report_time ? formatTime(driver.report_time) : <span className="text-muted-foreground">No report time</span>}
-                </span>
+                <span className="text-muted-foreground">No report time</span>
               </div>
             )}
           </div>
