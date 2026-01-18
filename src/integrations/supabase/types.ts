@@ -1252,6 +1252,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_ny_date: { Args: never; Returns: string }
+      current_ny_timestamp: { Args: never; Returns: string }
       get_my_role: {
         Args: never
         Returns: Database["public"]["Enums"]["profile_role"]
