@@ -292,6 +292,7 @@ const Drivers = () => {
           ...d,
           status: derivedStatus,
           vehicle: vehicleFromShift,
+          report_time: d.report_time,
           schedule: null as {
             start_time: string | null;
             end_time: string | null;
