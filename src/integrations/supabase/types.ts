@@ -580,6 +580,30 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          active: boolean
+          created_at: string
+          full_name: string | null
+          id: string
+          role: Database["public"]["Enums"]["profile_role"]
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          full_name?: string | null
+          id: string
+          role?: Database["public"]["Enums"]["profile_role"]
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["profile_role"]
+        }
+        Relationships: []
+      }
       queue_alerts: {
         Row: {
           alert_level: Database["public"]["Enums"]["alert_level"]
@@ -1228,6 +1252,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_my_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["profile_role"]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -1241,6 +1269,13 @@ export type Database = {
           user_id: string
         }[]
       }
+      has_profile_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["profile_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1248,6 +1283,9 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: { Args: never; Returns: boolean }
+      is_dispatcher_or_admin: { Args: never; Returns: boolean }
+      is_washer: { Args: never; Returns: boolean }
     }
     Enums: {
       alert_level: "URGENT"
@@ -1264,6 +1302,7 @@ export type Database = {
         | "cleaning"
         | "other"
       maintenance_priority: "low" | "medium" | "high" | "critical"
+      profile_role: "ADMIN" | "DISPATCHER" | "WASHER" | "USER"
       queue_item_status: "PENDING" | "CLEAN"
       queue_item_urgency: "NORMAL" | "HIGH" | "CRITICAL"
       queue_type: "SPECIALTY" | "GENERAL"
@@ -1426,6 +1465,7 @@ export const Constants = {
         "other",
       ],
       maintenance_priority: ["low", "medium", "high", "critical"],
+      profile_role: ["ADMIN", "DISPATCHER", "WASHER", "USER"],
       queue_item_status: ["PENDING", "CLEAN"],
       queue_item_urgency: ["NORMAL", "HIGH", "CRITICAL"],
       queue_type: ["SPECIALTY", "GENERAL"],
