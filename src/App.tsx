@@ -15,6 +15,7 @@ import Vehicles from "./pages/Vehicles";
 import ServiceTickets from "./pages/ServiceTickets";
 import Display from "./pages/Display";
 import CleaningQueues from "./pages/CleaningQueues";
+import WasherDashboard from "./pages/WasherDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,15 +29,18 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-            <Route path="/drivers" element={<ProtectedRoute><Drivers /></ProtectedRoute>} />
-            <Route path="/vehicles" element={<ProtectedRoute><Vehicles /></ProtectedRoute>} />
-            <Route path="/service-tickets" element={<ProtectedRoute><ServiceTickets /></ProtectedRoute>} />
-            <Route path="/display" element={<ProtectedRoute><Display /></ProtectedRoute>} />
-            <Route path="/scheduler" element={<ProtectedRoute><Scheduler /></ProtectedRoute>} />
-            <Route path="/shuttle-schedules" element={<ProtectedRoute><ShuttleSchedules /></ProtectedRoute>} />
-            <Route path="/cleaning-queues" element={<ProtectedRoute><CleaningQueues /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            {/* Washer-only route */}
+            <Route path="/washer" element={<ProtectedRoute allowedRoles={['WASHER', 'ADMIN']}><WasherDashboard /></ProtectedRoute>} />
+            {/* Dispatcher/Admin routes */}
+            <Route path="/" element={<ProtectedRoute allowedRoles={['ADMIN', 'DISPATCHER', 'USER']}><Index /></ProtectedRoute>} />
+            <Route path="/drivers" element={<ProtectedRoute allowedRoles={['ADMIN', 'DISPATCHER', 'USER']}><Drivers /></ProtectedRoute>} />
+            <Route path="/vehicles" element={<ProtectedRoute allowedRoles={['ADMIN', 'DISPATCHER', 'USER']}><Vehicles /></ProtectedRoute>} />
+            <Route path="/service-tickets" element={<ProtectedRoute allowedRoles={['ADMIN', 'DISPATCHER', 'USER']}><ServiceTickets /></ProtectedRoute>} />
+            <Route path="/display" element={<ProtectedRoute allowedRoles={['ADMIN', 'DISPATCHER', 'USER']}><Display /></ProtectedRoute>} />
+            <Route path="/scheduler" element={<ProtectedRoute allowedRoles={['ADMIN', 'DISPATCHER', 'USER']}><Scheduler /></ProtectedRoute>} />
+            <Route path="/shuttle-schedules" element={<ProtectedRoute allowedRoles={['ADMIN', 'DISPATCHER', 'USER']}><ShuttleSchedules /></ProtectedRoute>} />
+            <Route path="/cleaning-queues" element={<ProtectedRoute allowedRoles={['ADMIN', 'DISPATCHER']}><CleaningQueues /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><Admin /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
