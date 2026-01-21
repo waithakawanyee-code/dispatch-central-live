@@ -1,11 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
-import { Monitor, Users, Truck, RefreshCw, Clock, CheckCircle2, Star } from "lucide-react";
+import { Monitor, Users, Truck, RefreshCw, Clock, CheckCircle2, Star, ChevronDown } from "lucide-react";
 import { Header } from "@/components/Header";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { DisplayDriverCard } from "@/components/display/DisplayDriverCard";
 import { DisplayVehicleCard } from "@/components/display/DisplayVehicleCard";
 import { DisplaySection } from "@/components/display/DisplaySection";
 import { SpecialtyDepartureCard } from "@/components/display/SpecialtyDepartureCard";
+import { DriverStatusSection } from "@/components/drivers/DriverStatusSection";
+import { DriverSubcategoryGroup } from "@/components/drivers/DriverSubcategoryGroup";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
@@ -161,7 +164,7 @@ const Display = () => {
         </div>
 
         <div className="space-y-6">
-          {/* Top Section - Drivers */}
+          {/* Top Section - Drivers (Two-column layout like workbook) */}
           <section className="space-y-4">
             <div className="flex items-center gap-2 text-lg font-semibold text-foreground border-b border-border pb-2">
               <Users className="h-5 w-5 text-primary" />
@@ -171,110 +174,115 @@ const Display = () => {
               </span>
             </div>
 
-            {/* UNCONFIRMED */}
-            <DisplaySection
-              title="Unconfirmed"
-              count={categorizedDrivers.unconfirmed.total}
-              icon={<Users className="h-4 w-4" />}
-              variant="default"
-            >
-              {categorizedDrivers.unconfirmed.total === 0 ? (
-                <p className="text-xs text-muted-foreground italic py-2">All drivers confirmed</p>
-              ) : (
-                <div className="space-y-2">
-                  {/* With Vehicle subcategory */}
-                  {categorizedDrivers.unconfirmed.withVehicle.length > 0 && (
-                    <div className="space-y-1">
-                      <span className="text-[10px] uppercase tracking-wide text-blue-400 font-medium px-1">Has Vehicle</span>
-                      <div className="grid grid-cols-3 gap-1">
-                        {categorizedDrivers.unconfirmed.withVehicle.map((driver) => (
-                          <DisplayDriverCard key={driver.id} driver={driver} subcategory="has_vehicle" />
-                        ))}
-                      </div>
+            {/* Two-column grid matching DriverWorkbookPanel */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* LEFT COLUMN - UNCONFIRMED */}
+              <div className="space-y-6">
+                <DriverStatusSection
+                  title="Unconfirmed"
+                  count={categorizedDrivers.unconfirmed.total}
+                  icon={<Users className="h-4 w-4" />}
+                  variant="default"
+                >
+                  {categorizedDrivers.unconfirmed.total === 0 ? (
+                    <p className="text-sm text-muted-foreground italic py-4 text-center">
+                      All drivers confirmed
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Has Vehicle subcategory */}
+                      {categorizedDrivers.unconfirmed.withVehicle.length > 0 && (
+                        <DriverSubcategoryGroup
+                          type="has_vehicle"
+                          count={categorizedDrivers.unconfirmed.withVehicle.length}
+                        >
+                          {categorizedDrivers.unconfirmed.withVehicle.map((driver) => (
+                            <DisplayDriverCard key={driver.id} driver={driver} subcategory="has_vehicle" />
+                          ))}
+                        </DriverSubcategoryGroup>
+                      )}
+
+                      {/* Regular unconfirmed drivers (no vehicle) */}
+                      {categorizedDrivers.unconfirmed.noVehicle.length > 0 && (
+                        <div className="grid grid-cols-3 gap-1">
+                          {categorizedDrivers.unconfirmed.noVehicle.map((driver) => (
+                            <DisplayDriverCard key={driver.id} driver={driver} />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
-                  {/* No Vehicle */}
-                  {categorizedDrivers.unconfirmed.noVehicle.length > 0 && (
+                </DriverStatusSection>
+              </div>
+
+              {/* RIGHT COLUMN - CONFIRMED + ON THE CLOCK */}
+              <div className="space-y-6">
+                {/* CONFIRMED Section */}
+                <DriverStatusSection
+                  title="Confirmed"
+                  count={categorizedDrivers.confirmed.total}
+                  icon={<CheckCircle2 className="h-4 w-4" />}
+                  variant="success"
+                >
+                  {categorizedDrivers.confirmed.total === 0 ? (
+                    <p className="text-sm text-muted-foreground italic py-4 text-center">
+                      No drivers confirmed yet
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Report Time - confirmed but needs vehicle */}
+                      {categorizedDrivers.confirmed.reportTime.length > 0 && (
+                        <DriverSubcategoryGroup
+                          type="report_time"
+                          count={categorizedDrivers.confirmed.reportTime.length}
+                        >
+                          {categorizedDrivers.confirmed.reportTime.map((driver) => (
+                            <DisplayDriverCard key={driver.id} driver={driver} subcategory="report_time" />
+                          ))}
+                        </DriverSubcategoryGroup>
+                      )}
+
+                      {/* Dispatched - confirmed with vehicle */}
+                      {categorizedDrivers.confirmed.dispatched.length > 0 && (
+                        <DriverSubcategoryGroup
+                          type="dispatched"
+                          count={categorizedDrivers.confirmed.dispatched.length}
+                        >
+                          {categorizedDrivers.confirmed.dispatched.map((driver) => (
+                            <DisplayDriverCard key={driver.id} driver={driver} subcategory="dispatched" />
+                          ))}
+                        </DriverSubcategoryGroup>
+                      )}
+                    </div>
+                  )}
+                </DriverStatusSection>
+
+                {/* ON THE CLOCK Section */}
+                <DriverStatusSection
+                  title="On the Clock"
+                  count={categorizedDrivers.onTheClock.length}
+                  icon={<Clock className="h-4 w-4" />}
+                  variant="success"
+                >
+                  {categorizedDrivers.onTheClock.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic py-4 text-center">
+                      No drivers on the clock
+                    </p>
+                  ) : (
                     <div className="grid grid-cols-3 gap-1">
-                      {categorizedDrivers.unconfirmed.noVehicle.map((driver) => (
+                      {categorizedDrivers.onTheClock.map((driver) => (
                         <DisplayDriverCard key={driver.id} driver={driver} />
                       ))}
                     </div>
                   )}
-                </div>
-              )}
-            </DisplaySection>
+                </DriverStatusSection>
 
-            {/* CONFIRMED */}
-            <DisplaySection
-              title="Confirmed"
-              count={categorizedDrivers.confirmed.total}
-              icon={<CheckCircle2 className="h-4 w-4" />}
-              variant="success"
-            >
-              {categorizedDrivers.confirmed.total === 0 ? (
-                <p className="text-xs text-muted-foreground italic py-2">No drivers confirmed yet</p>
-              ) : (
-                <div className="space-y-2">
-                  {/* Report Time subcategory */}
-                  {categorizedDrivers.confirmed.reportTime.length > 0 && (
-                    <div className="space-y-1">
-                      <span className="text-[10px] uppercase tracking-wide text-amber-400 font-medium px-1">Report Time</span>
-                      <div className="grid grid-cols-3 gap-1">
-                        {categorizedDrivers.confirmed.reportTime.map((driver) => (
-                          <DisplayDriverCard key={driver.id} driver={driver} subcategory="report_time" />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {/* Dispatched subcategory */}
-                  {categorizedDrivers.confirmed.dispatched.length > 0 && (
-                    <div className="space-y-1">
-                      <span className="text-[10px] uppercase tracking-wide text-emerald-400 font-medium px-1">Dispatched</span>
-                      <div className="grid grid-cols-3 gap-1">
-                        {categorizedDrivers.confirmed.dispatched.map((driver) => (
-                          <DisplayDriverCard key={driver.id} driver={driver} subcategory="dispatched" />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </DisplaySection>
-
-            {/* ON THE CLOCK */}
-            <DisplaySection
-              title="On the Clock"
-              count={categorizedDrivers.onTheClock.length}
-              icon={<Clock className="h-4 w-4" />}
-              variant="success"
-            >
-              {categorizedDrivers.onTheClock.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic py-2">No drivers on the clock</p>
-              ) : (
-                <div className="grid grid-cols-3 gap-1">
-                  {categorizedDrivers.onTheClock.map((driver) => (
-                    <DisplayDriverCard key={driver.id} driver={driver} />
-                  ))}
-                </div>
-              )}
-            </DisplaySection>
-
-            {/* DONE - Collapsed */}
-            {categorizedDrivers.done.length > 0 && (
-              <DisplaySection
-                title="Done"
-                count={categorizedDrivers.done.length}
-                icon={<CheckCircle2 className="h-4 w-4" />}
-                variant="muted"
-              >
-                <div className="grid grid-cols-3 gap-1">
-                  {categorizedDrivers.done.map((driver) => (
-                    <DisplayDriverCard key={driver.id} driver={driver} />
-                  ))}
-                </div>
-              </DisplaySection>
-            )}
+                {/* DONE Section - Collapsible */}
+                <DisplayDoneSection
+                  drivers={categorizedDrivers.done}
+                />
+              </div>
+            </div>
           </section>
 
           {/* Bottom Section - Vehicles */}
@@ -365,5 +373,49 @@ const Display = () => {
     </div>
   );
 };
+
+// Collapsible Done section component (matches workbook)
+function DisplayDoneSection({
+  drivers,
+}: {
+  drivers: DriverRow[];
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (drivers.length === 0) return null;
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <div className="rounded-lg border bg-card">
+        <CollapsibleTrigger asChild>
+          <button className="flex w-full items-center justify-between p-3 hover:bg-muted/50 transition-colors rounded-lg">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium text-sm">Done</span>
+              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                {drivers.length}
+              </span>
+            </div>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                isOpen && "rotate-180"
+              )}
+            />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="px-3 pb-3">
+            <div className="grid grid-cols-3 gap-1">
+              {drivers.map((driver) => (
+                <DisplayDriverCard key={driver.id} driver={driver} />
+              ))}
+            </div>
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+}
 
 export default Display;
