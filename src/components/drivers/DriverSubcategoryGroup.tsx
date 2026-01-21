@@ -1,8 +1,8 @@
 import { ReactNode } from "react";
-import { Truck, Clock, MapPin } from "lucide-react";
+import { Truck, Clock, MapPin, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type SubcategoryType = "has_vehicle" | "dispatched" | "report_time";
+type SubcategoryType = "has_vehicle" | "dispatched" | "report_time" | "scheduled";
 
 interface DriverSubcategoryGroupProps {
   type: SubcategoryType;
@@ -34,6 +34,12 @@ const subcategoryConfig: Record<SubcategoryType, {
     icon: Clock,
     color: "text-amber-400",
     bgColor: "bg-amber-500/10",
+  },
+  scheduled: {
+    label: "Scheduled",
+    icon: Calendar,
+    color: "text-purple-400",
+    bgColor: "bg-purple-500/10",
   },
 };
 
