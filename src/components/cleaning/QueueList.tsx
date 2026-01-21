@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { QueueItemRow } from './QueueItemRow';
@@ -18,9 +18,10 @@ interface QueueListProps {
   queueType: 'SPECIALTY' | 'GENERAL';
   vehicles: Vehicle[];
   isLoading?: boolean;
+  isActiveTab?: boolean;
 }
 
-export function QueueList({ queueId, queueType, vehicles, isLoading }: QueueListProps) {
+export function QueueList({ queueId, queueType, vehicles, isLoading, isActiveTab = true }: QueueListProps) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [draggedItem, setDraggedItem] = useState<CleaningQueueItem | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -29,6 +30,30 @@ export function QueueList({ queueId, queueType, vehicles, isLoading }: QueueList
   const { createAlert } = useQueueAlerts(null);
 
   const isSpecialty = queueType === 'SPECIALTY';
+
+  // Keyboard shortcut: A to open add vehicle dialog
+  useEffect(() => {
+    if (!isActiveTab) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if dialog is open, or focus is on input/textarea/select
+      if (addDialogOpen) return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+        return;
+      }
+
+      if (e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        if (queueId) {
+          setAddDialogOpen(true);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isActiveTab, addDialogOpen, queueId]);
   const existingVehicleIds = items.map((item) => item.vehicle_id);
 
   const handleAddVehicle = useCallback(
