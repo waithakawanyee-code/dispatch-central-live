@@ -138,6 +138,7 @@ export default function CleaningQueues() {
               queueType="SPECIALTY"
               vehicles={activeVehicles}
               isLoading={queuesLoading || vehiclesLoading}
+              isActiveTab={activeTab === 'SPECIALTY'}
             />
           </TabsContent>
 
@@ -147,6 +148,7 @@ export default function CleaningQueues() {
               queueType="GENERAL"
               vehicles={activeVehicles}
               isLoading={queuesLoading || vehiclesLoading}
+              isActiveTab={activeTab === 'GENERAL'}
             />
           </TabsContent>
         </Tabs>
