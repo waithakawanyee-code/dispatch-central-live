@@ -92,14 +92,22 @@ const Display = () => {
   const categorizedVehicles = useMemo(() => {
     const activeVehicles = vehicles.filter((v) => v.status === "active");
     
-    // Available at base: active, no driver assigned
-    const available = activeVehicles.filter((v) => !v.driver);
+    // Available: active, non-specialty, not take-home, no driver assigned
+    const available = activeVehicles.filter((v) => 
+      !v.driver && 
+      v.primary_category !== "specialty" && 
+      v.classification !== "take_home"
+    );
     
-    // Assigned: active, with driver assigned
-    const assigned = activeVehicles.filter((v) => v.driver);
+    // Assigned (non-specialty): active, with driver assigned, not specialty
+    const assignedNonSpecialty = activeVehicles.filter((v) => 
+      v.driver && v.primary_category !== "specialty"
+    );
     
     // Specialty vehicles with assignments (for departure display)
-    const specialtyAssigned = assigned.filter((v) => v.primary_category === "specialty");
+    const specialtyAssigned = activeVehicles.filter((v) => 
+      v.driver && v.primary_category === "specialty"
+    );
     
     // Sort specialty by driver's report time if available
     const specialtyWithTimes = specialtyAssigned.map((v) => {
@@ -117,7 +125,7 @@ const Display = () => {
 
     return {
       available,
-      assigned,
+      assignedNonSpecialty,
       specialtyWithTimes,
       outOfService,
     };
@@ -285,88 +293,119 @@ const Display = () => {
             </div>
           </section>
 
-          {/* Bottom Section - Vehicles */}
+          {/* Bottom Section - Vehicles (Two-column layout) */}
           <section className="space-y-4 border-t border-border pt-6">
             <div className="flex items-center gap-2 text-lg font-semibold text-foreground border-b border-border pb-2">
               <Truck className="h-5 w-5 text-primary" />
               <span>Vehicles</span>
               <span className="ml-auto text-sm font-mono text-muted-foreground">
-                {vehicles.length} total
+                {vehicles.filter(v => v.status === "active").length} active
               </span>
             </div>
 
-            {/* AVAILABLE - At base, ready to assign */}
-            <DisplaySection
-              title="Available"
-              count={categorizedVehicles.available.length}
-              icon={<Truck className="h-4 w-4" />}
-              variant="default"
-            >
-              {categorizedVehicles.available.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic py-2">No vehicles available</p>
-              ) : (
-                <div className="grid grid-cols-3 gap-1">
-                  {categorizedVehicles.available.map((vehicle) => (
-                    <DisplayVehicleCard key={vehicle.id} vehicle={vehicle} drivers={drivers} />
-                  ))}
-                </div>
-              )}
-            </DisplaySection>
+            {/* Two-column grid matching driver layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* LEFT COLUMN - AVAILABLE */}
+              <div className="space-y-6">
+                <DriverStatusSection
+                  title="Available"
+                  subtitle="Fleet vehicles at base"
+                  count={categorizedVehicles.available.length}
+                  icon={<Truck className="h-4 w-4" />}
+                  variant="default"
+                >
+                  {categorizedVehicles.available.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic py-4 text-center">
+                      No vehicles available
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-1">
+                      {categorizedVehicles.available.map((vehicle) => (
+                        <DisplayVehicleCard key={vehicle.id} vehicle={vehicle} drivers={drivers} />
+                      ))}
+                    </div>
+                  )}
+                </DriverStatusSection>
 
-            {/* SPECIALTY DEPARTURES - Sorted by time */}
-            {categorizedVehicles.specialtyWithTimes.length > 0 && (
-              <DisplaySection
-                title="Specialty Departures"
-                count={categorizedVehicles.specialtyWithTimes.length}
-                icon={<Star className="h-4 w-4" />}
-                variant="warning"
-              >
-                <div className="space-y-1">
-                  {categorizedVehicles.specialtyWithTimes.map(({ vehicle, driver, reportTime }) => (
-                    <SpecialtyDepartureCard
-                      key={vehicle.id}
-                      vehicle={vehicle}
-                      departureTime={reportTime}
-                      driver={driver}
-                    />
-                  ))}
-                </div>
-              </DisplaySection>
-            )}
+                {/* OUT OF SERVICE - Collapsible */}
+                {categorizedVehicles.outOfService.length > 0 && (
+                  <Collapsible>
+                    <div className="rounded-lg border bg-card">
+                      <CollapsibleTrigger asChild>
+                        <button className="flex w-full items-center justify-between p-3 hover:bg-muted/50 transition-colors rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <Truck className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium text-sm">Out of Service</span>
+                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                              {categorizedVehicles.outOfService.length}
+                            </span>
+                          </div>
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="px-3 pb-3">
+                          <div className="grid grid-cols-3 gap-1">
+                            {categorizedVehicles.outOfService.map((vehicle) => (
+                              <DisplayVehicleCard key={vehicle.id} vehicle={vehicle} drivers={drivers} />
+                            ))}
+                          </div>
+                        </div>
+                      </CollapsibleContent>
+                    </div>
+                  </Collapsible>
+                )}
+              </div>
 
-            {/* ASSIGNED - On the road */}
-            <DisplaySection
-              title="Assigned"
-              count={categorizedVehicles.assigned.length}
-              icon={<Truck className="h-4 w-4" />}
-              variant="success"
-            >
-              {categorizedVehicles.assigned.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic py-2">No vehicles assigned</p>
-              ) : (
-                <div className="grid grid-cols-3 gap-1">
-                  {categorizedVehicles.assigned.map((vehicle) => (
-                    <DisplayVehicleCard key={vehicle.id} vehicle={vehicle} drivers={drivers} />
-                  ))}
-                </div>
-              )}
-            </DisplaySection>
+              {/* RIGHT COLUMN - SPECIALTY DEPARTURES + ASSIGNED */}
+              <div className="space-y-6">
+                {/* SPECIALTY DEPARTURES - Sorted by time */}
+                <DriverStatusSection
+                  title="Specialty Departures"
+                  count={categorizedVehicles.specialtyWithTimes.length}
+                  icon={<Star className="h-4 w-4" />}
+                  variant="warning"
+                >
+                  {categorizedVehicles.specialtyWithTimes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic py-4 text-center">
+                      No specialty departures
+                    </p>
+                  ) : (
+                    <div className="space-y-1">
+                      {categorizedVehicles.specialtyWithTimes.map(({ vehicle, driver, reportTime }) => (
+                        <SpecialtyDepartureCard
+                          key={vehicle.id}
+                          vehicle={vehicle}
+                          departureTime={reportTime}
+                          driver={driver}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </DriverStatusSection>
 
-            {/* OUT OF SERVICE */}
-            {categorizedVehicles.outOfService.length > 0 && (
-              <DisplaySection
-                title="Out of Service"
-                count={categorizedVehicles.outOfService.length}
-                icon={<Truck className="h-4 w-4" />}
-                variant="muted"
-              >
-                <div className="grid grid-cols-3 gap-1">
-                  {categorizedVehicles.outOfService.map((vehicle) => (
-                    <DisplayVehicleCard key={vehicle.id} vehicle={vehicle} drivers={drivers} />
-                  ))}
-                </div>
-              </DisplaySection>
-            )}
+                {/* ASSIGNED - On the road */}
+                <DriverStatusSection
+                  title="Assigned"
+                  subtitle="On the road"
+                  count={categorizedVehicles.assignedNonSpecialty.length}
+                  icon={<Truck className="h-4 w-4" />}
+                  variant="success"
+                >
+                  {categorizedVehicles.assignedNonSpecialty.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic py-4 text-center">
+                      No vehicles assigned
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-1">
+                      {categorizedVehicles.assignedNonSpecialty.map((vehicle) => (
+                        <DisplayVehicleCard key={vehicle.id} vehicle={vehicle} drivers={drivers} />
+                      ))}
+                    </div>
+                  )}
+                </DriverStatusSection>
+              </div>
+            </div>
           </section>
         </div>
       </main>
