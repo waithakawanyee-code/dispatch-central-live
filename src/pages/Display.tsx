@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Monitor, Users, Truck, RefreshCw, Clock, CheckCircle2, Star, ChevronDown } from "lucide-react";
+import { Monitor, Users, Truck, RefreshCw, Clock, CheckCircle2, Star, ChevronDown, Calendar } from "lucide-react";
 import { Header } from "@/components/Header";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { DisplayDriverCard } from "@/components/display/DisplayDriverCard";
@@ -10,7 +10,8 @@ import { DriverStatusSection } from "@/components/drivers/DriverStatusSection";
 import { DriverSubcategoryGroup } from "@/components/drivers/DriverSubcategoryGroup";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, getDay } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriverRow = Database["public"]["Tables"]["drivers"]["Row"];
@@ -31,6 +32,18 @@ const Display = () => {
   const { drivers, vehicles, loading, refetch } = useDispatchData();
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [schedules, setSchedules] = useState<Database["public"]["Tables"]["driver_schedules"]["Row"][]>([]);
+
+  // Fetch driver schedules
+  useEffect(() => {
+    const fetchSchedules = async () => {
+      const { data, error } = await supabase.from("driver_schedules").select("*");
+      if (!error && data) {
+        setSchedules(data);
+      }
+    };
+    fetchSchedules();
+  }, []);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -55,11 +68,20 @@ const Display = () => {
   // Categorize drivers like workbook
   const categorizedDrivers = useMemo(() => {
     const activeDrivers = drivers.filter((d) => (d as any).is_active !== false);
+    const today = new Date();
+    const dayOfWeek = getDay(today);
 
-    // UNCONFIRMED - split by has vehicle vs no vehicle
+    // Build set of driver IDs scheduled for today (not marked as off)
+    const scheduledDriverIds = new Set(
+      schedules
+        .filter((s) => s.day_of_week === dayOfWeek && !s.is_off)
+        .map((s) => s.driver_id)
+    );
+
+    // UNCONFIRMED - split by scheduled vs not scheduled
     const unconfirmed = activeDrivers.filter((d) => d.status === "unconfirmed");
-    const unconfirmedWithVehicle = sortByCode(unconfirmed.filter((d) => d.vehicle || d.default_vehicle));
-    const unconfirmedNoVehicle = sortByCode(unconfirmed.filter((d) => !d.vehicle && !d.default_vehicle));
+    const unconfirmedScheduled = sortByCode(unconfirmed.filter((d) => scheduledDriverIds.has(d.id)));
+    const unconfirmedNotScheduled = sortByCode(unconfirmed.filter((d) => !scheduledDriverIds.has(d.id)));
 
     // CONFIRMED - split by dispatched (has vehicle) vs report time (needs vehicle)
     const confirmed = activeDrivers.filter((d) => d.status === "confirmed");
@@ -75,8 +97,8 @@ const Display = () => {
     return {
       unconfirmed: {
         total: unconfirmed.length,
-        withVehicle: unconfirmedWithVehicle,
-        noVehicle: unconfirmedNoVehicle,
+        scheduled: unconfirmedScheduled,
+        notScheduled: unconfirmedNotScheduled,
       },
       confirmed: {
         total: confirmed.length,
@@ -86,7 +108,7 @@ const Display = () => {
       onTheClock,
       done,
     };
-  }, [drivers]);
+  }, [drivers, schedules]);
 
   // Categorize vehicles
   const categorizedVehicles = useMemo(() => {
@@ -198,22 +220,22 @@ const Display = () => {
                     </p>
                   ) : (
                     <div className="space-y-4">
-                      {/* Has Vehicle subcategory */}
-                      {categorizedDrivers.unconfirmed.withVehicle.length > 0 && (
+                      {/* Scheduled subcategory */}
+                      {categorizedDrivers.unconfirmed.scheduled.length > 0 && (
                         <DriverSubcategoryGroup
-                          type="has_vehicle"
-                          count={categorizedDrivers.unconfirmed.withVehicle.length}
+                          type="scheduled"
+                          count={categorizedDrivers.unconfirmed.scheduled.length}
                         >
-                          {categorizedDrivers.unconfirmed.withVehicle.map((driver) => (
-                            <DisplayDriverCard key={driver.id} driver={driver} subcategory="has_vehicle" />
+                          {categorizedDrivers.unconfirmed.scheduled.map((driver) => (
+                            <DisplayDriverCard key={driver.id} driver={driver} subcategory="scheduled" />
                           ))}
                         </DriverSubcategoryGroup>
                       )}
 
-                      {/* Regular unconfirmed drivers (no vehicle) */}
-                      {categorizedDrivers.unconfirmed.noVehicle.length > 0 && (
+                      {/* Unconfirmed drivers not scheduled */}
+                      {categorizedDrivers.unconfirmed.notScheduled.length > 0 && (
                         <div className="grid grid-cols-3 gap-1">
-                          {categorizedDrivers.unconfirmed.noVehicle.map((driver) => (
+                          {categorizedDrivers.unconfirmed.notScheduled.map((driver) => (
                             <DisplayDriverCard key={driver.id} driver={driver} />
                           ))}
                         </div>

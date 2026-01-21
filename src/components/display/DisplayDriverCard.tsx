@@ -15,7 +15,7 @@ interface DisplayDriverCardProps {
     has_cdl?: boolean;
     default_vehicle?: string | null;
   };
-  subcategory?: "has_vehicle" | "dispatched" | "report_time";
+  subcategory?: "has_vehicle" | "dispatched" | "report_time" | "scheduled";
 }
 
 export function DisplayDriverCard({ driver, subcategory }: DisplayDriverCardProps) {
@@ -45,7 +45,7 @@ export function DisplayDriverCard({ driver, subcategory }: DisplayDriverCardProp
       case "done":
         return "text-muted-foreground";
       case "unconfirmed":
-        return subcategory === "has_vehicle" ? "text-blue-500" : "text-slate-500";
+        return subcategory === "has_vehicle" || subcategory === "scheduled" ? "text-purple-500" : "text-slate-500";
       default:
         return "text-muted-foreground";
     }
@@ -60,7 +60,7 @@ export function DisplayDriverCard({ driver, subcategory }: DisplayDriverCardProp
       case "done":
         return "bg-muted/20";
       case "unconfirmed":
-        return subcategory === "has_vehicle" ? "bg-blue-500/20" : "bg-muted/20";
+        return subcategory === "has_vehicle" || subcategory === "scheduled" ? "bg-purple-500/20" : "bg-muted/20";
       default:
         return "bg-muted/20";
     }
@@ -73,7 +73,7 @@ export function DisplayDriverCard({ driver, subcategory }: DisplayDriverCardProp
       case "confirmed":
         return hasVehicle ? "border-l-4 border-l-emerald-500" : "border-l-4 border-l-amber-500";
       case "unconfirmed":
-        return subcategory === "has_vehicle" ? "border-l-4 border-l-blue-500" : "";
+        return subcategory === "has_vehicle" || subcategory === "scheduled" ? "border-l-4 border-l-purple-500" : "";
       case "done":
         return "border-l-4 border-l-muted-foreground";
       default:
