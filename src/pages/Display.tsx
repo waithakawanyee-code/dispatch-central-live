@@ -160,8 +160,8 @@ const Display = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
-          {/* Left Column - Drivers */}
+        <div className="space-y-6">
+          {/* Top Section - Drivers */}
           <section className="space-y-4">
             <div className="flex items-center gap-2 text-lg font-semibold text-foreground border-b border-border pb-2">
               <Users className="h-5 w-5 text-primary" />
@@ -277,8 +277,8 @@ const Display = () => {
             )}
           </section>
 
-          {/* Right Column - Vehicles */}
-          <section className="space-y-4">
+          {/* Bottom Section - Vehicles */}
+          <section className="space-y-4 border-t border-border pt-6">
             <div className="flex items-center gap-2 text-lg font-semibold text-foreground border-b border-border pb-2">
               <Truck className="h-5 w-5 text-primary" />
               <span>Vehicles</span>
