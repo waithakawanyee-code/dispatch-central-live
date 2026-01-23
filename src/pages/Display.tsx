@@ -1,482 +1,67 @@
-import { useState, useEffect, useMemo } from "react";
-import { Monitor, Users, Truck, RefreshCw, Clock, CheckCircle2, Star, ChevronDown, Calendar } from "lucide-react";
-import { Header } from "@/components/Header";
-import { useDispatchData } from "@/hooks/useDispatchData";
-import { DisplayDriverCard } from "@/components/display/DisplayDriverCard";
-import { DisplayVehicleCard } from "@/components/display/DisplayVehicleCard";
-import { DisplaySection } from "@/components/display/DisplaySection";
-import { SpecialtyDepartureCard } from "@/components/display/SpecialtyDepartureCard";
-import { DriverStatusSection } from "@/components/drivers/DriverStatusSection";
-import { DriverSubcategoryGroup } from "@/components/drivers/DriverSubcategoryGroup";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useEffect, useState } from "react";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { format, getDay } from "date-fns";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
-
-type DriverRow = Database["public"]["Tables"]["drivers"]["Row"];
-type VehicleRow = Database["public"]["Tables"]["vehicles"]["Row"];
-
-const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
-
-// Helper to sort drivers by code alphabetically
-const sortByCode = (drivers: DriverRow[]) => {
-  return [...drivers].sort((a, b) => {
-    const aCode = a.code || "zzz";
-    const bCode = b.code || "zzz";
-    return aCode.localeCompare(bCode);
-  });
-};
+import {
+  DriverStatusWidget,
+  VehicleAvailabilityWidget,
+  SpecialtyDeparturesWidget,
+  CarwashQueueWidget,
+} from "@/components/display/widgets";
 
 const Display = () => {
-  const { drivers, vehicles, loading, refetch } = useDispatchData();
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [schedules, setSchedules] = useState<Database["public"]["Tables"]["driver_schedules"]["Row"][]>([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Fetch driver schedules
+  // Update clock every second
   useEffect(() => {
-    const fetchSchedules = async () => {
-      const { data, error } = await supabase.from("driver_schedules").select("*");
-      if (!error && data) {
-        setSchedules(data);
-      }
-    };
-    fetchSchedules();
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      setIsRefreshing(true);
-      await refetch();
-      setLastUpdated(new Date());
-      setIsRefreshing(false);
-    }, AUTO_REFRESH_INTERVAL);
+  return (
+    <div className="h-screen w-screen overflow-hidden bg-background p-4 flex flex-col">
+      {/* Header bar - minimal, airport style */}
+      <header className="flex items-center justify-between border-b border-border/30 pb-3 mb-4">
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-bold tracking-tight text-foreground uppercase">
+            Command Center
+          </h1>
+          <div className="h-4 w-px bg-border/50" />
+          <span className="text-sm text-muted-foreground font-mono">
+            {format(currentTime, "EEEE, MMM d")}
+          </span>
+        </div>
 
-    return () => clearInterval(interval);
-  }, [refetch]);
+        {/* Live clock */}
+        <div className="flex items-center gap-3">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-2xl font-mono font-bold text-foreground tabular-nums">
+            {format(currentTime, "HH:mm:ss")}
+          </span>
+        </div>
+      </header>
 
-  // Manual refresh handler
-  const handleManualRefresh = async () => {
-    setIsRefreshing(true);
-    await refetch();
-    setLastUpdated(new Date());
-    setIsRefreshing(false);
-  };
+      {/* Widget Grid - fills remaining space */}
+      <div className="flex-1 grid grid-cols-3 grid-rows-2 gap-4">
+        {/* Row 1: Driver Status (2 cols) + Vehicle Availability (1 col) */}
+        <div className="col-span-2">
+          <DriverStatusWidget />
+        </div>
+        <div className="col-span-1">
+          <VehicleAvailabilityWidget />
+        </div>
 
-  // Categorize drivers like workbook
-  const categorizedDrivers = useMemo(() => {
-    const activeDrivers = drivers.filter((d) => (d as any).is_active !== false);
-    const today = new Date();
-    const dayOfWeek = getDay(today);
-
-    // Build set of driver IDs scheduled for today (not marked as off)
-    const scheduledDriverIds = new Set(
-      schedules
-        .filter((s) => s.day_of_week === dayOfWeek && !s.is_off)
-        .map((s) => s.driver_id)
-    );
-
-    // UNCONFIRMED - split by scheduled vs not scheduled
-    const unconfirmed = activeDrivers.filter((d) => d.status === "unconfirmed");
-    const unconfirmedScheduled = sortByCode(unconfirmed.filter((d) => scheduledDriverIds.has(d.id)));
-    const unconfirmedNotScheduled = sortByCode(unconfirmed.filter((d) => !scheduledDriverIds.has(d.id)));
-
-    // CONFIRMED - split by dispatched (has vehicle) vs report time (needs vehicle)
-    const confirmed = activeDrivers.filter((d) => d.status === "confirmed");
-    const confirmedDispatched = sortByCode(confirmed.filter((d) => d.vehicle));
-    const confirmedReportTime = sortByCode(confirmed.filter((d) => !d.vehicle));
-
-    // ON THE CLOCK - sorted by code
-    const onTheClock = sortByCode(activeDrivers.filter((d) => d.status === "on_the_clock"));
-
-    // DONE - sorted by code
-    const done = sortByCode(activeDrivers.filter((d) => d.status === "done"));
-
-    return {
-      unconfirmed: {
-        total: unconfirmed.length,
-        scheduled: unconfirmedScheduled,
-        notScheduled: unconfirmedNotScheduled,
-      },
-      confirmed: {
-        total: confirmed.length,
-        dispatched: confirmedDispatched,
-        reportTime: confirmedReportTime,
-      },
-      onTheClock,
-      done,
-    };
-  }, [drivers, schedules]);
-
-  // Categorize vehicles
-  const categorizedVehicles = useMemo(() => {
-    const activeVehicles = vehicles.filter((v) => v.status === "active");
-    
-    // Available: active, non-specialty, not take-home, no driver assigned
-    const available = activeVehicles.filter((v) => 
-      !v.driver && 
-      v.primary_category !== "specialty" && 
-      v.classification !== "take_home"
-    );
-    
-    // Assigned (non-specialty): active, with driver assigned, not specialty
-    const assignedNonSpecialty = activeVehicles.filter((v) => 
-      v.driver && v.primary_category !== "specialty"
-    );
-    
-    // Specialty vehicles with assignments (for departure display)
-    const specialtyAssigned = activeVehicles.filter((v) => 
-      v.driver && v.primary_category === "specialty"
-    );
-    
-    // Sort specialty by driver's report time if available
-    const specialtyWithTimes = specialtyAssigned.map((v) => {
-      const driver = drivers.find((d) => d.name === v.driver);
-      return { vehicle: v, driver, reportTime: driver?.report_time };
-    }).sort((a, b) => {
-      if (!a.reportTime && !b.reportTime) return 0;
-      if (!a.reportTime) return 1;
-      if (!b.reportTime) return -1;
-      return a.reportTime.localeCompare(b.reportTime);
-    });
-
-    // Out of service
-    const outOfService = vehicles.filter((v) => v.status === "out-of-service");
-
-    return {
-      available,
-      assignedNonSpecialty,
-      specialtyWithTimes,
-      outOfService,
-    };
-  }, [vehicles, drivers]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
-          <p className="text-sm text-muted-foreground">Loading display data...</p>
+        {/* Row 2: Specialty Departures + Carwash Queue */}
+        <div className="col-span-1">
+          <SpecialtyDeparturesWidget />
+        </div>
+        <div className="col-span-2">
+          <CarwashQueueWidget />
         </div>
       </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
-
-      <main className="p-4">
-        {/* Header */}
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-              <Monitor className="h-5 w-5 text-primary" />
-              Command Center Display
-            </h1>
-            <p className="text-sm text-muted-foreground">Real-time driver and vehicle status</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">
-              Last updated: {format(lastUpdated, "HH:mm:ss")}
-            </span>
-            <button
-              onClick={handleManualRefresh}
-              disabled={isRefreshing}
-              className="p-2 rounded-md hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh now"
-            >
-              <RefreshCw className={cn("h-4 w-4 text-muted-foreground", isRefreshing && "animate-spin")} />
-            </button>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          {/* Top Section - Drivers (Two-column layout like workbook) */}
-          <section className="space-y-4">
-            <div className="flex items-center gap-2 text-lg font-semibold text-foreground border-b border-border pb-2">
-              <Users className="h-5 w-5 text-primary" />
-              <span>Drivers</span>
-              <span className="ml-auto text-sm font-mono text-muted-foreground">
-                {drivers.filter((d) => (d as any).is_active !== false).length} active
-              </span>
-            </div>
-
-            {/* Two-column grid matching DriverWorkbookPanel */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* LEFT COLUMN - UNCONFIRMED */}
-              <div className="space-y-6">
-                <DriverStatusSection
-                  title="Unconfirmed"
-                  count={categorizedDrivers.unconfirmed.total}
-                  icon={<Users className="h-4 w-4" />}
-                  variant="default"
-                >
-                  {categorizedDrivers.unconfirmed.total === 0 ? (
-                    <p className="text-sm text-muted-foreground italic py-4 text-center">
-                      All drivers confirmed
-                    </p>
-                  ) : (
-                    <div className="space-y-4">
-                      {/* Scheduled subcategory */}
-                      {categorizedDrivers.unconfirmed.scheduled.length > 0 && (
-                        <DriverSubcategoryGroup
-                          type="scheduled"
-                          count={categorizedDrivers.unconfirmed.scheduled.length}
-                        >
-                          {categorizedDrivers.unconfirmed.scheduled.map((driver) => (
-                            <DisplayDriverCard key={driver.id} driver={driver} subcategory="scheduled" />
-                          ))}
-                        </DriverSubcategoryGroup>
-                      )}
-
-                      {/* Unconfirmed drivers not scheduled */}
-                      {categorizedDrivers.unconfirmed.notScheduled.length > 0 && (
-                        <div className="grid grid-cols-3 gap-1">
-                          {categorizedDrivers.unconfirmed.notScheduled.map((driver) => (
-                            <DisplayDriverCard key={driver.id} driver={driver} />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </DriverStatusSection>
-              </div>
-
-              {/* RIGHT COLUMN - CONFIRMED + ON THE CLOCK */}
-              <div className="space-y-6">
-                {/* CONFIRMED Section */}
-                <DriverStatusSection
-                  title="Confirmed"
-                  count={categorizedDrivers.confirmed.total}
-                  icon={<CheckCircle2 className="h-4 w-4" />}
-                  variant="success"
-                >
-                  {categorizedDrivers.confirmed.total === 0 ? (
-                    <p className="text-sm text-muted-foreground italic py-4 text-center">
-                      No drivers confirmed yet
-                    </p>
-                  ) : (
-                    <div className="space-y-4">
-                      {/* Report Time - confirmed but needs vehicle */}
-                      {categorizedDrivers.confirmed.reportTime.length > 0 && (
-                        <DriverSubcategoryGroup
-                          type="report_time"
-                          count={categorizedDrivers.confirmed.reportTime.length}
-                        >
-                          {categorizedDrivers.confirmed.reportTime.map((driver) => (
-                            <DisplayDriverCard key={driver.id} driver={driver} subcategory="report_time" />
-                          ))}
-                        </DriverSubcategoryGroup>
-                      )}
-
-                      {/* Dispatched - confirmed with vehicle */}
-                      {categorizedDrivers.confirmed.dispatched.length > 0 && (
-                        <DriverSubcategoryGroup
-                          type="dispatched"
-                          count={categorizedDrivers.confirmed.dispatched.length}
-                        >
-                          {categorizedDrivers.confirmed.dispatched.map((driver) => (
-                            <DisplayDriverCard key={driver.id} driver={driver} subcategory="dispatched" />
-                          ))}
-                        </DriverSubcategoryGroup>
-                      )}
-                    </div>
-                  )}
-                </DriverStatusSection>
-
-                {/* ON THE CLOCK Section */}
-                <DriverStatusSection
-                  title="On the Clock"
-                  count={categorizedDrivers.onTheClock.length}
-                  icon={<Clock className="h-4 w-4" />}
-                  variant="success"
-                >
-                  {categorizedDrivers.onTheClock.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic py-4 text-center">
-                      No drivers on the clock
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-1">
-                      {categorizedDrivers.onTheClock.map((driver) => (
-                        <DisplayDriverCard key={driver.id} driver={driver} />
-                      ))}
-                    </div>
-                  )}
-                </DriverStatusSection>
-
-                {/* DONE Section - Collapsible */}
-                <DisplayDoneSection
-                  drivers={categorizedDrivers.done}
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Bottom Section - Vehicles (Two-column layout) */}
-          <section className="space-y-4 border-t border-border pt-6">
-            <div className="flex items-center gap-2 text-lg font-semibold text-foreground border-b border-border pb-2">
-              <Truck className="h-5 w-5 text-primary" />
-              <span>Vehicles</span>
-              <span className="ml-auto text-sm font-mono text-muted-foreground">
-                {vehicles.filter(v => v.status === "active").length} active
-              </span>
-            </div>
-
-            {/* Two-column grid matching driver layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* LEFT COLUMN - AVAILABLE */}
-              <div className="space-y-6">
-                <DriverStatusSection
-                  title="Available"
-                  subtitle="Fleet vehicles at base"
-                  count={categorizedVehicles.available.length}
-                  icon={<Truck className="h-4 w-4" />}
-                  variant="default"
-                >
-                  {categorizedVehicles.available.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic py-4 text-center">
-                      No vehicles available
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-1">
-                      {categorizedVehicles.available.map((vehicle) => (
-                        <DisplayVehicleCard key={vehicle.id} vehicle={vehicle} drivers={drivers} />
-                      ))}
-                    </div>
-                  )}
-                </DriverStatusSection>
-
-                {/* OUT OF SERVICE - Collapsible */}
-                {categorizedVehicles.outOfService.length > 0 && (
-                  <Collapsible>
-                    <div className="rounded-lg border bg-card">
-                      <CollapsibleTrigger asChild>
-                        <button className="flex w-full items-center justify-between p-3 hover:bg-muted/50 transition-colors rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <Truck className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium text-sm">Out of Service</span>
-                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                              {categorizedVehicles.outOfService.length}
-                            </span>
-                          </div>
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        </button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="px-3 pb-3">
-                          <div className="grid grid-cols-3 gap-1">
-                            {categorizedVehicles.outOfService.map((vehicle) => (
-                              <DisplayVehicleCard key={vehicle.id} vehicle={vehicle} drivers={drivers} />
-                            ))}
-                          </div>
-                        </div>
-                      </CollapsibleContent>
-                    </div>
-                  </Collapsible>
-                )}
-              </div>
-
-              {/* RIGHT COLUMN - SPECIALTY DEPARTURES + ASSIGNED */}
-              <div className="space-y-6">
-                {/* SPECIALTY DEPARTURES - Sorted by time */}
-                <DriverStatusSection
-                  title="Specialty Departures"
-                  count={categorizedVehicles.specialtyWithTimes.length}
-                  icon={<Star className="h-4 w-4" />}
-                  variant="warning"
-                >
-                  {categorizedVehicles.specialtyWithTimes.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic py-4 text-center">
-                      No specialty departures
-                    </p>
-                  ) : (
-                    <div className="space-y-1">
-                      {categorizedVehicles.specialtyWithTimes.map(({ vehicle, driver, reportTime }) => (
-                        <SpecialtyDepartureCard
-                          key={vehicle.id}
-                          vehicle={vehicle}
-                          departureTime={reportTime}
-                          driver={driver}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </DriverStatusSection>
-
-                {/* ASSIGNED - On the road */}
-                <DriverStatusSection
-                  title="Assigned"
-                  subtitle="On the road"
-                  count={categorizedVehicles.assignedNonSpecialty.length}
-                  icon={<Truck className="h-4 w-4" />}
-                  variant="success"
-                >
-                  {categorizedVehicles.assignedNonSpecialty.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic py-4 text-center">
-                      No vehicles assigned
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-1">
-                      {categorizedVehicles.assignedNonSpecialty.map((vehicle) => (
-                        <DisplayVehicleCard key={vehicle.id} vehicle={vehicle} drivers={drivers} />
-                      ))}
-                    </div>
-                  )}
-                </DriverStatusSection>
-              </div>
-            </div>
-          </section>
-        </div>
-      </main>
     </div>
   );
 };
-
-// Collapsible Done section component (matches workbook)
-function DisplayDoneSection({
-  drivers,
-}: {
-  drivers: DriverRow[];
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  if (drivers.length === 0) return null;
-
-  return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className="rounded-lg border bg-card">
-        <CollapsibleTrigger asChild>
-          <button className="flex w-full items-center justify-between p-3 hover:bg-muted/50 transition-colors rounded-lg">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium text-sm">Done</span>
-              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                {drivers.length}
-              </span>
-            </div>
-            <ChevronDown
-              className={cn(
-                "h-4 w-4 text-muted-foreground transition-transform duration-200",
-                isOpen && "rotate-180"
-              )}
-            />
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="px-3 pb-3">
-            <div className="grid grid-cols-3 gap-1">
-              {drivers.map((driver) => (
-                <DisplayDriverCard key={driver.id} driver={driver} />
-              ))}
-            </div>
-          </div>
-        </CollapsibleContent>
-      </div>
-    </Collapsible>
-  );
-}
 
 export default Display;
