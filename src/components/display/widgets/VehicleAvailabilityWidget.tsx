@@ -1,10 +1,10 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { WidgetCard } from "./WidgetCard";
-import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
 
 type VehicleType = Database["public"]["Enums"]["vehicle_type"];
+type DriverStatus = Database["public"]["Enums"]["driver_status"];
 
 interface VehicleSummary {
   id: string;
@@ -15,9 +15,10 @@ interface VehicleSummary {
   driver: string | null;
 }
 
-interface TicketCount {
-  vehicle_id: string;
-  count: number;
+interface DriverSummary {
+  id: string;
+  name: string;
+  status: DriverStatus;
 }
 
 const sedanTypes: VehicleType[] = ["sedan_volvo", "sedan_aviator"];
@@ -25,48 +26,30 @@ const suvTypes: VehicleType[] = ["suv"];
 
 export function VehicleAvailabilityWidget() {
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
-  const [ticketCounts, setTicketCounts] = useState<TicketCount[]>([]);
+  const [drivers, setDrivers] = useState<DriverSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch vehicles (above_all only for sedan/suv counts)
-      const { data: vehicleData } = await supabase
-        .from("vehicles")
-        .select("id, unit, status, vehicle_type, primary_category, driver");
+      const [{ data: vehicleData }, { data: driverData }] = await Promise.all([
+        supabase
+          .from("vehicles")
+          .select("id, unit, status, vehicle_type, primary_category, driver"),
+        supabase
+          .from("drivers")
+          .select("id, name, status")
+          .eq("is_active", true),
+      ]);
 
-      // Fetch open ticket counts
-      const { data: ticketData } = await supabase
-        .from("vehicle_service_tickets")
-        .select("vehicle_id")
-        .in("ticket_status", ["open", "in_progress", "waiting_parts"]);
-
-      if (vehicleData) {
-        setVehicles(vehicleData);
-      }
-
-      if (ticketData) {
-        // Count tickets per vehicle
-        const counts: Record<string, number> = {};
-        ticketData.forEach((t) => {
-          counts[t.vehicle_id] = (counts[t.vehicle_id] || 0) + 1;
-        });
-        setTicketCounts(
-          Object.entries(counts).map(([vehicle_id, count]) => ({
-            vehicle_id,
-            count,
-          }))
-        );
-      }
-
+      if (vehicleData) setVehicles(vehicleData);
+      if (driverData) setDrivers(driverData);
       setLoading(false);
     };
 
     fetchData();
 
-    // Subscribe to realtime updates
     const channel = supabase
-      .channel("display-vehicles")
+      .channel("display-vehicles-drivers")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "vehicles" },
@@ -74,7 +57,7 @@ export function VehicleAvailabilityWidget() {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "vehicle_service_tickets" },
+        { event: "*", schema: "public", table: "drivers" },
         () => fetchData()
       )
       .subscribe();
@@ -87,8 +70,7 @@ export function VehicleAvailabilityWidget() {
     };
   }, []);
 
-  const stats = useMemo(() => {
-    // Above All vehicles only (sedan + SUV)
+  const { availableSedans, availableSuvs, workingVehicles, outOfServiceCount } = useMemo(() => {
     const aboveAll = vehicles.filter(
       (v) => v.primary_category === "above_all" && v.status === "active"
     );
@@ -100,30 +82,24 @@ export function VehicleAvailabilityWidget() {
       suvTypes.includes(v.vehicle_type as VehicleType)
     );
 
-    const availableSedans = sedans.filter((v) => !v.driver);
-    const availableSuvs = suvs.filter((v) => !v.driver);
+    const availableSedans = sedans
+      .filter((v) => !v.driver)
+      .sort((a, b) => a.unit.localeCompare(b.unit, undefined, { numeric: true }));
+    const availableSuvs = suvs
+      .filter((v) => !v.driver)
+      .sort((a, b) => a.unit.localeCompare(b.unit, undefined, { numeric: true }));
 
-    const outOfService = vehicles.filter((v) => v.status === "out-of-service");
+    const onTheClockDriverNames = new Set(
+      drivers.filter((d) => d.status === "on_the_clock").map((d) => d.name)
+    );
+    const workingVehicles = [...sedans, ...suvs]
+      .filter((v) => v.driver && onTheClockDriverNames.has(v.driver))
+      .sort((a, b) => a.unit.localeCompare(b.unit, undefined, { numeric: true }));
 
-    // Health counts (vehicles with open tickets)
-    const vehiclesWithTickets = new Set(ticketCounts.map((t) => t.vehicle_id));
-    const yellowCount = [...aboveAll].filter(
-      (v) => !v.driver && vehiclesWithTickets.has(v.id)
-    ).length;
+    const outOfServiceCount = vehicles.filter((v) => v.status === "out-of-service").length;
 
-    return {
-      sedans: {
-        available: availableSedans.length,
-        total: sedans.length,
-      },
-      suvs: {
-        available: availableSuvs.length,
-        total: suvs.length,
-      },
-      outOfService: outOfService.length,
-      withTickets: yellowCount,
-    };
-  }, [vehicles, ticketCounts]);
+    return { availableSedans, availableSuvs, workingVehicles, outOfServiceCount };
+  }, [vehicles, drivers]);
 
   if (loading) {
     return (
@@ -135,51 +111,42 @@ export function VehicleAvailabilityWidget() {
     );
   }
 
+  const VehicleList = ({ items, label, colorClass }: { items: VehicleSummary[]; label: string; colorClass: string }) => (
+    <div className="mb-3">
+      <div className={`flex items-center gap-2 mb-1 border-b border-border/20 pb-1 ${colorClass}`}>
+        <span className="font-mono text-xs uppercase tracking-wide">{label}</span>
+        <span className="font-mono text-lg font-bold">{items.length}</span>
+      </div>
+      {items.length > 0 ? (
+        <div className="grid grid-cols-6 gap-1 font-mono text-sm">
+          {items.map((v) => (
+            <span key={v.id} className={colorClass}>{v.unit}</span>
+          ))}
+        </div>
+      ) : (
+        <div className="text-xs text-muted-foreground/50 font-mono">—</div>
+      )}
+    </div>
+  );
+
   return (
     <WidgetCard title="Vehicle Availability" className="h-full">
-      <div className="flex h-full flex-col justify-center gap-6">
-        {/* Main counts - large typography */}
-        <div className="grid grid-cols-2 gap-8 text-center">
-          {/* Sedans */}
-          <div>
-            <div className="text-6xl font-bold font-mono text-emerald-400">
-              {stats.sedans.available}
-            </div>
-            <div className="text-sm text-muted-foreground font-mono uppercase tracking-wide mt-1">
-              Sedans
-            </div>
-            <div className="text-xs text-muted-foreground/60">
-              of {stats.sedans.total} active
-            </div>
-          </div>
-
-          {/* SUVs */}
-          <div>
-            <div className="text-6xl font-bold font-mono text-emerald-400">
-              {stats.suvs.available}
-            </div>
-            <div className="text-sm text-muted-foreground font-mono uppercase tracking-wide mt-1">
-              SUVs
-            </div>
-            <div className="text-xs text-muted-foreground/60">
-              of {stats.suvs.total} active
-            </div>
-          </div>
+      <div className="h-full flex flex-col overflow-auto">
+        <div className="flex-1">
+          <VehicleList items={availableSedans} label="Sedans Available" colorClass="text-emerald-400" />
+          <VehicleList items={availableSuvs} label="SUVs Available" colorClass="text-emerald-400" />
         </div>
 
-        {/* Footer stats */}
-        <div className="flex justify-center gap-8 border-t border-border/30 pt-4 text-sm font-mono">
-          {stats.withTickets > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-amber-500" />
-              <span className="text-amber-400">{stats.withTickets} w/ tickets</span>
-            </div>
-          )}
-          <div className="flex items-center gap-2">
+        <div className="border-t border-border/30 pt-3 mt-2">
+          <VehicleList items={workingVehicles} label="Working" colorClass="text-sky-400" />
+        </div>
+
+        {outOfServiceCount > 0 && (
+          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
             <span className="h-2 w-2 rounded-full bg-red-500" />
-            <span className="text-red-400">{stats.outOfService} OOS</span>
+            <span className="text-red-400 font-mono text-sm">{outOfServiceCount} OOS</span>
           </div>
-        </div>
+        )}
       </div>
     </WidgetCard>
   );

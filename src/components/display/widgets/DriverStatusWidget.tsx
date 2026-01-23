@@ -16,15 +16,8 @@ interface DriverSummary {
 const statusColors: Record<DriverStatus, string> = {
   unconfirmed: "text-amber-400",
   confirmed: "text-emerald-400",
-  on_the_clock: "text-emerald-400",
+  on_the_clock: "text-sky-400",
   done: "text-muted-foreground",
-};
-
-const statusLabels: Record<DriverStatus, string> = {
-  unconfirmed: "UNCONF",
-  confirmed: "CONF",
-  on_the_clock: "OTC",
-  done: "DONE",
 };
 
 export function DriverStatusWidget() {
@@ -47,7 +40,6 @@ export function DriverStatusWidget() {
 
     fetchDrivers();
 
-    // Subscribe to realtime updates
     const channel = supabase
       .channel("display-drivers")
       .on(
@@ -57,7 +49,6 @@ export function DriverStatusWidget() {
       )
       .subscribe();
 
-    // Auto-refresh every 30s
     const interval = setInterval(fetchDrivers, 30000);
 
     return () => {
@@ -66,13 +57,46 @@ export function DriverStatusWidget() {
     };
   }, []);
 
-  // Group by status for display
   const grouped = {
     unconfirmed: drivers.filter((d) => d.status === "unconfirmed"),
     confirmed: drivers.filter((d) => d.status === "confirmed"),
     on_the_clock: drivers.filter((d) => d.status === "on_the_clock"),
     done: drivers.filter((d) => d.status === "done"),
   };
+
+  const renderDriverList = (driverList: DriverSummary[], status: DriverStatus) => (
+    <div className="grid grid-cols-6 gap-1 font-mono text-sm">
+      {driverList.map((driver) => (
+        <span key={driver.id} className={cn("font-bold", statusColors[status])}>
+          {driver.code || driver.name.slice(0, 4).toUpperCase()}
+        </span>
+      ))}
+    </div>
+  );
+
+  const StatusSection = ({
+    title,
+    driverList,
+    status,
+    colorClass,
+  }: {
+    title: string;
+    driverList: DriverSummary[];
+    status: DriverStatus;
+    colorClass: string;
+  }) => (
+    <div className="mb-3">
+      <div className={cn("flex items-center gap-2 mb-1 pb-1 border-b border-border/20", colorClass)}>
+        <span className="font-mono text-xs uppercase tracking-wide">{title}</span>
+        <span className="font-mono text-lg font-bold">{driverList.length}</span>
+      </div>
+      {driverList.length > 0 ? (
+        renderDriverList(driverList, status)
+      ) : (
+        <div className="text-xs text-muted-foreground/50 font-mono">—</div>
+      )}
+    </div>
+  );
 
   if (loading) {
     return (
@@ -87,54 +111,30 @@ export function DriverStatusWidget() {
   return (
     <WidgetCard title="Driver Status" className="h-full">
       <div className="h-full overflow-auto">
-        {/* Status counts header */}
-        <div className="mb-3 flex gap-4 text-xs font-mono border-b border-border/30 pb-2">
-          <span className="text-amber-400">
-            UNCONF: {grouped.unconfirmed.length}
-          </span>
-          <span className="text-emerald-400">
-            CONF: {grouped.confirmed.length}
-          </span>
-          <span className="text-emerald-400">
-            OTC: {grouped.on_the_clock.length}
-          </span>
-          <span className="text-muted-foreground">
-            DONE: {grouped.done.length}
-          </span>
-        </div>
-
-        {/* Driver list - airport board style */}
-        <div className="grid grid-cols-4 gap-x-2 gap-y-0.5 font-mono text-sm">
-          {drivers
-            .filter((d) => d.status !== "done")
-            .map((driver) => (
-              <div
-                key={driver.id}
-                className="flex items-center gap-2 py-0.5"
-              >
-                <span
-                  className={cn(
-                    "w-12 text-right font-bold",
-                    statusColors[driver.status]
-                  )}
-                >
-                  {driver.code || driver.name.slice(0, 4).toUpperCase()}
-                </span>
-                <span
-                  className={cn(
-                    "text-[10px] px-1 rounded",
-                    driver.status === "unconfirmed"
-                      ? "bg-amber-500/20 text-amber-400"
-                      : driver.status === "confirmed"
-                      ? "bg-emerald-500/20 text-emerald-400"
-                      : "bg-emerald-500/20 text-emerald-400"
-                  )}
-                >
-                  {statusLabels[driver.status]}
-                </span>
-              </div>
-            ))}
-        </div>
+        <StatusSection
+          title="Unconfirmed"
+          driverList={grouped.unconfirmed}
+          status="unconfirmed"
+          colorClass="text-amber-400"
+        />
+        <StatusSection
+          title="Confirmed"
+          driverList={grouped.confirmed}
+          status="confirmed"
+          colorClass="text-emerald-400"
+        />
+        <StatusSection
+          title="On The Clock"
+          driverList={grouped.on_the_clock}
+          status="on_the_clock"
+          colorClass="text-sky-400"
+        />
+        <StatusSection
+          title="Done"
+          driverList={grouped.done}
+          status="done"
+          colorClass="text-muted-foreground"
+        />
       </div>
     </WidgetCard>
   );
