@@ -68,6 +68,7 @@ const Drivers = () => {
     getDriverStatusForWorkday,
     punchIn,
     punchOut,
+    changeVehicle,
     getOpenShiftForDriver
   } = useShifts(selectedDate);
   const [schedules, setSchedules] = useState<DriverSchedule[]>([]);
@@ -149,6 +150,17 @@ const Drivers = () => {
     id: string;
     name: string;
   } | null>(null);
+
+  // Switch Vehicle dialog state
+  const [showSwitchVehicleDialog, setShowSwitchVehicleDialog] = useState(false);
+  const [switchVehicleDriver, setSwitchVehicleDriver] = useState<{
+    id: string;
+    name: string;
+    currentVehicle: string | null;
+    shiftId: string;
+  } | null>(null);
+  const [switchVehicleNewVehicle, setSwitchVehicleNewVehicle] = useState("__none__");
+  const [switchVehicleTime, setSwitchVehicleTime] = useState("");
 
   // Undo last action state
   const [lastAction, setLastAction] = useState<{
@@ -1029,6 +1041,129 @@ const Drivers = () => {
     setPunchOutDriver(null);
     setPunchOutTime("");
   };
+
+  // Switch Vehicle - opens dialog for on_the_clock drivers to change vehicle
+  const executeSwitchVehicle = useCallback(async (driverId: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver) return;
+
+    if (driver.status !== "on_the_clock") {
+      toast({
+        title: "Cannot switch vehicle",
+        description: "Driver must be on the clock to switch vehicles",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Find the open shift for this driver
+    const openShift = await getOpenShiftForDriver(driverId);
+    if (!openShift) {
+      toast({
+        title: "No active shift",
+        description: "Could not find an active shift for this driver",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const now = new Date();
+    const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+
+    setSwitchVehicleDriver({
+      id: driver.id,
+      name: driver.name,
+      currentVehicle: openShift.vehicle_unit,
+      shiftId: openShift.id
+    });
+    setSwitchVehicleNewVehicle("__none__");
+    setSwitchVehicleTime(currentTime);
+    setShowSwitchVehicleDialog(true);
+  }, [drivers, getOpenShiftForDriver, toast]);
+
+  // Handle the switch vehicle confirmation
+  const handleConfirmSwitchVehicle = async () => {
+    if (!switchVehicleDriver || switchVehicleNewVehicle === "__none__") {
+      toast({
+        title: "Select a vehicle",
+        description: "Please select a new vehicle",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const result = await changeVehicle(
+      switchVehicleDriver.shiftId,
+      switchVehicleNewVehicle,
+      switchVehicleTime
+    );
+
+    if (result.success) {
+      // Update the driver record's vehicle
+      await supabase
+        .from("drivers")
+        .update({ vehicle: switchVehicleNewVehicle })
+        .eq("id", switchVehicleDriver.id);
+
+      // Update vehicle assignments
+      if (switchVehicleDriver.currentVehicle) {
+        await supabase
+          .from("vehicles")
+          .update({ driver: null })
+          .eq("unit", switchVehicleDriver.currentVehicle);
+      }
+      await supabase
+        .from("vehicles")
+        .update({ driver: switchVehicleDriver.name })
+        .eq("unit", switchVehicleNewVehicle);
+
+      toast({
+        title: "Vehicle switched",
+        description: `${switchVehicleDriver.name} is now on ${switchVehicleNewVehicle}`
+      });
+    } else {
+      toast({
+        title: "Error switching vehicle",
+        description: result.error || "Failed to switch vehicle",
+        variant: "destructive"
+      });
+    }
+
+    setShowSwitchVehicleDialog(false);
+    setSwitchVehicleDriver(null);
+    setSwitchVehicleNewVehicle("__none__");
+    setSwitchVehicleTime("");
+  };
+
+  // Start New Shift - for done drivers to start another shift on the same day
+  const executeStartNewShift = useCallback((driverId: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver) return;
+
+    if (driver.status !== "done") {
+      toast({
+        title: "Cannot start new shift",
+        description: "Driver must have completed a shift to start a new one",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Open the punch-in dialog for the done driver
+    const currentTime = (() => {
+      const now = new Date();
+      return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+    })();
+
+    setPunchInDriver({
+      id: driver.id,
+      name: driver.name
+    });
+    setPunchInVehicle(getDriverDefaultVehicle(driver.id));
+    setPunchInTime(currentTime);
+    setShowPunchInDialog(true);
+  }, [drivers, getDriverDefaultVehicle, toast]);
+
   const executeOff = useCallback((driverId: string) => {
     const driver = drivers.find(d => d.id === driverId);
     if (!driver) return;
@@ -1632,7 +1767,7 @@ const Drivers = () => {
             {isToday && selectedDriverId && (() => {
             const selectedDriver = drivers.find(d => d.id === selectedDriverId);
             if (!selectedDriver) return null;
-            return <DriverActionToolbar driverName={selectedDriver.name} status={selectedDriver.status} onAssign={() => executeAssign(selectedDriverId)} onPunchIn={() => executePunchIn(selectedDriverId)} onQuickPunchIn={() => executeQuickPunchIn(selectedDriverId)} onPunchOut={() => executePunchOut(selectedDriverId)} onMarkOff={() => executeOff(selectedDriverId)} onUnassign={() => executeUnassign(selectedDriverId)} onReset={() => executeReset(selectedDriverId)} onResetAll={executeResetAll} onSimulateWorkflow={() => executeSimulateWorkflow(selectedDriverId)} showTestingTools={true} />;
+            return <DriverActionToolbar driverName={selectedDriver.name} status={selectedDriver.status} onAssign={() => executeAssign(selectedDriverId)} onPunchIn={() => executePunchIn(selectedDriverId)} onQuickPunchIn={() => executeQuickPunchIn(selectedDriverId)} onPunchOut={() => executePunchOut(selectedDriverId)} onSwitchVehicle={() => executeSwitchVehicle(selectedDriverId)} onStartNewShift={() => executeStartNewShift(selectedDriverId)} onMarkOff={() => executeOff(selectedDriverId)} onUnassign={() => executeUnassign(selectedDriverId)} onReset={() => executeReset(selectedDriverId)} onResetAll={executeResetAll} onSimulateWorkflow={() => executeSimulateWorkflow(selectedDriverId)} showTestingTools={true} />;
           })()}
           </div>
         </div>
@@ -2473,6 +2608,58 @@ const Drivers = () => {
             </Button>
             <Button ref={punchOutButtonRef} onClick={handleConfirmPunchOut} disabled={!punchOutDriver}>
               Punch Out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Switch Vehicle Dialog */}
+      <Dialog open={showSwitchVehicleDialog} onOpenChange={setShowSwitchVehicleDialog}>
+        <DialogContent className="sm:max-w-[350px]">
+          <DialogHeader>
+            <DialogTitle>Switch Vehicle</DialogTitle>
+            <DialogDescription>
+              Change {switchVehicleDriver?.name}'s vehicle while keeping them on the clock.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {/* Current Vehicle Display */}
+            {switchVehicleDriver?.currentVehicle && (
+              <div className="grid gap-2">
+                <Label className="text-muted-foreground text-xs">Current Vehicle</Label>
+                <div className="text-sm font-medium px-3 py-2 rounded-md bg-muted/50">
+                  {switchVehicleDriver.currentVehicle}
+                </div>
+              </div>
+            )}
+            {/* New Vehicle Selection */}
+            <div className="grid gap-2">
+              <Label htmlFor="switch-vehicle-new">New Vehicle</Label>
+              <VehicleCombobox 
+                vehicles={vehicles.filter(v => v.status === "active" && v.unit !== switchVehicleDriver?.currentVehicle)} 
+                value={switchVehicleNewVehicle} 
+                onValueChange={setSwitchVehicleNewVehicle} 
+                placeholder="Select new vehicle" 
+              />
+            </div>
+            {/* Switch Time */}
+            <div className="grid gap-2">
+              <Label htmlFor="switch-vehicle-time">Switch Time</Label>
+              <TimeInput 
+                id="switch-vehicle-time" 
+                value={switchVehicleTime} 
+                onChange={setSwitchVehicleTime} 
+                onEnterSubmit={handleConfirmSwitchVehicle}
+                placeholder="HH:MM" 
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSwitchVehicleDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmSwitchVehicle} disabled={!switchVehicleDriver || switchVehicleNewVehicle === "__none__"}>
+              Switch Vehicle
             </Button>
           </DialogFooter>
         </DialogContent>
