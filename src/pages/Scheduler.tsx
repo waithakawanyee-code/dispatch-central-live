@@ -1225,6 +1225,110 @@ const Scheduler = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Primary Shuttle Drivers Summary */}
+                <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent overflow-hidden">
+                    <div className="border-b border-primary/10 bg-primary/5 px-4 py-3">
+                      <h3 className="font-semibold flex items-center gap-2 text-primary">
+                        <Train className="h-4 w-4" />
+                        Primary Shuttle Drivers
+                        <span className="ml-auto text-sm font-normal text-muted-foreground">
+                          {drivers.filter(d => (d as any).amtrak_primary || (d as any).bph_primary).length} drivers
+                        </span>
+                      </h3>
+                    </div>
+                    <div className="p-4">
+                      {/* Amtrak Primary Drivers */}
+                      {drivers.filter(d => (d as any).amtrak_primary).length > 0 && (
+                        <div className="mb-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Train className="h-3.5 w-3.5 text-blue-400" />
+                            <span className="text-xs font-medium text-blue-400 uppercase tracking-wider">Amtrak</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {drivers
+                              .filter(d => (d as any).amtrak_primary)
+                              .sort((a, b) => a.name.localeCompare(b.name))
+                              .map(driver => {
+                                const driverShift = amtrakShiftsForDay.find(s => s.driver_id === driver.id);
+                                const shiftInfo = driverShift ? AMTRAK_SHIFTS.find(s => s.number === driverShift.shift_number) : null;
+                                return (
+                                  <div
+                                    key={driver.id}
+                                    className={cn(
+                                      "flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm",
+                                      driverShift
+                                        ? "bg-blue-500/10 border-blue-500/30 text-blue-300"
+                                        : "bg-muted/30 border-border/50 text-muted-foreground"
+                                    )}
+                                  >
+                                    <span className={cn(
+                                      "h-2 w-2 rounded-full",
+                                      driverShift ? "bg-blue-400" : "bg-muted-foreground"
+                                    )} />
+                                    <span className="font-medium">{driver.name}</span>
+                                    {shiftInfo && (
+                                      <span className="text-xs opacity-75">
+                                        {shiftInfo.label}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* BPH Primary Drivers */}
+                      {drivers.filter(d => (d as any).bph_primary).length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Stethoscope className="h-3.5 w-3.5 text-rose-400" />
+                            <span className="text-xs font-medium text-rose-400 uppercase tracking-wider">BPH</span>
+                            {!isBphDay && (
+                              <span className="text-xs text-muted-foreground">(Not scheduled - weekend)</span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {drivers
+                              .filter(d => (d as any).bph_primary)
+                              .sort((a, b) => a.name.localeCompare(b.name))
+                              .map(driver => {
+                                const isAssigned = bphShiftForDay?.driver_id === driver.id;
+                                return (
+                                  <div
+                                    key={driver.id}
+                                    className={cn(
+                                      "flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm",
+                                      isAssigned
+                                        ? "bg-rose-500/10 border-rose-500/30 text-rose-300"
+                                        : "bg-muted/30 border-border/50 text-muted-foreground"
+                                    )}
+                                  >
+                                    <span className={cn(
+                                      "h-2 w-2 rounded-full",
+                                      isAssigned ? "bg-rose-400" : "bg-muted-foreground"
+                                    )} />
+                                    <span className="font-medium">{driver.name}</span>
+                                    {isAssigned && isBphDay && (
+                                      <span className="text-xs opacity-75">
+                                        {bphShiftForDay?.start_time?.slice(0, 5)} - {bphShiftForDay?.end_time?.slice(0, 5)}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      )}
+
+                      {drivers.filter(d => (d as any).amtrak_primary || (d as any).bph_primary).length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-2">
+                          No primary shuttle drivers configured
+                        </p>
+                      )}
+                    </div>
+                  </div>
               </>
             )}
 
