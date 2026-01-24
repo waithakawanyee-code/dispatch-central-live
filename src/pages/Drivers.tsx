@@ -36,6 +36,7 @@ interface CallOut {
   driver_name: string;
   call_out_date: string;
   note: string | null;
+  is_call_out: boolean;
 }
 interface FutureAssignment {
   id: string;
@@ -572,7 +573,8 @@ const Drivers = () => {
         driver_id: driverId,
         driver_name: driverName,
         call_out_date: dateStr,
-        note: null
+        note: null,
+        is_call_out: false
       }]);
     }
   };
@@ -689,8 +691,8 @@ const Drivers = () => {
     // Determine which dates to mark off
     const datesToMarkOff = hasFutureDates ? offDates : [today];
 
-    // Always create a call_out record to track the OFF status
-    // The isCallOutChecked flag just indicates if the user added a note/reason
+    // Create a call_out record to track the OFF status
+    // is_call_out: true only when user explicitly checks the checkbox
     const {
       data: {
         user
@@ -701,7 +703,8 @@ const Drivers = () => {
       driver_name: offDriver.name,
       note: isCallOutChecked ? (callOutNote.trim() || null) : null,
       created_by: user?.id || null,
-      call_out_date: format(date, "yyyy-MM-dd")
+      call_out_date: format(date, "yyyy-MM-dd"),
+      is_call_out: isCallOutChecked
     }));
     const {
       error
@@ -1408,9 +1411,14 @@ const Drivers = () => {
     return offDrivers.filter(driver => driver.name.toLowerCase().includes(search));
   }, [offDrivers, offDriverSearch]);
 
-  // Check if a driver called out today
-  const isCallOut = (driverId: string) => {
+  // Check if a driver has an OFF record (marked off or called out)
+  const hasOffRecord = (driverId: string) => {
     return todayCallOuts.some(co => co.driver_id === driverId);
+  };
+  // Check if it's specifically a call-out (vs just marked off)
+  const isActualCallOut = (driverId: string) => {
+    const record = todayCallOuts.find(co => co.driver_id === driverId);
+    return record?.is_call_out === true;
   };
   const getCallOutNote = (driverId: string) => {
     const callOut = todayCallOuts.find(co => co.driver_id === driverId);
@@ -1474,7 +1482,8 @@ const Drivers = () => {
   const workingDrivers = displayDrivers.filter(d => d.status === "on_the_clock").length;
   const punchedOutDrivers = displayDrivers.filter(d => d.status === "done").length;
   const offDriverCount = offDrivers.length;
-  const calledOutCount = todayCallOuts.length;
+  const calledOutCount = todayCallOuts.filter(c => c.is_call_out).length;
+  const markedOffCount = todayCallOuts.filter(c => !c.is_call_out).length;
 
   // Create section-based driver lists for keyboard navigation
   const driverSections = useMemo(() => {
@@ -2070,6 +2079,9 @@ const Drivers = () => {
                     {calledOutCount > 0 && <span className="rounded-full bg-destructive/20 text-destructive px-2 py-0.5 font-mono text-xs">
                         {calledOutCount} called out
                       </span>}
+                    {markedOffCount > 0 && <span className="rounded-full bg-amber-500/20 text-amber-600 px-2 py-0.5 font-mono text-xs">
+                        {markedOffCount} marked off
+                      </span>}
                   </span>
                   <span className="rounded-full bg-muted px-2.5 py-0.5 font-mono text-xs text-muted-foreground">
                     {offDriverCount}
@@ -2087,23 +2099,37 @@ const Drivers = () => {
                   
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 max-h-[300px] overflow-y-auto">
                     {filteredOffDrivers.map(driver => {
-                  const calledOut = isCallOut(driver.id);
+                  const markedOff = hasOffRecord(driver.id);
+                  const calledOut = isActualCallOut(driver.id);
                   const note = getCallOutNote(driver.id);
-                  return <div key={driver.id} className={cn("group flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 text-sm transition-all duration-200", calledOut ? "border-destructive/30 bg-destructive/5" : "border-border hover:border-primary/30")}>
-                          <span className="h-2 w-2 rounded-full bg-muted-foreground shrink-0" />
+                  return <div key={driver.id} className={cn("group flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 text-sm transition-all duration-200", 
+                    calledOut ? "border-destructive/30 bg-destructive/5" : 
+                    markedOff ? "border-amber-500/30 bg-amber-500/5" : 
+                    "border-border hover:border-primary/30")}>
+                          <span className={cn("h-2 w-2 rounded-full shrink-0", 
+                            calledOut ? "bg-destructive" : 
+                            markedOff ? "bg-amber-500" : 
+                            "bg-muted-foreground")} />
                           <span className="font-medium text-foreground flex-1 truncate">{driver.name}</span>
                           {(driver as any).has_cdl && <span className="text-[9px] font-bold text-primary bg-primary/15 px-1.5 py-0.5 rounded uppercase">CDL</span>}
-                          {calledOut && <span className="flex items-center gap-1 text-destructive" title={note || "Called out"}>
+                          {calledOut ? (
+                            <span className="flex items-center gap-1 text-destructive" title={note || "Called out"}>
                               <PhoneOff className="h-3.5 w-3.5" />
                               <span className="text-[10px] font-medium">Called Out</span>
-                            </span>}
+                            </span>
+                          ) : markedOff ? (
+                            <span className="flex items-center gap-1 text-amber-600" title="Marked off for today">
+                              <X className="h-3.5 w-3.5" />
+                              <span className="text-[10px] font-medium">Marked Off</span>
+                            </span>
+                          ) : null}
                           {/* Add to schedule button */}
                           <Button variant="ghost" size="sm" onClick={() => addOffDriverToSchedule(driver.id, driver.name)} className="h-7 px-2 gap-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 hover:text-primary" title="Add to today's schedule">
                             <UserPlus className="h-3.5 w-3.5" />
                             <span className="hidden sm:inline">Add</span>
                           </Button>
                         </div>;
-                })}
+                })})
                     {filteredOffDrivers.length === 0 && offDriverSearch && <p className="text-sm text-muted-foreground italic py-4 col-span-2 text-center">No matching drivers</p>}
                     {offDriverCount === 0 && !offDriverSearch && <p className="text-sm text-muted-foreground italic py-4 col-span-2 text-center">No OFF drivers</p>}
                   </div>

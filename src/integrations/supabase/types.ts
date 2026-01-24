@@ -115,6 +115,7 @@ export type Database = {
           driver_id: string
           driver_name: string
           id: string
+          is_call_out: boolean
           note: string | null
         }
         Insert: {
@@ -124,6 +125,7 @@ export type Database = {
           driver_id: string
           driver_name: string
           id?: string
+          is_call_out?: boolean
           note?: string | null
         }
         Update: {
@@ -133,6 +135,7 @@ export type Database = {
           driver_id?: string
           driver_name?: string
           id?: string
+          is_call_out?: boolean
           note?: string | null
         }
         Relationships: []
