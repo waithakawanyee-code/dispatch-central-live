@@ -64,8 +64,8 @@ Deno.serve(async (req) => {
 
     console.log(`Processing shuttle punch automation for ${todayStr} (day ${dayOfWeek})`);
 
-    // Fetch all Primary Amtrak shuttle schedules for today
-    const { data: amtrakSchedules, error: amtrakError } = await supabase
+    // Fetch all shuttle schedules for today (Amtrak and BPH)
+    const { data: shuttleSchedules, error: schedulesError } = await supabase
       .from("shuttle_schedules")
       .select(`
         id,
@@ -76,35 +76,38 @@ Deno.serve(async (req) => {
         start_time,
         end_time
       `)
-      .eq("program", "amtrak")
-      .eq("day_of_week", dayOfWeek);
+      .eq("day_of_week", dayOfWeek)
+      .in("program", ["amtrak", "bph"]);
 
-    if (amtrakError) {
-      console.error("Error fetching Amtrak schedules:", amtrakError);
-      throw amtrakError;
+    if (schedulesError) {
+      console.error("Error fetching shuttle schedules:", schedulesError);
+      throw schedulesError;
     }
 
-    // Get primary Amtrak drivers
-    const { data: primaryAmtrakDrivers, error: driversError } = await supabase
+    // Get primary Amtrak and BPH drivers
+    const { data: primaryDrivers, error: driversError } = await supabase
       .from("drivers")
-      .select("id, name, amtrak_primary")
-      .eq("amtrak_primary", true)
-      .eq("is_active", true);
+      .select("id, name, amtrak_primary, bph_primary")
+      .eq("is_active", true)
+      .or("amtrak_primary.eq.true,bph_primary.eq.true");
 
     if (driversError) {
       console.error("Error fetching drivers:", driversError);
       throw driversError;
     }
 
-    const primaryDriverIds = new Set((primaryAmtrakDrivers || []).map(d => d.id));
-    const driverNameMap = new Map((primaryAmtrakDrivers || []).map(d => [d.id, d.name]));
+    const primaryAmtrakIds = new Set((primaryDrivers || []).filter(d => d.amtrak_primary).map(d => d.id));
+    const primaryBphIds = new Set((primaryDrivers || []).filter(d => d.bph_primary).map(d => d.id));
+    const driverNameMap = new Map((primaryDrivers || []).map(d => [d.id, d.name]));
 
-    // Filter schedules to only primary drivers
-    const primarySchedules = (amtrakSchedules || []).filter(s => 
-      primaryDriverIds.has(s.driver_id)
-    );
+    // Filter schedules to only primary drivers for their respective programs
+    const primarySchedules = (shuttleSchedules || []).filter(s => {
+      if (s.program === "amtrak") return primaryAmtrakIds.has(s.driver_id);
+      if (s.program === "bph") return primaryBphIds.has(s.driver_id);
+      return false;
+    });
 
-    console.log(`Found ${primarySchedules.length} Primary Amtrak shifts for today`);
+    console.log(`Found ${primarySchedules.length} Primary Shuttle shifts for today`);
 
     // Check existing shifts for today to avoid duplicates
     const { data: existingShifts, error: existingError } = await supabase
@@ -117,11 +120,18 @@ Deno.serve(async (req) => {
       throw existingError;
     }
 
-    // Track driver IDs who already have shuttle auto-punch shifts
-    const driversWithAutoShifts = new Set<string>();
+    // Track driver IDs who already have shuttle auto-punch shifts (by program)
+    const driversWithAutoShifts = new Map<string, Set<string>>();
     (existingShifts || []).forEach(shift => {
       if (shift.notes?.includes("[AUTO-SHUTTLE]")) {
-        driversWithAutoShifts.add(shift.driver_id);
+        const program = shift.notes.includes("Amtrak") ? "amtrak" : 
+                        shift.notes.includes("BPH") ? "bph" : null;
+        if (program) {
+          if (!driversWithAutoShifts.has(shift.driver_id)) {
+            driversWithAutoShifts.set(shift.driver_id, new Set());
+          }
+          driversWithAutoShifts.get(shift.driver_id)!.add(program);
+        }
       }
     });
 
@@ -129,9 +139,10 @@ Deno.serve(async (req) => {
     const errors: string[] = [];
 
     for (const schedule of primarySchedules) {
-      // Skip if driver already has an auto-generated shift today
-      if (driversWithAutoShifts.has(schedule.driver_id)) {
-        console.log(`Skipping ${driverNameMap.get(schedule.driver_id)} - already has auto-punch shift`);
+      // Skip if driver already has an auto-generated shift today for this program
+      const driverShifts = driversWithAutoShifts.get(schedule.driver_id);
+      if (driverShifts?.has(schedule.program)) {
+        console.log(`Skipping ${driverNameMap.get(schedule.driver_id)} - already has ${schedule.program} auto-punch shift`);
         continue;
       }
 
@@ -142,24 +153,37 @@ Deno.serve(async (req) => {
 
       const driverName = driverNameMap.get(schedule.driver_id) || "Unknown";
 
-      // Calculate punch times: IN = 30 mins before start, OUT = 30 mins after end
-      const punchInTime = addMinutesToTime(schedule.start_time, -30);
-      const punchOutTime = addMinutesToTime(schedule.end_time, 30);
+      let punchInTime: string;
+      let punchOutTime: string;
+      let shiftDescription: string;
+
+      if (schedule.program === "bph") {
+        // BPH: Fixed punch times - 06:00 to 18:00 (12 hours)
+        // BPH runs 07:00-18:00 but driver is on clock 06:00-18:00
+        punchInTime = "06:00";
+        punchOutTime = "18:00";
+        shiftDescription = `BPH Shift - Fixed 12hr (06:00-18:00)`;
+      } else {
+        // Amtrak: IN = 30 mins before start, OUT = 30 mins after end
+        punchInTime = addMinutesToTime(schedule.start_time, -30);
+        punchOutTime = addMinutesToTime(schedule.end_time, 30);
+        shiftDescription = `Amtrak Shift ${schedule.shift_number} - Auto-generated punch times`;
+      }
 
       // Build timestamps
       let punchInAt = buildTimestamp(todayStr, punchInTime);
       
       // For punch out, check if end time wraps to next day
       let punchOutDate = todayStr;
-      if (punchOutWrapsToNextDay(schedule.end_time)) {
-        // End time is early morning (e.g., 03:00), so punch out is next day
+      if (punchOutWrapsToNextDay(schedule.end_time) && schedule.program === "amtrak") {
+        // Only Amtrak has overnight shifts; BPH is always same-day
         const nextDay = new Date(todayDate);
         nextDay.setUTCDate(nextDay.getUTCDate() + 1);
         punchOutDate = nextDay.toISOString().split("T")[0];
       }
       let punchOutAt = buildTimestamp(punchOutDate, punchOutTime);
 
-      console.log(`Creating shift for ${driverName}: IN ${punchInTime} (${punchInAt}), OUT ${punchOutTime} (${punchOutAt})`);
+      console.log(`Creating shift for ${driverName} (${schedule.program}): IN ${punchInTime} (${punchInAt}), OUT ${punchOutTime} (${punchOutAt})`);
 
       // Create the shift record
       const { error: insertError } = await supabase.from("shifts").insert({
@@ -169,10 +193,10 @@ Deno.serve(async (req) => {
         punch_out_at: punchOutAt,
         workday_date: todayStr,
         vehicle_unit: null, // Shuttle drivers don't use fleet vehicles
-        notes: `[AUTO-SHUTTLE] Amtrak Shift ${schedule.shift_number} - Auto-generated punch times`,
+        notes: `[AUTO-SHUTTLE] ${shiftDescription}`,
         exception_flags: {
           auto_generated: true,
-          shuttle_program: "amtrak",
+          shuttle_program: schedule.program,
           shift_number: schedule.shift_number,
           original_start: schedule.start_time,
           original_end: schedule.end_time,
@@ -184,7 +208,10 @@ Deno.serve(async (req) => {
         errors.push(`${driverName}: ${insertError.message}`);
       } else {
         shiftsCreated++;
-        driversWithAutoShifts.add(schedule.driver_id);
+        if (!driversWithAutoShifts.has(schedule.driver_id)) {
+          driversWithAutoShifts.set(schedule.driver_id, new Set());
+        }
+        driversWithAutoShifts.get(schedule.driver_id)!.add(schedule.program);
 
         // Log to status_history
         await supabase.from("status_history").insert({
@@ -193,7 +220,7 @@ Deno.serve(async (req) => {
           entity_name: driverName,
           field_changed: "shuttle_auto_punch",
           old_value: null,
-          new_value: `Amtrak Shift ${schedule.shift_number}: ${schedule.start_time}-${schedule.end_time}`,
+          new_value: `${schedule.program.toUpperCase()} Shift: ${punchInTime}-${punchOutTime}`,
         });
       }
     }
