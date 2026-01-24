@@ -89,7 +89,7 @@ const Scheduler = () => {
   const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<DriverStatus | "all">("all");
-  const [scheduleTab, setScheduleTab] = useState<"all" | "black-car" | "amtrak" | "bph">("all");
+  const [scheduleTab, setScheduleTab] = useState<"all" | "black-car" | "shuttles">("all");
   const [showTrainedCoverage, setShowTrainedCoverage] = useState(false);
   
   // BPH time editing state
@@ -290,10 +290,8 @@ const Scheduler = () => {
     
     if (scheduleTab === "black-car") {
       result = result.filter(d => !d.amtrak_primary && !d.bph_primary);
-    } else if (scheduleTab === "amtrak") {
-      result = result.filter(d => d.amtrak_primary);
-    } else if (scheduleTab === "bph") {
-      result = result.filter(d => d.bph_primary);
+    } else if (scheduleTab === "shuttles") {
+      result = result.filter(d => d.amtrak_primary || d.bph_primary);
     }
     
     if (statusFilter !== "all") {
@@ -303,12 +301,12 @@ const Scheduler = () => {
     return result;
   }, [driversWithSchedules, scheduleTab, statusFilter]);
 
-  // Trained coverage drivers (for Amtrak/BPH tabs)
+  // Trained coverage drivers (for Shuttles tab - combined Amtrak and BPH)
   const trainedCoverageDrivers = useMemo(() => {
-    if (scheduleTab === "amtrak") {
-      return driversWithSchedules.filter(d => d.amtrak_trained && !d.amtrak_primary);
-    } else if (scheduleTab === "bph") {
-      return driversWithSchedules.filter(d => d.bph_trained && !d.bph_primary);
+    if (scheduleTab === "shuttles") {
+      return driversWithSchedules.filter(d => 
+        (d.amtrak_trained && !d.amtrak_primary) || (d.bph_trained && !d.bph_primary)
+      );
     }
     return [];
   }, [driversWithSchedules, scheduleTab]);
@@ -321,8 +319,7 @@ const Scheduler = () => {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfDay(new Date()), i));
 
   // Shuttle counts for tab badges
-  const amtrakPrimaryCount = drivers.filter(d => (d as any).amtrak_primary).length;
-  const bphPrimaryCount = drivers.filter(d => (d as any).bph_primary).length;
+  const shuttlePrimaryCount = drivers.filter(d => (d as any).amtrak_primary || (d as any).bph_primary).length;
 
   // Get shuttle coverage for selected day
   const dayOfWeek = getDayOfWeek(selectedDate);
@@ -718,36 +715,6 @@ const Scheduler = () => {
             })}
           </div>
 
-          {/* Shuttle Summary - Inline */}
-          {(amtrakShiftsForDay.length > 0 || bphShiftForDay || isBphDay) && (
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground bg-muted/30 rounded-lg px-3 py-2 mb-3">
-              {AMTRAK_SHIFTS.map((shift) => {
-                const schedule = amtrakShiftsForDay.find(s => s.shift_number === shift.number);
-                const driver = schedule ? drivers.find(d => d.id === schedule.driver_id) : null;
-                return (
-                  <div key={shift.number} className="flex items-center gap-1.5">
-                    <Train className="h-3 w-3 text-blue-500" />
-                    <span className="font-mono">{shift.start.slice(0,2)}-{shift.end.slice(0,2)}</span>
-                    <span className={driver ? "font-medium text-foreground" : "italic opacity-50"}>
-                      {driver ? driver.name.split(' ')[0] : "—"}
-                    </span>
-                  </div>
-                );
-              })}
-              {isBphDay && (
-                <div className="flex items-center gap-1.5">
-                  <Stethoscope className="h-3 w-3 text-green-500" />
-                  <span className="font-mono">
-                    {bphShiftForDay ? `${formatTime(bphShiftForDay.start_time).slice(0,2)}-${formatTime(bphShiftForDay.end_time).slice(0,2)}` : "BPH"}
-                  </span>
-                  <span className={bphShiftForDay ? "font-medium text-foreground" : "italic opacity-50"}>
-                    {bphShiftForDay ? drivers.find(d => d.id === bphShiftForDay.driver_id)?.name.split(' ')[0] || "—" : "—"}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Tabs */}
           <Tabs value={scheduleTab} onValueChange={(v) => setScheduleTab(v as typeof scheduleTab)}>
             <TabsList className="h-9 p-1">
@@ -756,18 +723,11 @@ const Scheduler = () => {
                 <Car className="h-3.5 w-3.5" />
                 Above All
               </TabsTrigger>
-              <TabsTrigger value="amtrak" className="text-xs h-7 px-3 gap-1.5">
+              <TabsTrigger value="shuttles" className="text-xs h-7 px-3 gap-1.5">
                 <Train className="h-3.5 w-3.5" />
-                Amtrak
-                {amtrakPrimaryCount > 0 && (
-                  <span className="ml-1 px-1.5 rounded-full bg-blue-500/20 text-blue-500 text-[10px]">{amtrakPrimaryCount}</span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="bph" className="text-xs h-7 px-3 gap-1.5">
-                <Stethoscope className="h-3.5 w-3.5" />
-                BPH
-                {bphPrimaryCount > 0 && (
-                  <span className="ml-1 px-1.5 rounded-full bg-green-500/20 text-green-500 text-[10px]">{bphPrimaryCount}</span>
+                Shuttles
+                {shuttlePrimaryCount > 0 && (
+                  <span className="ml-1 px-1.5 rounded-full bg-blue-500/20 text-blue-500 text-[10px]">{shuttlePrimaryCount}</span>
                 )}
               </TabsTrigger>
             </TabsList>
@@ -813,7 +773,7 @@ const Scheduler = () => {
           </div>
 
           {/* Trained Coverage Toggle */}
-          {(scheduleTab === "amtrak" || scheduleTab === "bph") && trainedCoverageDrivers.length > 0 && (
+          {scheduleTab === "shuttles" && trainedCoverageDrivers.length > 0 && (
             <Button
               variant={showTrainedCoverage ? "secondary" : "ghost"}
               size="sm"
@@ -832,35 +792,34 @@ const Scheduler = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Shuttle-specific views */}
-            {scheduleTab === "amtrak" && (
+            {/* Shuttles tab - combined Amtrak and BPH view */}
+            {scheduleTab === "shuttles" && (
               <>
-                {renderAmtrakShifts()}
-                {showTrainedCoverage && trainedCoverageDrivers.length > 0 && (
-                  <div className="rounded-lg border border-blue-500/20 bg-blue-500/5">
-                    <div className="border-b border-blue-500/20 px-3 py-2">
-                      <h3 className="font-medium text-sm flex items-center gap-2">
-                        <Users className="h-4 w-4 text-blue-500" />
-                        Backup Drivers
-                      </h3>
-                    </div>
-                    <div className="divide-y divide-border/50">
-                      {trainedCoverageDrivers.map(driver => renderDriverRow(driver, false))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
+                {/* Amtrak section */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-blue-500">
+                    <Train className="h-4 w-4" />
+                    Amtrak Shuttle
+                  </h3>
+                  {renderAmtrakShifts()}
+                </div>
 
-            {scheduleTab === "bph" && (
-              <>
-                {renderBphShift()}
+                {/* BPH section */}
+                <div className="space-y-3 pt-4 border-t border-border">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-green-500">
+                    <Stethoscope className="h-4 w-4" />
+                    BPH Shuttle
+                  </h3>
+                  {renderBphShift()}
+                </div>
+
+                {/* Backup drivers */}
                 {showTrainedCoverage && trainedCoverageDrivers.length > 0 && (
-                  <div className="rounded-lg border border-green-500/20 bg-green-500/5">
-                    <div className="border-b border-green-500/20 px-3 py-2">
+                  <div className="rounded-lg border border-border bg-muted/30 mt-4">
+                    <div className="border-b border-border px-3 py-2">
                       <h3 className="font-medium text-sm flex items-center gap-2">
-                        <Users className="h-4 w-4 text-green-500" />
-                        Backup Drivers
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        Backup Drivers (Trained)
                       </h3>
                     </div>
                     <div className="divide-y divide-border/50">
@@ -1006,7 +965,7 @@ const Scheduler = () => {
               </>
             )}
 
-            {filteredDrivers.length === 0 && scheduleTab !== "amtrak" && scheduleTab !== "bph" && (
+            {filteredDrivers.length === 0 && scheduleTab !== "shuttles" && (
               <div className="text-center py-12 text-muted-foreground text-sm">
                 No drivers found for this view.
               </div>
