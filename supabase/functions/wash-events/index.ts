@@ -53,21 +53,84 @@ Deno.serve(async (req) => {
   // --------------------------------------------------
 
   try {
-    // Optional shared secret (recommended for webhook hardening)
+    // Supabase service client (needed for auth validation and operations)
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Authentication: require EITHER a valid shared secret OR an authorized user (ADMIN/DISPATCHER)
     const expectedSecret = Deno.env.get("WASH_EVENTS_SECRET");
     const providedSecret = req.headers.get("x-lovable-secret");
+    const authHeader = req.headers.get("authorization");
 
-    if (expectedSecret && providedSecret !== expectedSecret) {
-      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+    const hasValidSecret = expectedSecret && providedSecret === expectedSecret;
+    const hasAuthHeader = authHeader && authHeader.startsWith("Bearer ");
+
+    if (!hasValidSecret && !hasAuthHeader) {
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized - no credentials provided" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
       });
     }
 
-    // Supabase service client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // If using JWT auth (not shared secret), verify the user has ADMIN or DISPATCHER role
+    if (!hasValidSecret && hasAuthHeader) {
+      const jwt = authHeader.replace("Bearer ", "");
+      
+      // Create a client with the user's token to validate it
+      const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+
+      const { data: claimsData, error: claimsError } = await userClient.auth.getUser(jwt);
+
+      if (claimsError || !claimsData?.user) {
+        console.log("[wash-events] Invalid JWT token:", claimsError?.message);
+        return new Response(JSON.stringify({ success: false, error: "Invalid authentication token" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        });
+      }
+
+      const userId = claimsData.user.id;
+
+      // Check if user has ADMIN or DISPATCHER role using the service client
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role, active")
+        .eq("id", userId)
+        .single();
+
+      if (profileError || !profile) {
+        console.log("[wash-events] Could not find user profile:", profileError?.message);
+        return new Response(JSON.stringify({ success: false, error: "User profile not found" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 403,
+        });
+      }
+
+      if (!profile.active) {
+        console.log("[wash-events] User account is inactive");
+        return new Response(JSON.stringify({ success: false, error: "User account is inactive" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 403,
+        });
+      }
+
+      const allowedRoles = ["ADMIN", "DISPATCHER"];
+      if (!allowedRoles.includes(profile.role)) {
+        console.log(`[wash-events] User role '${profile.role}' is not authorized. Required: ${allowedRoles.join(" or ")}`);
+        return new Response(JSON.stringify({ success: false, error: "Insufficient permissions - requires ADMIN or DISPATCHER role" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 403,
+        });
+      }
+
+      console.log(`[wash-events] Authorized user: ${userId} with role: ${profile.role}`);
+    } else if (hasValidSecret) {
+      console.log("[wash-events] Authorized via shared secret");
+    }
 
     /**
      * Filter: Only process events from "Sonny's Car wash" geofence
@@ -126,24 +189,56 @@ Deno.serve(async (req) => {
 
     console.log(`[wash-events] Processing wash event for: ${vehicle_identifier}`);
 
-    // Match vehicle by unit (case-insensitive)
+    // Match vehicle by unit - use EXACT matching (case-insensitive) to prevent cross-vehicle updates
     const identifier = vehicle_identifier.trim();
 
-    // NOTE: For ilike in Supabase filters, safest is to include % wildcards
-    // so it matches exact or partial. If you want exact-only, remove the %.
-    const ilikePattern = `%${identifier}%`;
-
-    const { data: vehicles, error: searchError } = await supabase
+    // First, try exact match (case-insensitive)
+    const { data: exactMatches, error: exactSearchError } = await supabase
       .from("vehicles")
       .select("id, unit, primary_category, always_clean_exempt, clean_status")
-      .ilike("unit", ilikePattern);
+      .ilike("unit", identifier);
 
-    if (searchError) {
-      console.error("[wash-events] Error searching vehicles:", searchError);
-      throw searchError;
+    if (exactSearchError) {
+      console.error("[wash-events] Error searching vehicles:", exactSearchError);
+      throw exactSearchError;
     }
 
-    if (!vehicles || vehicles.length === 0) {
+    let vehicle = exactMatches?.[0];
+
+    // If no exact match found, try normalized matching (strip common prefixes like "Car-", "V-", etc.)
+    if (!vehicle) {
+      // Normalize identifier - remove common prefixes and try again
+      const normalizedIdentifier = identifier.replace(/^(car-?|v-?|vehicle-?)/i, "").trim();
+      
+      const { data: normalizedMatches, error: normalizedSearchError } = await supabase
+        .from("vehicles")
+        .select("id, unit, primary_category, always_clean_exempt, clean_status")
+        .or(`unit.ilike.${identifier},unit.ilike.Car-${normalizedIdentifier},unit.ilike.V-${normalizedIdentifier}`);
+
+      if (normalizedSearchError) {
+        console.error("[wash-events] Error searching vehicles with normalized identifier:", normalizedSearchError);
+        throw normalizedSearchError;
+      }
+
+      // If multiple matches found, reject with ambiguity error
+      if (normalizedMatches && normalizedMatches.length > 1) {
+        console.log(`[wash-events] Ambiguous vehicle identifier: ${vehicle_identifier} matches ${normalizedMatches.length} vehicles`);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Ambiguous vehicle identifier - multiple matches found",
+            vehicle_identifier,
+            matches: normalizedMatches.map((v) => v.unit),
+            hint: "Please provide the exact vehicle unit name",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
+        );
+      }
+
+      vehicle = normalizedMatches?.[0];
+    }
+
+    if (!vehicle) {
       console.log(`[wash-events] Vehicle not found: ${vehicle_identifier}`);
       return new Response(
         JSON.stringify({
@@ -155,7 +250,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    const vehicle = vehicles[0];
+    console.log(`[wash-events] Matched vehicle: ${vehicle.unit} (exact match for "${identifier}")`);
+    
+    // Double-check we have a single, unambiguous match
+    if (exactMatches && exactMatches.length > 1) {
+      console.log(`[wash-events] Warning: Multiple exact matches for ${identifier}, using first: ${vehicle.unit}`);
+    }
 
     const washedAtTime = washed_at ? new Date(washed_at).toISOString() : new Date().toISOString();
     const now = new Date().toISOString();
