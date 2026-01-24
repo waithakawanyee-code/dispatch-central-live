@@ -1406,7 +1406,11 @@ const Drivers = () => {
 
     // Return drivers who are NOT scheduled for today OR have a call-out record
     // BUT exclude any driver already displayed in the workbook
+    // AND exclude primary shuttle drivers (they have their own workflow)
     return drivers.filter(driver => {
+      // Exclude primary shuttle drivers - they have a dedicated workflow
+      if ((driver as any).amtrak_primary || (driver as any).bph_primary) return false;
+      
       // Never show a driver in both sections
       if (displayedDriverIds.has(driver.id)) return false;
       
