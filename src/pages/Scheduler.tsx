@@ -81,11 +81,11 @@ const AMTRAK_SHIFTS = [
   { number: 3, label: "Shift 3", start: "19:00", end: "03:00" },
 ];
 
+// Scheduler only allows planning-phase status changes (unconfirmed, confirmed)
+// On-the-clock and done are managed on day-of in the Driver Workbook
 const schedulerStatusOptions: { value: DriverStatus; label: string; color: string; bgColor: string }[] = [
   { value: "unconfirmed", label: "Unconfirmed", color: "text-muted-foreground", bgColor: "bg-muted/50" },
   { value: "confirmed", label: "Confirmed", color: "text-emerald-400", bgColor: "bg-emerald-500/10" },
-  { value: "on_the_clock", label: "On The Clock", color: "text-blue-400", bgColor: "bg-blue-500/10" },
-  { value: "done", label: "Done", color: "text-violet-400", bgColor: "bg-violet-500/10" },
 ];
 
 const shuttleStatusOptions: { value: DriverStatus; label: string; color: string; bgColor: string }[] = [
@@ -98,7 +98,8 @@ const Scheduler = () => {
   const { drivers, updateDriverStatus } = useDispatchData();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [shuttleSchedules, setShuttleSchedules] = useState<ShuttleSchedule[]>([]);
-  const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
+  // Scheduler starts from tomorrow - today is managed in the Driver Workbook
+  const [selectedDate, setSelectedDate] = useState(addDays(startOfDay(new Date()), 1));
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<DriverStatus | "all">("all");
   const [scheduleTab, setScheduleTab] = useState<"all" | "black-car" | "shuttles">("all");
@@ -373,8 +374,13 @@ const Scheduler = () => {
     return time.slice(0, 5);
   };
 
+  const tomorrow = addDays(startOfDay(new Date()), 1);
+
   const goToPreviousDay = () => {
-    setSelectedDate(prev => addDays(prev, -1));
+    // Can't go before tomorrow
+    if (selectedDate > tomorrow) {
+      setSelectedDate(prev => addDays(prev, -1));
+    }
   };
 
   const goToNextDay = () => {
@@ -384,12 +390,12 @@ const Scheduler = () => {
     }
   };
 
-  const goToToday = () => {
-    setSelectedDate(startOfDay(new Date()));
+  const goToTomorrow = () => {
+    setSelectedDate(tomorrow);
   };
 
-  const isToday = isSameDay(selectedDate, new Date());
-  const canGoBack = selectedDate > startOfDay(new Date());
+  const isTomorrow = isSameDay(selectedDate, tomorrow);
+  const canGoBack = selectedDate > tomorrow;
   const canGoForward = selectedDate < addDays(startOfDay(new Date()), 6);
 
   const driversWithSchedules = getDriversWithSchedules(selectedDate);
@@ -431,7 +437,8 @@ const Scheduler = () => {
   const offDrivers = filteredDrivers.filter(d => d.schedule?.is_off);
   const unscheduledDrivers = filteredDrivers.filter(d => !d.schedule);
 
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfDay(new Date()), i));
+  // Week days start from tomorrow (excludes today)
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfDay(new Date()), i + 1));
   const shuttlePrimaryCount = drivers.filter(d => (d as any).amtrak_primary || (d as any).bph_primary).length;
 
   const dayOfWeek = getDayOfWeek(selectedDate);
@@ -868,14 +875,14 @@ const Scheduler = () => {
               >
                 <ChevronRight className="h-5 w-5" />
               </Button>
-              {!isToday && (
+              {!isTomorrow && (
                 <Button 
                   variant="outline" 
                   size="sm" 
                   className="h-8 rounded-lg border-primary/30 text-primary hover:bg-primary/10" 
-                  onClick={goToToday}
+                  onClick={goToTomorrow}
                 >
-                  Today
+                  Tomorrow
                 </Button>
               )}
             </div>
@@ -885,8 +892,8 @@ const Scheduler = () => {
               </h2>
               <p className="text-sm text-muted-foreground">
                 {format(selectedDate, "MMMM d, yyyy")}
-                {isToday && (
-                  <span className="ml-2 text-primary font-medium">• Today</span>
+                {isTomorrow && (
+                  <span className="ml-2 text-primary font-medium">• Tomorrow</span>
                 )}
               </p>
             </div>
