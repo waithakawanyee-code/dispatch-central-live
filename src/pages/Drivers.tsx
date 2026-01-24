@@ -1393,16 +1393,27 @@ const Drivers = () => {
   }, [pendingAction, executeAssign, executeOff]);
 
   // Get drivers NOT scheduled for today (OFF drivers)
+  // Exclude any drivers who are already shown in the workbook (displayDrivers)
   const offDrivers = useMemo(() => {
     if (!isToday) return [];
     const dayOfWeek = getDay(today);
 
     // Get driver IDs that ARE scheduled for today (not marked as off)
     const scheduledDriverIds = new Set(schedules.filter(s => s.day_of_week === dayOfWeek && !s.is_off).map(s => s.driver_id));
+    
+    // Get driver IDs already showing in the workbook
+    const displayedDriverIds = new Set(displayDrivers.map(d => d.id));
 
     // Return drivers who are NOT scheduled for today OR have a call-out record
-    return drivers.filter(driver => !scheduledDriverIds.has(driver.id) || todayCallOuts.some(c => c.driver_id === driver.id));
-  }, [drivers, schedules, isToday, todayCallOuts]);
+    // BUT exclude any driver already displayed in the workbook
+    return drivers.filter(driver => {
+      // Never show a driver in both sections
+      if (displayedDriverIds.has(driver.id)) return false;
+      
+      // Show if not scheduled or has a call-out record
+      return !scheduledDriverIds.has(driver.id) || todayCallOuts.some(c => c.driver_id === driver.id);
+    });
+  }, [drivers, schedules, isToday, todayCallOuts, displayDrivers]);
 
   // Filtered off drivers based on search
   const filteredOffDrivers = useMemo(() => {
