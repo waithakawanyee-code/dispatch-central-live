@@ -304,7 +304,13 @@ const Scheduler = () => {
     return [];
   }, [driversWithSchedules, scheduleTab]);
   
-  const availableDrivers = filteredDrivers.filter(d => d.schedule && !d.schedule.is_off);
+  const availableDrivers = filteredDrivers
+    .filter(d => d.schedule && !d.schedule.is_off)
+    .sort((a, b) => {
+      const timeA = a.schedule?.start_time || "99:99";
+      const timeB = b.schedule?.start_time || "99:99";
+      return timeA.localeCompare(timeB);
+    });
   const offDrivers = filteredDrivers.filter(d => d.schedule?.is_off);
   const unscheduledDrivers = filteredDrivers.filter(d => !d.schedule);
 
