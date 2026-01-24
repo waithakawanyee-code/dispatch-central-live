@@ -281,12 +281,19 @@ const Drivers = () => {
         }
       });
 
+      // Create a set of driver IDs who have call-outs for today
+      const calledOutDriverIds = new Set(todayCallOuts.map(c => c.driver_id));
+
       // Include drivers who are scheduled for today OR who have shift activity for today
       // Also include drivers with base status of confirmed
       // EXCLUDE primary shuttle drivers (they have their own workflow on /scheduler)
+      // EXCLUDE drivers who have been marked OFF (have a call-out record for today)
       const todayDrivers = drivers.filter(d => {
         // Exclude primary shuttle drivers from this workflow
         if ((d as any).amtrak_primary || (d as any).bph_primary) return false;
+        
+        // Exclude drivers who have a call-out for today (they are OFF)
+        if (calledOutDriverIds.has(d.id)) return false;
         
         const hasSchedule = scheduledDriverMap.has(d.id);
         const hasShiftActivity = driverShiftStatusMap.has(d.id);
@@ -410,7 +417,7 @@ const Drivers = () => {
       const bCode = b.code || "zzz";
       return aCode.localeCompare(bCode);
     });
-  }, [isToday, getAvailableDriversWithSchedule, drivers, futureAssignments, schedules, selectedDateCallOuts, shifts]);
+  }, [isToday, getAvailableDriversWithSchedule, drivers, futureAssignments, schedules, selectedDateCallOuts, shifts, todayCallOuts]);
 
   // Handler for assigning a driver
   const handleAssignDriver = async () => {
