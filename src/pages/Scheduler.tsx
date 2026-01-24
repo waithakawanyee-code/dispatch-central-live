@@ -76,6 +76,12 @@ const schedulerStatusOptions: { value: DriverStatus; label: string; color: strin
   { value: "done", label: "Done", color: "text-status-on-route" },
 ];
 
+// Primary shuttle drivers only have unconfirmed/confirmed status
+const shuttleStatusOptions: { value: DriverStatus; label: string; color: string }[] = [
+  { value: "unconfirmed", label: "Unconfirmed", color: "text-muted-foreground" },
+  { value: "confirmed", label: "Confirmed", color: "text-status-available" },
+];
+
 const Scheduler = () => {
   const { drivers, updateDriverStatus } = useDispatchData();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -474,7 +480,7 @@ const Scheduler = () => {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-popover">
-                        {schedulerStatusOptions.map((option) => (
+                        {((assignedDriver as any).amtrak_primary ? shuttleStatusOptions : schedulerStatusOptions).map((option) => (
                           <DropdownMenuItem
                             key={option.value}
                             onClick={() => handleStatusChange(assignedDriver.id, option.value)}
@@ -582,7 +588,7 @@ const Scheduler = () => {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-popover">
-                  {schedulerStatusOptions.map((option) => (
+                  {((assignedDriver as any).bph_primary ? shuttleStatusOptions : schedulerStatusOptions).map((option) => (
                     <DropdownMenuItem
                       key={option.value}
                       onClick={() => handleStatusChange(assignedDriver.id, option.value)}
