@@ -689,57 +689,44 @@ const Drivers = () => {
     // Determine which dates to mark off
     const datesToMarkOff = hasFutureDates ? offDates : [today];
 
-    // If it's a call out, record it for all selected dates
-    if (isCallOutChecked) {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
-      const insertData = datesToMarkOff.map(date => ({
-        driver_id: offDriver.id,
-        driver_name: offDriver.name,
-        note: callOutNote.trim() || null,
-        created_by: user?.id || null,
-        call_out_date: format(date, "yyyy-MM-dd")
-      }));
-      const {
-        error
-      } = await supabase.from("call_outs").insert(insertData);
-      if (error) {
-        toast({
-          title: "Error recording call out",
-          description: error.message,
-          variant: "destructive"
-        });
-      } else {
-        const dateCount = datesToMarkOff.length;
-        toast({
-          title: "Call out recorded",
-          description: `${offDriver.name} marked as called out for ${dateCount} day${dateCount > 1 ? "s" : ""}`
-        });
-        // Refresh call outs for today if today is included
-        if (!hasFutureDates || includestoday) {
-          const {
-            data: callOutsRes
-          } = await supabase.from("call_outs").select("*").eq("call_out_date", format(today, "yyyy-MM-dd"));
-          if (callOutsRes) {
-            setTodayCallOuts(callOutsRes as CallOut[]);
-          }
+    // Always create a call_out record to track the OFF status
+    // The isCallOutChecked flag just indicates if the user added a note/reason
+    const {
+      data: {
+        user
+      }
+    } = await supabase.auth.getUser();
+    const insertData = datesToMarkOff.map(date => ({
+      driver_id: offDriver.id,
+      driver_name: offDriver.name,
+      note: isCallOutChecked ? (callOutNote.trim() || null) : null,
+      created_by: user?.id || null,
+      call_out_date: format(date, "yyyy-MM-dd")
+    }));
+    const {
+      error
+    } = await supabase.from("call_outs").insert(insertData);
+    if (error) {
+      toast({
+        title: "Error marking driver OFF",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      const dateCount = datesToMarkOff.length;
+      toast({
+        title: "Driver marked OFF",
+        description: `${offDriver.name} marked OFF for ${dateCount} day${dateCount > 1 ? "s" : ""}${isCallOutChecked ? " (call out)" : ""}`
+      });
+      // Refresh call outs for today if today is included
+      if (!hasFutureDates || includestoday) {
+        const {
+          data: callOutsRes
+        } = await supabase.from("call_outs").select("*").eq("call_out_date", format(today, "yyyy-MM-dd"));
+        if (callOutsRes) {
+          setTodayCallOuts(callOutsRes as CallOut[]);
         }
       }
-    }
-
-    // Only update driver status if marking off for today
-    // Note: We create a call_out record but keep driver status as-is (done or unconfirmed)
-    if (!hasFutureDates || includestoday) {
-      // Driver remains in their current status, call_out record tracks the absence
-    } else {
-      const futureDatesStr = offDates.map(d => format(d, "EEE, MMM d")).join(", ");
-      toast({
-        title: "Scheduled OFF",
-        description: `${offDriver.name} will be marked OFF on: ${futureDatesStr}`
-      });
     }
     setShowOffDialog(false);
     setOffDriver(null);
