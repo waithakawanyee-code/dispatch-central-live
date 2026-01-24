@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfWeek, endOfWeek, addWeeks, eachDayOfInterval } from "date-fns";
 import { useDateFormat } from "@/hooks/useDateFormat";
-import { Clock, Download, ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, Calendar, FileText, Search } from "lucide-react";
+import { Clock, Download, ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, Calendar, FileText, Search, Train } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -74,6 +74,8 @@ interface VirtualPunch {
 interface Driver {
   id: string;
   name: string;
+  amtrak_primary?: boolean;
+  bph_primary?: boolean;
 }
 
 interface DriverHours {
@@ -201,7 +203,7 @@ export function TimePunchReport() {
   };
 
   const fetchDrivers = async () => {
-    const { data } = await supabase.from("drivers").select("id, name").order("name");
+    const { data } = await supabase.from("drivers").select("id, name, amtrak_primary, bph_primary").order("name");
     if (data) setDrivers(data);
   };
 
@@ -284,7 +286,8 @@ export function TimePunchReport() {
   }, [weeklyShifts]);
 
   // Build payroll data with detailed punch in/out times per day per driver
-  const buildPayrollData = (filterName: string = "") => {
+  // driverType: 'all' | 'regular' | 'shuttle' - filter by driver type
+  const buildPayrollData = (filterName: string = "", driverType: 'all' | 'regular' | 'shuttle' = 'all') => {
     interface DailyRecord {
       date: string;
       punchIn: string | null;
@@ -292,6 +295,7 @@ export function TimePunchReport() {
       dailyTotalMinutes: number;
       dailyTotal: string;
       vehicleUnit: string | null;
+      isAutoShuttle?: boolean;
     }
     
     interface DriverPayroll {
@@ -301,11 +305,25 @@ export function TimePunchReport() {
       weekTotalMinutes: number;
       weeklyTotal: string;
       overtime: string;
+      isShuttleDriver?: boolean;
+      shuttleProgram?: string;
     }
+
+    // Get shuttle driver IDs
+    const shuttleDriverIds = new Set(
+      drivers.filter(d => d.amtrak_primary || d.bph_primary).map(d => d.id)
+    );
+    const driverInfoMap = new Map(drivers.map(d => [d.id, d]));
 
     // Group shifts by driver
     const driverShifts = new Map<string, { name: string; shifts: Shift[] }>();
     weeklyShifts.forEach((shift) => {
+      const isShuttleDriver = shuttleDriverIds.has(shift.driver_id);
+      
+      // Filter based on driverType
+      if (driverType === 'regular' && isShuttleDriver) return;
+      if (driverType === 'shuttle' && !isShuttleDriver) return;
+      
       if (!driverShifts.has(shift.driver_id)) {
         driverShifts.set(shift.driver_id, { name: shift.driver_name, shifts: [] });
       }
@@ -315,23 +333,28 @@ export function TimePunchReport() {
     const result: DriverPayroll[] = [];
 
     driverShifts.forEach((data, driverId) => {
+      const driverInfo = driverInfoMap.get(driverId);
+      const isShuttleDriver = shuttleDriverIds.has(driverId);
+      const shuttleProgram = driverInfo?.amtrak_primary ? 'Amtrak' : (driverInfo?.bph_primary ? 'BPH' : undefined);
+
       // Sort shifts by punch_in_at
       const sortedShifts = [...data.shifts].sort(
         (a, b) => new Date(a.punch_in_at).getTime() - new Date(b.punch_in_at).getTime()
       );
 
       // Group by date
-      const dateGroups = new Map<string, { ins: Date[]; outs: (Date | null)[]; vehicles: (string | null)[] }>();
+      const dateGroups = new Map<string, { ins: Date[]; outs: (Date | null)[]; vehicles: (string | null)[]; isAutoShuttle: boolean[] }>();
       
       sortedShifts.forEach((shift) => {
         const inTime = new Date(shift.punch_in_at);
         const dateStr = format(inTime, "MM/dd/yyyy");
         if (!dateGroups.has(dateStr)) {
-          dateGroups.set(dateStr, { ins: [], outs: [], vehicles: [] });
+          dateGroups.set(dateStr, { ins: [], outs: [], vehicles: [], isAutoShuttle: [] });
         }
         dateGroups.get(dateStr)!.ins.push(inTime);
         dateGroups.get(dateStr)!.outs.push(shift.punch_out_at ? new Date(shift.punch_out_at) : null);
         dateGroups.get(dateStr)!.vehicles.push(shift.vehicle_unit);
+        dateGroups.get(dateStr)!.isAutoShuttle.push(shift.notes?.includes("[AUTO-SHUTTLE]") || false);
       });
 
       const dailyRecords: DailyRecord[] = [];
@@ -349,6 +372,7 @@ export function TimePunchReport() {
             const punchIn = group.ins[i];
             const punchOut = group.outs[i];
             const vehicleUnit = group.vehicles[i];
+            const isAutoShuttle = group.isAutoShuttle[i];
             
             if (punchIn && punchOut) {
               dailyMinutes += (punchOut.getTime() - punchIn.getTime()) / (1000 * 60);
@@ -356,11 +380,12 @@ export function TimePunchReport() {
             
             dailyRecords.push({
               date: i === 0 ? dateStr : "",
-              punchIn: punchIn ? format(punchIn, "h:mm a") : null,
-              punchOut: punchOut ? format(punchOut, "h:mm a") : null,
+              punchIn: punchIn ? format(punchIn, "HH:mm") : null,
+              punchOut: punchOut ? format(punchOut, "HH:mm") : null,
               dailyTotalMinutes: i === group.ins.length - 1 ? dailyMinutes : 0,
               dailyTotal: i === group.ins.length - 1 ? formatHoursMinutes(dailyMinutes) : "",
               vehicleUnit: vehicleUnit,
+              isAutoShuttle,
             });
           }
           
@@ -377,6 +402,8 @@ export function TimePunchReport() {
           weekTotalMinutes,
           weeklyTotal: formatHoursMinutes(weekTotalMinutes),
           overtime: overtimeMinutes > 0 ? formatHoursMinutes(overtimeMinutes) : "",
+          isShuttleDriver,
+          shuttleProgram,
         });
       }
     });
@@ -939,87 +966,196 @@ export function TimePunchReport() {
               No shifts found for this week.
             </div>
           ) : (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Payroll Report (Mon-Sun)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[150px]">Driver</TableHead>
-                        <TableHead className="text-center min-w-[100px]">Date</TableHead>
-                        <TableHead className="text-center min-w-[90px]">Punch In</TableHead>
-                        <TableHead className="text-center min-w-[90px]">Punch Out</TableHead>
-                        <TableHead className="text-center min-w-[80px]">Vehicle</TableHead>
-                        <TableHead className="text-center min-w-[100px]">Daily Total</TableHead>
-                        <TableHead className="text-center min-w-[100px] font-bold">Weekly Total</TableHead>
-                        <TableHead className="text-center min-w-[90px] font-bold">Overtime</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(() => {
-                        const payrollData = buildPayrollData(payrollDriverFilter);
-                        return payrollData.map((driver) => {
-                          const isOvertime = driver.weekTotalMinutes > OVERTIME_THRESHOLD_MINUTES;
-                          return driver.dailyRecords.map((record, recordIdx) => (
-                            <TableRow 
-                              key={`${driver.driverId}-${record.date}-${recordIdx}`}
-                              className={`${isOvertime ? "bg-amber-500/10" : ""} ${recordIdx === driver.dailyRecords.length - 1 ? "border-b-2 border-border" : ""}`}
-                            >
-                              <TableCell className={`font-medium ${recordIdx === 0 ? "" : "text-muted-foreground/0"}`}>
-                                {recordIdx === 0 && (
-                                  <div className="flex items-center gap-2">
-                                    {driver.driverName}
-                                    {isOvertime && (
-                                      <Badge variant="outline" className="bg-amber-500/20 text-amber-700 border-amber-500/30 text-xs">
-                                        OT
-                                      </Badge>
-                                    )}
-                                  </div>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-center font-mono text-sm">
-                                {record.date}
-                              </TableCell>
-                              <TableCell className="text-center font-mono text-sm">
-                                {record.punchIn ? (
-                                  <span className="text-green-600">{record.punchIn}</span>
-                                ) : (
-                                  <span className="text-muted-foreground">-</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-center font-mono text-sm">
-                                {record.punchOut ? (
-                                  <span className="text-red-600">{record.punchOut}</span>
-                                ) : record.punchIn ? (
-                                  <span className="text-amber-600 text-xs">Open</span>
-                                ) : (
-                                  <span className="text-muted-foreground">-</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-center font-mono text-sm text-muted-foreground">
-                                {record.vehicleUnit || "-"}
-                              </TableCell>
-                              <TableCell className="text-center font-mono text-sm font-medium">
-                                {record.dailyTotal !== "0h 0m" ? record.dailyTotal : "-"}
-                              </TableCell>
-                              <TableCell className={`text-center font-mono font-bold ${isOvertime ? "text-amber-700" : ""}`}>
-                                {recordIdx === 0 ? driver.weeklyTotal : ""}
-                              </TableCell>
-                              <TableCell className={`text-center font-mono font-bold ${isOvertime ? "text-amber-700 bg-amber-500/20" : ""}`}>
-                                {recordIdx === 0 ? (isOvertime ? driver.overtime : "-") : ""}
-                              </TableCell>
-                            </TableRow>
-                          ));
-                        });
-                      })()}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              {/* Regular Drivers Section */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Payroll Report - Regular Drivers (Mon-Sun)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[150px]">Driver</TableHead>
+                          <TableHead className="text-center min-w-[100px]">Date</TableHead>
+                          <TableHead className="text-center min-w-[90px]">Punch In</TableHead>
+                          <TableHead className="text-center min-w-[90px]">Punch Out</TableHead>
+                          <TableHead className="text-center min-w-[80px]">Vehicle</TableHead>
+                          <TableHead className="text-center min-w-[100px]">Daily Total</TableHead>
+                          <TableHead className="text-center min-w-[100px] font-bold">Weekly Total</TableHead>
+                          <TableHead className="text-center min-w-[90px] font-bold">Overtime</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(() => {
+                          const payrollData = buildPayrollData(payrollDriverFilter, 'regular');
+                          if (payrollData.length === 0) {
+                            return (
+                              <TableRow>
+                                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                                  No regular driver shifts found for this week.
+                                </TableCell>
+                              </TableRow>
+                            );
+                          }
+                          return payrollData.map((driver) => {
+                            const isOvertime = driver.weekTotalMinutes > OVERTIME_THRESHOLD_MINUTES;
+                            return driver.dailyRecords.map((record, recordIdx) => (
+                              <TableRow 
+                                key={`${driver.driverId}-${record.date}-${recordIdx}`}
+                                className={`${isOvertime ? "bg-amber-500/10" : ""} ${recordIdx === driver.dailyRecords.length - 1 ? "border-b-2 border-border" : ""}`}
+                              >
+                                <TableCell className={`font-medium ${recordIdx === 0 ? "" : "text-muted-foreground/0"}`}>
+                                  {recordIdx === 0 && (
+                                    <div className="flex items-center gap-2">
+                                      {driver.driverName}
+                                      {isOvertime && (
+                                        <Badge variant="outline" className="bg-amber-500/20 text-amber-700 border-amber-500/30 text-xs">
+                                          OT
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-center font-mono text-sm">
+                                  {record.date}
+                                </TableCell>
+                                <TableCell className="text-center font-mono text-sm">
+                                  {record.punchIn ? (
+                                    <span className="text-green-600">{record.punchIn}</span>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-center font-mono text-sm">
+                                  {record.punchOut ? (
+                                    <span className="text-red-600">{record.punchOut}</span>
+                                  ) : record.punchIn ? (
+                                    <span className="text-amber-600 text-xs">Open</span>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-center font-mono text-sm text-muted-foreground">
+                                  {record.vehicleUnit || "-"}
+                                </TableCell>
+                                <TableCell className="text-center font-mono text-sm font-medium">
+                                  {record.dailyTotal !== "0h 0m" ? record.dailyTotal : "-"}
+                                </TableCell>
+                                <TableCell className={`text-center font-mono font-bold ${isOvertime ? "text-amber-700" : ""}`}>
+                                  {recordIdx === 0 ? driver.weeklyTotal : ""}
+                                </TableCell>
+                                <TableCell className={`text-center font-mono font-bold ${isOvertime ? "text-amber-700 bg-amber-500/20" : ""}`}>
+                                  {recordIdx === 0 ? (isOvertime ? driver.overtime : "-") : ""}
+                                </TableCell>
+                              </TableRow>
+                            ));
+                          });
+                        })()}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Shuttle Drivers Section */}
+              <Card className="border-blue-500/30">
+                <CardHeader className="pb-2 bg-blue-500/5">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Train className="h-4 w-4 text-blue-500" />
+                    Shuttle Drivers (Auto-Recorded)
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Primary Amtrak shuttle drivers - punch times auto-generated (IN: 30 min before, OUT: 30 min after shift)
+                  </p>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[150px]">Driver</TableHead>
+                          <TableHead className="text-center min-w-[80px]">Program</TableHead>
+                          <TableHead className="text-center min-w-[100px]">Date</TableHead>
+                          <TableHead className="text-center min-w-[90px]">Punch In</TableHead>
+                          <TableHead className="text-center min-w-[90px]">Punch Out</TableHead>
+                          <TableHead className="text-center min-w-[100px]">Daily Total</TableHead>
+                          <TableHead className="text-center min-w-[100px] font-bold">Weekly Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(() => {
+                          const shuttlePayroll = buildPayrollData(payrollDriverFilter, 'shuttle');
+                          if (shuttlePayroll.length === 0) {
+                            return (
+                              <TableRow>
+                                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                  No shuttle driver shifts found for this week.
+                                </TableCell>
+                              </TableRow>
+                            );
+                          }
+                          return shuttlePayroll.map((driver) => {
+                            return driver.dailyRecords.map((record, recordIdx) => (
+                              <TableRow 
+                                key={`shuttle-${driver.driverId}-${record.date}-${recordIdx}`}
+                                className={`${record.isAutoShuttle ? "bg-blue-500/5" : ""} ${recordIdx === driver.dailyRecords.length - 1 ? "border-b-2 border-border" : ""}`}
+                              >
+                                <TableCell className={`font-medium ${recordIdx === 0 ? "" : "text-muted-foreground/0"}`}>
+                                  {recordIdx === 0 && (
+                                    <div className="flex items-center gap-2">
+                                      {driver.driverName}
+                                      {record.isAutoShuttle && (
+                                        <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30 text-xs">
+                                          Auto
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-center text-sm">
+                                  {recordIdx === 0 && driver.shuttleProgram && (
+                                    <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30 text-xs">
+                                      {driver.shuttleProgram}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-center font-mono text-sm">
+                                  {record.date}
+                                </TableCell>
+                                <TableCell className="text-center font-mono text-sm">
+                                  {record.punchIn ? (
+                                    <span className="text-green-600">{record.punchIn}</span>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-center font-mono text-sm">
+                                  {record.punchOut ? (
+                                    <span className="text-red-600">{record.punchOut}</span>
+                                  ) : record.punchIn ? (
+                                    <span className="text-amber-600 text-xs">Open</span>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-center font-mono text-sm font-medium">
+                                  {record.dailyTotal !== "0h 0m" ? record.dailyTotal : "-"}
+                                </TableCell>
+                                <TableCell className="text-center font-mono font-bold">
+                                  {recordIdx === 0 ? driver.weeklyTotal : ""}
+                                </TableCell>
+                              </TableRow>
+                            ));
+                          });
+                        })()}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </TabsContent>
 

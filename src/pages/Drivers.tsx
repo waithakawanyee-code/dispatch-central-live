@@ -271,7 +271,11 @@ const Drivers = () => {
 
       // Include drivers who are scheduled for today OR who have shift activity for today
       // Also include drivers with base status of confirmed
+      // EXCLUDE primary shuttle drivers (they have their own workflow on /scheduler)
       const todayDrivers = drivers.filter(d => {
+        // Exclude primary shuttle drivers from this workflow
+        if ((d as any).amtrak_primary || (d as any).bph_primary) return false;
+        
         const hasSchedule = scheduledDriverMap.has(d.id);
         const hasShiftActivity = driverShiftStatusMap.has(d.id);
         const isConfirmed = d.status === "confirmed";
@@ -339,8 +343,14 @@ const Drivers = () => {
 
     // For future dates, return available drivers with their assignment status
     // Exclude drivers who are marked OFF
+    // Exclude primary shuttle drivers (they have their own workflow on /scheduler)
     // All scheduled drivers show as "unconfirmed", take-home drivers show their default vehicle
-    const futureDrivers = (getAvailableDriversWithSchedule || []).filter(driver => !offDriverIds.has(driver.id)).map(driver => {
+    const futureDrivers = (getAvailableDriversWithSchedule || []).filter(driver => {
+      // Exclude primary shuttle drivers
+      if ((driver as any).amtrak_primary || (driver as any).bph_primary) return false;
+      // Exclude drivers marked off
+      return !offDriverIds.has(driver.id);
+    }).map(driver => {
       const assignment = assignedMap.get(driver.id);
       if (assignment) {
         return {
