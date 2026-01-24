@@ -804,20 +804,8 @@ const Scheduler = () => {
                   {renderAmtrakShifts()}
                 </div>
 
-                {/* Divider */}
-                <div className="relative py-2">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-border" />
-                  </div>
-                  <div className="relative flex justify-center">
-                    <span className="bg-background px-3 text-[10px] uppercase tracking-wider text-muted-foreground">
-                      Hospital Shuttle
-                    </span>
-                  </div>
-                </div>
-
                 {/* BPH section */}
-                <div className="space-y-3">
+                <div className="space-y-3 pt-4 border-t border-border">
                   <h3 className="text-sm font-semibold flex items-center gap-2 text-green-500">
                     <Stethoscope className="h-4 w-4" />
                     BPH Shuttle
