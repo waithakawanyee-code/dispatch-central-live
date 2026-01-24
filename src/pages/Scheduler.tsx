@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Clock, UserCheck, UserX, Train, Stethoscope, Users, Eye, EyeOff, X, Save, Car } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Clock, UserCheck, UserX, Train, Stethoscope, Users, Eye, EyeOff, X, Save, Car, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -69,17 +69,16 @@ const AMTRAK_SHIFTS = [
   { number: 3, label: "Shift 3", start: "19:00", end: "03:00" },
 ];
 
-const schedulerStatusOptions: { value: DriverStatus; label: string; color: string }[] = [
-  { value: "unconfirmed", label: "Unconfirmed", color: "text-muted-foreground" },
-  { value: "confirmed", label: "Confirmed", color: "text-status-available" },
-  { value: "on_the_clock", label: "On The Clock", color: "text-blue-500" },
-  { value: "done", label: "Done", color: "text-status-on-route" },
+const schedulerStatusOptions: { value: DriverStatus; label: string; color: string; bgColor: string }[] = [
+  { value: "unconfirmed", label: "Unconfirmed", color: "text-muted-foreground", bgColor: "bg-muted/50" },
+  { value: "confirmed", label: "Confirmed", color: "text-emerald-400", bgColor: "bg-emerald-500/10" },
+  { value: "on_the_clock", label: "On The Clock", color: "text-blue-400", bgColor: "bg-blue-500/10" },
+  { value: "done", label: "Done", color: "text-violet-400", bgColor: "bg-violet-500/10" },
 ];
 
-// Primary shuttle drivers only have unconfirmed/confirmed status
-const shuttleStatusOptions: { value: DriverStatus; label: string; color: string }[] = [
-  { value: "unconfirmed", label: "Unconfirmed", color: "text-muted-foreground" },
-  { value: "confirmed", label: "Confirmed", color: "text-status-available" },
+const shuttleStatusOptions: { value: DriverStatus; label: string; color: string; bgColor: string }[] = [
+  { value: "unconfirmed", label: "Unconfirmed", color: "text-muted-foreground", bgColor: "bg-muted/50" },
+  { value: "confirmed", label: "Confirmed", color: "text-emerald-400", bgColor: "bg-emerald-500/10" },
 ];
 
 const Scheduler = () => {
@@ -92,7 +91,6 @@ const Scheduler = () => {
   const [scheduleTab, setScheduleTab] = useState<"all" | "black-car" | "shuttles">("all");
   const [showTrainedCoverage, setShowTrainedCoverage] = useState(false);
   
-  // BPH time editing state
   const [editingBphTimes, setEditingBphTimes] = useState(false);
   const [bphTempStartTime, setBphTempStartTime] = useState("08:00");
   const [bphTempEndTime, setBphTempEndTime] = useState("16:00");
@@ -120,7 +118,6 @@ const Scheduler = () => {
     setLoading(false);
   };
 
-  // Assign driver to Amtrak shift
   const assignAmtrakShift = async (driverId: string | null, shiftNumber: number) => {
     const dayOfWeek = getDayOfWeek(selectedDate);
     
@@ -152,7 +149,6 @@ const Scheduler = () => {
     fetchAllSchedules();
   };
 
-  // Assign driver to BPH shift
   const assignBphShift = async (driverId: string | null, startTime: string, endTime: string) => {
     const dayOfWeek = getDayOfWeek(selectedDate);
     
@@ -182,7 +178,6 @@ const Scheduler = () => {
     fetchAllSchedules();
   };
 
-  // Update BPH shift times
   const updateBphShiftTimes = async (startTime: string, endTime: string) => {
     const dayOfWeek = getDayOfWeek(selectedDate);
     
@@ -208,7 +203,7 @@ const Scheduler = () => {
 
   const getStatusBadge = (status: DriverStatus) => {
     const option = schedulerStatusOptions.find(o => o.value === status);
-    return option || { label: status, color: "text-muted-foreground" };
+    return option || { label: status, color: "text-muted-foreground", bgColor: "bg-muted/50" };
   };
 
   const getDayOfWeek = (date: Date) => date.getDay();
@@ -284,7 +279,6 @@ const Scheduler = () => {
   const amtrakDrivers = getDriversWithShuttleSchedules(selectedDate, "amtrak");
   const bphDrivers = getDriversWithShuttleSchedules(selectedDate, "bph");
 
-  // Filter based on tab
   const filteredDrivers = useMemo(() => {
     let result = driversWithSchedules;
     
@@ -301,7 +295,6 @@ const Scheduler = () => {
     return result;
   }, [driversWithSchedules, scheduleTab, statusFilter]);
 
-  // Trained coverage drivers (for Shuttles tab - combined Amtrak and BPH)
   const trainedCoverageDrivers = useMemo(() => {
     if (scheduleTab === "shuttles") {
       return driversWithSchedules.filter(d => 
@@ -315,81 +308,93 @@ const Scheduler = () => {
   const offDrivers = filteredDrivers.filter(d => d.schedule?.is_off);
   const unscheduledDrivers = filteredDrivers.filter(d => !d.schedule);
 
-  // Generate week days for quick navigation
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfDay(new Date()), i));
-
-  // Shuttle counts for tab badges
   const shuttlePrimaryCount = drivers.filter(d => (d as any).amtrak_primary || (d as any).bph_primary).length;
 
-  // Get shuttle coverage for selected day
   const dayOfWeek = getDayOfWeek(selectedDate);
   const dayShuttles = shuttleSchedules.filter(s => s.day_of_week === dayOfWeek);
   const amtrakShiftsForDay = dayShuttles.filter(s => s.program === "amtrak");
   const bphShiftForDay = dayShuttles.find(s => s.program === "bph");
   const isBphDay = dayOfWeek >= 1 && dayOfWeek <= 5;
 
-  const renderDriverRow = (driver: DriverWithSchedule, showScheduleTime = true) => (
-    <div key={driver.id} className="flex items-center justify-between px-3 py-2.5 hover:bg-muted/30 transition-colors">
-      <div className="flex items-center gap-2.5 min-w-0">
-        <div className="h-7 w-7 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-          <span className="text-xs font-semibold text-primary">
-            {driver.name.charAt(0)}
-          </span>
+  const renderDriverRow = (driver: DriverWithSchedule, showScheduleTime = true) => {
+    const statusBadge = getStatusBadge(driver.status);
+    
+    return (
+      <div 
+        key={driver.id} 
+        className="group flex items-center justify-between px-4 py-3 hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent transition-all duration-200"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="relative">
+            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center ring-2 ring-primary/10 group-hover:ring-primary/20 transition-all">
+              <span className="text-sm font-semibold text-primary">
+                {driver.name.charAt(0)}
+              </span>
+            </div>
+            {driver.status === "on_the_clock" && (
+              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-blue-500 ring-2 ring-card animate-pulse" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <span className="font-medium text-sm block truncate">{driver.name}</span>
+            {showScheduleTime && driver.schedule && !driver.schedule.is_off && (
+              <span className="text-xs font-mono text-muted-foreground">
+                {formatTime(driver.schedule?.start_time)}–{formatTime(driver.schedule?.end_time)}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+            {driver.amtrak_primary && (
+              <div className="h-6 px-2 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center gap-1">
+                <Train className="h-3 w-3 text-blue-400" />
+                <span className="text-[10px] font-medium text-blue-400">AMT</span>
+              </div>
+            )}
+            {driver.amtrak_trained && !driver.amtrak_primary && (
+              <Train className="h-3.5 w-3.5 text-blue-400/60" />
+            )}
+            {driver.bph_primary && (
+              <div className="h-6 px-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1">
+                <Stethoscope className="h-3 w-3 text-emerald-400" />
+                <span className="text-[10px] font-medium text-emerald-400">BPH</span>
+              </div>
+            )}
+            {driver.bph_trained && !driver.bph_primary && (
+              <Stethoscope className="h-3.5 w-3.5 text-emerald-400/60" />
+            )}
+          </div>
         </div>
-        <span className="font-medium text-sm truncate">{driver.name}</span>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {driver.amtrak_primary && (
-            <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-blue-500/10 text-blue-500 border-blue-500/30">
-              <Train className="h-3 w-3" />
-            </Badge>
-          )}
-          {driver.amtrak_trained && !driver.amtrak_primary && (
-            <Train className="h-3 w-3 text-blue-400" />
-          )}
-          {driver.bph_primary && (
-            <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-green-500/10 text-green-500 border-green-500/30">
-              <Stethoscope className="h-3 w-3" />
-            </Badge>
-          )}
-          {driver.bph_trained && !driver.bph_primary && (
-            <Stethoscope className="h-3 w-3 text-green-400" />
-          )}
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        {showScheduleTime && driver.schedule && !driver.schedule.is_off && (
-          <span className="text-xs font-mono text-muted-foreground">
-            {formatTime(driver.schedule?.start_time)}–{formatTime(driver.schedule?.end_time)}
-          </span>
-        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className={cn(
-              "px-2.5 py-1 rounded text-xs font-medium border cursor-pointer transition-colors",
-              getStatusBadge(driver.status).color,
-              "bg-secondary/50 border-border hover:bg-secondary"
+              "px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
+              statusBadge.color,
+              statusBadge.bgColor,
+              "border border-transparent hover:border-primary/20 hover:shadow-sm"
             )}>
-              {getStatusBadge(driver.status).label}
+              {statusBadge.label}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-popover">
+          <DropdownMenuContent align="end" className="bg-popover/95 backdrop-blur-sm border-border/50">
             {schedulerStatusOptions.map((option) => (
               <DropdownMenuItem
                 key={option.value}
                 onClick={() => handleStatusChange(driver.id, option.value)}
                 className={cn(
-                  "cursor-pointer",
-                  driver.status === option.value && "bg-secondary"
+                  "cursor-pointer gap-2",
+                  driver.status === option.value && "bg-primary/10"
                 )}
               >
+                <span className={cn("h-2 w-2 rounded-full", option.bgColor)} />
                 <span className={option.color}>{option.label}</span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderAmtrakShifts = () => {
     const amtrakEligibleDrivers = drivers.filter(d => 
@@ -397,7 +402,7 @@ const Scheduler = () => {
     );
     
     return (
-      <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-3">
         {AMTRAK_SHIFTS.map((shift) => {
           const shiftSchedule = shuttleSchedules.find(s => 
             s.program === "amtrak" && s.day_of_week === dayOfWeek && s.shift_number === shift.number
@@ -411,84 +416,99 @@ const Scheduler = () => {
             .map(s => s.driver_id);
           
           return (
-            <div key={shift.number} className="rounded-lg border border-blue-500/20 bg-blue-500/5">
-              <div className="border-b border-blue-500/20 px-3 py-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Train className="h-4 w-4 text-blue-500" />
-                  <span className="font-medium text-sm">{shift.label}</span>
+            <div 
+              key={shift.number} 
+              className={cn(
+                "rounded-xl border-2 transition-all duration-200",
+                assignedDriver 
+                  ? "border-blue-500/30 bg-gradient-to-br from-blue-500/10 to-blue-500/5" 
+                  : "border-dashed border-border bg-card/50"
+              )}
+            >
+              <div className="px-4 py-3 border-b border-blue-500/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                      <Train className="h-4 w-4 text-blue-400" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-sm">{shift.label}</span>
+                      <div className="text-[10px] font-mono text-muted-foreground">
+                        {shift.start}–{shift.end}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <span className="text-xs text-muted-foreground font-mono">
-                  {shift.start}–{shift.end}
-                </span>
               </div>
-              <div className="p-3">
-                <div className="flex items-center gap-3">
-                  <Select
-                    value={assignedDriver?.id || "__none__"}
-                    onValueChange={(value) => assignAmtrakShift(value === "__none__" ? null : value, shift.number)}
-                  >
-                    <SelectTrigger className={cn(
-                      "flex-1 h-9",
-                      assignedDriver ? "border-blue-500/30" : "border-dashed"
-                    )}>
-                      <SelectValue placeholder="Select driver..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover">
-                      <SelectItem value="__none__">
-                        <span className="text-muted-foreground italic">Unassigned</span>
-                      </SelectItem>
-                      {amtrakEligibleDrivers.map((driver) => {
-                        const isAssignedElsewhere = assignedDriverIds.includes(driver.id);
-                        const isPrimary = (driver as any).amtrak_primary;
-                        return (
-                          <SelectItem 
-                            key={driver.id} 
-                            value={driver.id}
-                            disabled={isAssignedElsewhere}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className={isAssignedElsewhere ? "text-muted-foreground" : ""}>
-                                {driver.name}
-                              </span>
-                              {isPrimary ? (
-                                <Badge variant="outline" className="h-4 px-1 text-[9px] bg-blue-500/10 text-blue-500 border-blue-500/30">
-                                  Primary
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="h-4 px-1 text-[9px] text-muted-foreground">
-                                  Trained
-                                </Badge>
-                              )}
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                  {assignedDriver && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className={cn(
-                          "px-2.5 py-1.5 rounded text-xs font-medium border cursor-pointer",
-                          getStatusBadge(assignedDriver.status).color,
-                          "bg-secondary/50 border-border hover:bg-secondary"
-                        )}>
-                          {getStatusBadge(assignedDriver.status).label}
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-popover">
-                        {((assignedDriver as any).amtrak_primary ? shuttleStatusOptions : schedulerStatusOptions).map((option) => (
-                          <DropdownMenuItem
-                            key={option.value}
-                            onClick={() => handleStatusChange(assignedDriver.id, option.value)}
-                          >
-                            <span className={option.color}>{option.label}</span>
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
+              <div className="p-3 space-y-3">
+                <Select
+                  value={assignedDriver?.id || "__none__"}
+                  onValueChange={(value) => assignAmtrakShift(value === "__none__" ? null : value, shift.number)}
+                >
+                  <SelectTrigger className={cn(
+                    "h-10 rounded-lg",
+                    assignedDriver ? "border-blue-500/30 bg-blue-500/5" : "border-dashed"
+                  )}>
+                    <SelectValue placeholder="Assign driver..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover/95 backdrop-blur-sm">
+                    <SelectItem value="__none__">
+                      <span className="text-muted-foreground italic">Unassigned</span>
+                    </SelectItem>
+                    {amtrakEligibleDrivers.map((driver) => {
+                      const isAssignedElsewhere = assignedDriverIds.includes(driver.id);
+                      const isPrimary = (driver as any).amtrak_primary;
+                      return (
+                        <SelectItem 
+                          key={driver.id} 
+                          value={driver.id}
+                          disabled={isAssignedElsewhere}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className={isAssignedElsewhere ? "text-muted-foreground" : ""}>
+                              {driver.name}
+                            </span>
+                            {isPrimary ? (
+                              <Badge className="h-4 px-1.5 text-[9px] bg-blue-500/20 text-blue-400 border-0">
+                                Primary
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="h-4 px-1.5 text-[9px] text-muted-foreground">
+                                Trained
+                              </Badge>
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                {assignedDriver && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className={cn(
+                        "w-full px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                        getStatusBadge(assignedDriver.status).color,
+                        getStatusBadge(assignedDriver.status).bgColor,
+                        "border border-transparent hover:border-blue-500/20"
+                      )}>
+                        {getStatusBadge(assignedDriver.status).label}
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-popover/95 backdrop-blur-sm">
+                      {((assignedDriver as any).amtrak_primary ? shuttleStatusOptions : schedulerStatusOptions).map((option) => (
+                        <DropdownMenuItem
+                          key={option.value}
+                          onClick={() => handleStatusChange(assignedDriver.id, option.value)}
+                          className="gap-2"
+                        >
+                          <span className={cn("h-2 w-2 rounded-full", option.bgColor)} />
+                          <span className={option.color}>{option.label}</span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             </div>
           );
@@ -510,11 +530,21 @@ const Scheduler = () => {
     );
     
     return (
-      <div className="rounded-lg border border-green-500/20 bg-green-500/5">
-        <div className="border-b border-green-500/20 px-3 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Stethoscope className="h-4 w-4 text-green-500" />
-            <span className="font-medium text-sm">BPH Shuttle</span>
+      <div className={cn(
+        "rounded-xl border-2 transition-all duration-200",
+        assignedDriver 
+          ? "border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5" 
+          : "border-dashed border-border bg-card/50"
+      )}>
+        <div className="px-4 py-3 border-b border-emerald-500/10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+              <Stethoscope className="h-5 w-5 text-emerald-400" />
+            </div>
+            <div>
+              <span className="font-semibold">BPH Shuttle</span>
+              <div className="text-xs text-muted-foreground">Mon–Fri</div>
+            </div>
           </div>
           {bphSchedule && !editingBphTimes && (
             <button 
@@ -523,7 +553,7 @@ const Scheduler = () => {
                 setBphTempEndTime(bphSchedule.end_time || "16:00");
                 setEditingBphTimes(true);
               }}
-              className="text-xs text-muted-foreground font-mono hover:text-foreground transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-xs font-mono text-emerald-400 hover:bg-emerald-500/20 transition-colors"
             >
               {formatTime(bphSchedule.start_time)}–{formatTime(bphSchedule.end_time)}
             </button>
@@ -532,7 +562,7 @@ const Scheduler = () => {
             <span className="text-xs text-muted-foreground italic">Assign to set times</span>
           )}
         </div>
-        <div className="p-3 space-y-3">
+        <div className="p-4 space-y-3">
           <div className="flex items-center gap-3">
             <Select
               value={assignedDriver?.id || "__none__"}
@@ -543,12 +573,12 @@ const Scheduler = () => {
               }}
             >
               <SelectTrigger className={cn(
-                "flex-1 h-9",
-                assignedDriver ? "border-green-500/30" : "border-dashed"
+                "flex-1 h-10 rounded-lg",
+                assignedDriver ? "border-emerald-500/30 bg-emerald-500/5" : "border-dashed"
               )}>
-                <SelectValue placeholder="Select driver..." />
+                <SelectValue placeholder="Assign driver..." />
               </SelectTrigger>
-              <SelectContent className="bg-popover">
+              <SelectContent className="bg-popover/95 backdrop-blur-sm">
                 <SelectItem value="__none__">
                   <span className="text-muted-foreground italic">Unassigned</span>
                 </SelectItem>
@@ -559,11 +589,11 @@ const Scheduler = () => {
                       <div className="flex items-center gap-2">
                         <span>{driver.name}</span>
                         {isPrimary ? (
-                          <Badge variant="outline" className="h-4 px-1 text-[9px] bg-green-500/10 text-green-500 border-green-500/30">
+                          <Badge className="h-4 px-1.5 text-[9px] bg-emerald-500/20 text-emerald-400 border-0">
                             Primary
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="h-4 px-1 text-[9px] text-muted-foreground">
+                          <Badge variant="outline" className="h-4 px-1.5 text-[9px] text-muted-foreground">
                             Trained
                           </Badge>
                         )}
@@ -577,19 +607,22 @@ const Scheduler = () => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className={cn(
-                    "px-2.5 py-1.5 rounded text-xs font-medium border cursor-pointer",
+                    "px-4 py-2 rounded-lg text-xs font-medium transition-all",
                     getStatusBadge(assignedDriver.status).color,
-                    "bg-secondary/50 border-border hover:bg-secondary"
+                    getStatusBadge(assignedDriver.status).bgColor,
+                    "border border-transparent hover:border-emerald-500/20"
                   )}>
                     {getStatusBadge(assignedDriver.status).label}
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-popover">
+                <DropdownMenuContent align="end" className="bg-popover/95 backdrop-blur-sm">
                   {((assignedDriver as any).bph_primary ? shuttleStatusOptions : schedulerStatusOptions).map((option) => (
                     <DropdownMenuItem
                       key={option.value}
                       onClick={() => handleStatusChange(assignedDriver.id, option.value)}
+                      className="gap-2"
                     >
+                      <span className={cn("h-2 w-2 rounded-full", option.bgColor)} />
                       <span className={option.color}>{option.label}</span>
                     </DropdownMenuItem>
                   ))}
@@ -599,42 +632,42 @@ const Scheduler = () => {
           </div>
 
           {bphSchedule && editingBphTimes && (
-            <div className="flex items-end gap-2 p-2.5 rounded bg-card border border-green-500/20">
-              <div className="space-y-1">
-                <Label className="text-[10px] text-muted-foreground uppercase">Start</Label>
+            <div className="flex items-end gap-3 p-4 rounded-xl bg-card border border-emerald-500/20">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">Start</Label>
                 <Input
                   type="time"
                   value={bphTempStartTime}
                   onChange={(e) => setBphTempStartTime(e.target.value)}
-                  className="h-8 w-28 text-sm"
+                  className="h-9 w-28 text-sm rounded-lg"
                 />
               </div>
-              <div className="space-y-1">
-                <Label className="text-[10px] text-muted-foreground uppercase">End</Label>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">End</Label>
                 <Input
                   type="time"
                   value={bphTempEndTime}
                   onChange={(e) => setBphTempEndTime(e.target.value)}
-                  className="h-8 w-28 text-sm"
+                  className="h-9 w-28 text-sm rounded-lg"
                 />
               </div>
               <Button
                 size="sm"
-                className="h-8 px-2"
+                className="h-9 px-3 rounded-lg"
                 onClick={() => {
                   updateBphShiftTimes(bphTempStartTime, bphTempEndTime);
                   setEditingBphTimes(false);
                 }}
               >
-                <Save className="h-3.5 w-3.5" />
+                <Save className="h-4 w-4" />
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-8 px-2"
+                className="h-9 px-3 rounded-lg"
                 onClick={() => setEditingBphTimes(false)}
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-4 w-4" />
               </Button>
             </div>
           )}
@@ -644,72 +677,119 @@ const Scheduler = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Compact Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-20">
-        <div className="flex items-center justify-between px-4 py-2.5 max-w-5xl mx-auto">
-          <div className="flex items-center gap-3">
-            <Link to="/" className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="h-4 w-4" />
-              <span className="text-sm hidden sm:inline">Dispatch</span>
+    <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
+      {/* Enhanced Header */}
+      <header className="border-b border-border/50 bg-card/80 backdrop-blur-xl sticky top-0 z-20">
+        <div className="flex items-center justify-between px-4 py-3 max-w-5xl mx-auto">
+          <div className="flex items-center gap-4">
+            <Link 
+              to="/" 
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
+            >
+              <div className="h-8 w-8 rounded-lg bg-muted/50 flex items-center justify-center group-hover:bg-muted transition-colors">
+                <ArrowLeft className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-medium hidden sm:inline">Dispatch</span>
             </Link>
-            <div className="h-4 w-px bg-border" />
-            <h1 className="text-base font-semibold flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-primary" />
-              Schedule
-            </h1>
+            <div className="h-6 w-px bg-border" />
+            <div className="flex items-center gap-2">
+              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold leading-tight">Schedule</h1>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Weekly Planner</p>
+              </div>
+            </div>
           </div>
           <Link to="/shuttle-schedules">
-            <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
-              <Train className="h-4 w-4" />
-              <span className="hidden sm:inline">Shuttles</span>
+            <Button variant="outline" size="sm" className="gap-2 rounded-lg border-border/50 hover:bg-muted/50">
+              <Train className="h-4 w-4 text-blue-400" />
+              <span className="hidden sm:inline">Manage Shuttles</span>
             </Button>
           </Link>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto p-4">
-        {/* Date Navigation - Consolidated */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between gap-4 mb-3">
-            <div className="flex items-center gap-1.5">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToPreviousDay} disabled={!canGoBack}>
-                <ChevronLeft className="h-4 w-4" />
+      <main className="max-w-5xl mx-auto p-4 space-y-6">
+        {/* Date Navigation Card */}
+        <div className="rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm p-4 space-y-4">
+          {/* Date Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-9 w-9 rounded-xl hover:bg-muted" 
+                onClick={goToPreviousDay} 
+                disabled={!canGoBack}
+              >
+                <ChevronLeft className="h-5 w-5" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToNextDay} disabled={!canGoForward}>
-                <ChevronRight className="h-4 w-4" />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-9 w-9 rounded-xl hover:bg-muted" 
+                onClick={goToNextDay} 
+                disabled={!canGoForward}
+              >
+                <ChevronRight className="h-5 w-5" />
               </Button>
               {!isToday && (
-                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={goToToday}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 rounded-lg border-primary/30 text-primary hover:bg-primary/10" 
+                  onClick={goToToday}
+                >
                   Today
                 </Button>
               )}
             </div>
             <div className="text-right">
-              <h2 className="text-lg font-bold leading-tight">
-                {format(selectedDate, "EEEE, MMM d")}
+              <h2 className="text-xl font-bold tracking-tight">
+                {format(selectedDate, "EEEE")}
               </h2>
-              {isToday && <span className="text-xs text-primary font-medium">Today</span>}
+              <p className="text-sm text-muted-foreground">
+                {format(selectedDate, "MMMM d, yyyy")}
+                {isToday && (
+                  <span className="ml-2 text-primary font-medium">• Today</span>
+                )}
+              </p>
             </div>
           </div>
 
-          {/* Week Pills */}
-          <div className="flex gap-1.5 mb-3">
+          {/* Week Calendar Pills */}
+          <div className="grid grid-cols-7 gap-2">
             {weekDays.map((day, index) => {
               const isSelected = isSameDay(day, selectedDate);
+              const dayIsToday = isSameDay(day, new Date());
               return (
                 <button
                   key={index}
                   onClick={() => setSelectedDate(day)}
                   className={cn(
-                    "flex-1 py-2 rounded-lg text-center transition-all",
+                    "relative py-3 rounded-xl text-center transition-all duration-200",
                     isSelected 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-card border border-border hover:border-primary/50"
+                      ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/25" 
+                      : "bg-muted/30 hover:bg-muted/60 border border-transparent hover:border-border/50"
                   )}
                 >
-                  <div className="text-[10px] uppercase tracking-wide opacity-70">{format(day, "EEE")}</div>
-                  <div className="text-sm font-semibold">{format(day, "d")}</div>
+                  <div className={cn(
+                    "text-[10px] uppercase tracking-wider mb-0.5",
+                    isSelected ? "text-primary-foreground/80" : "text-muted-foreground"
+                  )}>
+                    {format(day, "EEE")}
+                  </div>
+                  <div className={cn(
+                    "text-lg font-bold",
+                    isSelected ? "text-primary-foreground" : ""
+                  )}>
+                    {format(day, "d")}
+                  </div>
+                  {dayIsToday && !isSelected && (
+                    <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
+                  )}
                 </button>
               );
             })}
@@ -717,17 +797,30 @@ const Scheduler = () => {
 
           {/* Tabs */}
           <Tabs value={scheduleTab} onValueChange={(v) => setScheduleTab(v as typeof scheduleTab)}>
-            <TabsList className="h-9 p-1">
-              <TabsTrigger value="all" className="text-xs h-7 px-3">All</TabsTrigger>
-              <TabsTrigger value="black-car" className="text-xs h-7 px-3 gap-1.5">
-                <Car className="h-3.5 w-3.5" />
+            <TabsList className="h-11 p-1.5 bg-muted/50 rounded-xl w-full grid grid-cols-3">
+              <TabsTrigger 
+                value="all" 
+                className="rounded-lg text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm"
+              >
+                All Drivers
+              </TabsTrigger>
+              <TabsTrigger 
+                value="black-car" 
+                className="rounded-lg text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+              >
+                <Car className="h-4 w-4" />
                 Above All
               </TabsTrigger>
-              <TabsTrigger value="shuttles" className="text-xs h-7 px-3 gap-1.5">
-                <Train className="h-3.5 w-3.5" />
+              <TabsTrigger 
+                value="shuttles" 
+                className="rounded-lg text-sm font-medium gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+              >
+                <Train className="h-4 w-4" />
                 Shuttles
                 {shuttlePrimaryCount > 0 && (
-                  <span className="ml-1 px-1.5 rounded-full bg-blue-500/20 text-blue-500 text-[10px]">{shuttlePrimaryCount}</span>
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-semibold">
+                    {shuttlePrimaryCount}
+                  </span>
                 )}
               </TabsTrigger>
             </TabsList>
@@ -735,16 +828,16 @@ const Scheduler = () => {
         </div>
 
         {/* Controls Row */}
-        <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center justify-between gap-4">
           {/* Status Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
             <button
               onClick={() => setStatusFilter("all")}
               className={cn(
-                "px-2.5 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap",
+                "px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap",
                 statusFilter === "all"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary/50 hover:bg-secondary text-muted-foreground"
+                  ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20"
+                  : "bg-muted/50 hover:bg-muted text-muted-foreground"
               )}
             >
               All
@@ -754,18 +847,18 @@ const Scheduler = () => {
                 key={option.value}
                 onClick={() => setStatusFilter(option.value)}
                 className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap",
+                  "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap",
                   statusFilter === option.value
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary/50 hover:bg-secondary text-muted-foreground"
+                    ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20"
+                    : "bg-muted/50 hover:bg-muted text-muted-foreground"
                 )}
               >
                 <span className={cn(
-                  "h-1.5 w-1.5 rounded-full",
+                  "h-2 w-2 rounded-full",
                   option.value === "unconfirmed" && "bg-muted-foreground",
-                  option.value === "confirmed" && "bg-status-available",
-                  option.value === "on_the_clock" && "bg-blue-500",
-                  option.value === "done" && "bg-status-on-route"
+                  option.value === "confirmed" && "bg-emerald-400",
+                  option.value === "on_the_clock" && "bg-blue-400",
+                  option.value === "done" && "bg-violet-400"
                 )} />
                 {option.label}
               </button>
@@ -775,54 +868,75 @@ const Scheduler = () => {
           {/* Trained Coverage Toggle */}
           {scheduleTab === "shuttles" && trainedCoverageDrivers.length > 0 && (
             <Button
-              variant={showTrainedCoverage ? "secondary" : "ghost"}
+              variant={showTrainedCoverage ? "secondary" : "outline"}
               size="sm"
-              className="h-7 text-xs gap-1.5 flex-shrink-0"
+              className="h-8 rounded-full text-xs gap-2 flex-shrink-0 border-border/50"
               onClick={() => setShowTrainedCoverage(!showTrainedCoverage)}
             >
-              {showTrainedCoverage ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+              {showTrainedCoverage ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
               Backup ({trainedCoverageDrivers.length})
             </Button>
           )}
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center animate-pulse">
+              <Sparkles className="h-5 w-5 text-primary" />
+            </div>
+            <p className="text-sm text-muted-foreground">Loading schedule...</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {/* Shuttles tab - combined Amtrak and BPH view */}
+          <div className="space-y-6">
+            {/* Shuttles tab */}
             {scheduleTab === "shuttles" && (
               <>
                 {/* Amtrak section */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold flex items-center gap-2 text-blue-500">
-                    <Train className="h-4 w-4" />
-                    Amtrak Shuttle
-                  </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                      <Train className="h-4 w-4 text-blue-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-blue-400">Amtrak Shuttle</h3>
+                      <p className="text-xs text-muted-foreground">3 shifts daily</p>
+                    </div>
+                  </div>
                   {renderAmtrakShifts()}
                 </div>
 
+                {/* Divider */}
+                <div className="relative py-2">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border/50" />
+                  </div>
+                </div>
+
                 {/* BPH section */}
-                <div className="space-y-3 pt-4 border-t border-border">
-                  <h3 className="text-sm font-semibold flex items-center gap-2 text-green-500">
-                    <Stethoscope className="h-4 w-4" />
-                    BPH Shuttle
-                  </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                      <Stethoscope className="h-4 w-4 text-emerald-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-emerald-400">BPH Shuttle</h3>
+                      <p className="text-xs text-muted-foreground">Mon–Fri, 12-hour shifts</p>
+                    </div>
+                  </div>
                   {renderBphShift()}
                 </div>
 
                 {/* Backup drivers */}
                 {showTrainedCoverage && trainedCoverageDrivers.length > 0 && (
-                  <div className="rounded-lg border border-border bg-muted/30 mt-4">
-                    <div className="border-b border-border px-3 py-2">
-                      <h3 className="font-medium text-sm flex items-center gap-2">
+                  <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
+                    <div className="border-b border-border/50 px-4 py-3 bg-muted/30">
+                      <h3 className="font-semibold flex items-center gap-2">
                         <Users className="h-4 w-4 text-muted-foreground" />
-                        Backup Drivers (Trained)
+                        Backup Drivers
+                        <span className="text-xs text-muted-foreground font-normal">(Trained)</span>
                       </h3>
                     </div>
-                    <div className="divide-y divide-border/50">
+                    <div className="divide-y divide-border/30">
                       {trainedCoverageDrivers.map(driver => renderDriverRow(driver, false))}
                     </div>
                   </div>
@@ -830,38 +944,53 @@ const Scheduler = () => {
               </>
             )}
 
-            {/* Regular schedule views (All & Black Car tabs) */}
+            {/* Regular schedule views */}
             {(scheduleTab === "all" || scheduleTab === "black-car") && (
               <>
-                {/* Compact Stats */}
-                <div className="flex items-center gap-2 text-xs">
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-status-available/10 text-status-available">
-                    <UserCheck className="h-3.5 w-3.5" />
-                    <span className="font-semibold">{availableDrivers.length}</span>
-                    <span className="text-muted-foreground">scheduled</span>
+                {/* Stats Summary */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20">
+                    <div className="h-10 w-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                      <UserCheck className="h-5 w-5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <span className="text-2xl font-bold text-emerald-400">{availableDrivers.length}</span>
+                      <p className="text-xs text-muted-foreground">Scheduled</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted text-muted-foreground">
-                    <UserX className="h-3.5 w-3.5" />
-                    <span className="font-semibold">{offDrivers.length}</span>
-                    <span>off</span>
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-muted/30 border border-border/50">
+                    <div className="h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center">
+                      <UserX className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <span className="text-2xl font-bold">{offDrivers.length}</span>
+                      <p className="text-xs text-muted-foreground">Day Off</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted text-muted-foreground">
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span className="font-semibold">{unscheduledDrivers.length}</span>
-                    <span>unset</span>
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-muted/30 border border-border/50">
+                    <div className="h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center">
+                      <Calendar className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <span className="text-2xl font-bold">{unscheduledDrivers.length}</span>
+                      <p className="text-xs text-muted-foreground">Unset</p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Available Drivers */}
                 {availableDrivers.length > 0 && (
-                  <div className="rounded-lg border border-border bg-card overflow-hidden">
-                    <div className="border-b border-border bg-status-available/5 px-3 py-2">
-                      <h3 className="font-medium text-sm flex items-center gap-2 text-status-available">
+                  <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent overflow-hidden">
+                    <div className="border-b border-emerald-500/10 bg-emerald-500/5 px-4 py-3">
+                      <h3 className="font-semibold flex items-center gap-2 text-emerald-400">
                         <UserCheck className="h-4 w-4" />
-                        Scheduled ({availableDrivers.length})
+                        Scheduled
+                        <span className="ml-auto text-sm font-normal text-muted-foreground">
+                          {availableDrivers.length} drivers
+                        </span>
                       </h3>
                     </div>
-                    <div className="divide-y divide-border/50">
+                    <div className="divide-y divide-border/30">
                       {availableDrivers.map(driver => renderDriverRow(driver))}
                     </div>
                   </div>
@@ -869,19 +998,22 @@ const Scheduler = () => {
 
                 {/* Off Drivers */}
                 {offDrivers.length > 0 && (
-                  <div className="rounded-lg border border-border bg-card overflow-hidden">
-                    <div className="border-b border-border bg-muted/50 px-3 py-2">
-                      <h3 className="font-medium text-sm flex items-center gap-2 text-muted-foreground">
+                  <div className="rounded-2xl border border-border/50 bg-card/50 overflow-hidden">
+                    <div className="border-b border-border/50 bg-muted/30 px-4 py-3">
+                      <h3 className="font-semibold flex items-center gap-2 text-muted-foreground">
                         <UserX className="h-4 w-4" />
-                        Day Off ({offDrivers.length})
+                        Day Off
+                        <span className="ml-auto text-sm font-normal">
+                          {offDrivers.length} drivers
+                        </span>
                       </h3>
                     </div>
-                    <div className="divide-y divide-border/50">
+                    <div className="divide-y divide-border/30">
                       {offDrivers.map(driver => (
-                        <div key={driver.id} className="flex items-center justify-between px-3 py-2.5 hover:bg-muted/30 transition-colors">
-                          <div className="flex items-center gap-2.5">
-                            <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center">
-                              <span className="text-xs font-medium text-muted-foreground">
+                        <div key={driver.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-full bg-muted/50 flex items-center justify-center">
+                              <span className="text-sm font-medium text-muted-foreground">
                                 {driver.name.charAt(0)}
                               </span>
                             </div>
@@ -890,20 +1022,21 @@ const Scheduler = () => {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button className={cn(
-                                "px-2.5 py-1 rounded text-xs font-medium border cursor-pointer",
+                                "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
                                 getStatusBadge(driver.status).color,
-                                "bg-secondary/50 border-border hover:bg-secondary"
+                                getStatusBadge(driver.status).bgColor
                               )}>
                                 {getStatusBadge(driver.status).label}
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-popover">
+                            <DropdownMenuContent align="end" className="bg-popover/95 backdrop-blur-sm">
                               {schedulerStatusOptions.map((option) => (
                                 <DropdownMenuItem
                                   key={option.value}
                                   onClick={() => handleStatusChange(driver.id, option.value)}
-                                  className={cn("cursor-pointer", driver.status === option.value && "bg-secondary")}
+                                  className={cn("cursor-pointer gap-2", driver.status === option.value && "bg-primary/10")}
                                 >
+                                  <span className={cn("h-2 w-2 rounded-full", option.bgColor)} />
                                   <span className={option.color}>{option.label}</span>
                                 </DropdownMenuItem>
                               ))}
@@ -917,19 +1050,22 @@ const Scheduler = () => {
 
                 {/* Unscheduled Drivers */}
                 {unscheduledDrivers.length > 0 && (
-                  <div className="rounded-lg border border-border bg-card overflow-hidden">
-                    <div className="border-b border-border bg-muted/30 px-3 py-2">
-                      <h3 className="font-medium text-sm flex items-center gap-2 text-muted-foreground">
+                  <div className="rounded-2xl border border-border/50 bg-card/50 overflow-hidden">
+                    <div className="border-b border-border/50 bg-muted/20 px-4 py-3">
+                      <h3 className="font-semibold flex items-center gap-2 text-muted-foreground">
                         <Calendar className="h-4 w-4" />
-                        No Schedule ({unscheduledDrivers.length})
+                        No Schedule
+                        <span className="ml-auto text-sm font-normal">
+                          {unscheduledDrivers.length} drivers
+                        </span>
                       </h3>
                     </div>
-                    <div className="divide-y divide-border/50">
+                    <div className="divide-y divide-border/30">
                       {unscheduledDrivers.map(driver => (
-                        <div key={driver.id} className="flex items-center justify-between px-3 py-2.5 hover:bg-muted/30 transition-colors">
-                          <div className="flex items-center gap-2.5">
-                            <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center">
-                              <span className="text-xs font-medium text-muted-foreground">
+                        <div key={driver.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-full bg-muted/50 flex items-center justify-center">
+                              <span className="text-sm font-medium text-muted-foreground">
                                 {driver.name.charAt(0)}
                               </span>
                             </div>
@@ -938,20 +1074,21 @@ const Scheduler = () => {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button className={cn(
-                                "px-2.5 py-1 rounded text-xs font-medium border cursor-pointer",
+                                "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
                                 getStatusBadge(driver.status).color,
-                                "bg-secondary/50 border-border hover:bg-secondary"
+                                getStatusBadge(driver.status).bgColor
                               )}>
                                 {getStatusBadge(driver.status).label}
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-popover">
+                            <DropdownMenuContent align="end" className="bg-popover/95 backdrop-blur-sm">
                               {schedulerStatusOptions.map((option) => (
                                 <DropdownMenuItem
                                   key={option.value}
                                   onClick={() => handleStatusChange(driver.id, option.value)}
-                                  className={cn("cursor-pointer", driver.status === option.value && "bg-secondary")}
+                                  className={cn("cursor-pointer gap-2", driver.status === option.value && "bg-primary/10")}
                                 >
+                                  <span className={cn("h-2 w-2 rounded-full", option.bgColor)} />
                                   <span className={option.color}>{option.label}</span>
                                 </DropdownMenuItem>
                               ))}
@@ -966,8 +1103,11 @@ const Scheduler = () => {
             )}
 
             {filteredDrivers.length === 0 && scheduleTab !== "shuttles" && (
-              <div className="text-center py-12 text-muted-foreground text-sm">
-                No drivers found for this view.
+              <div className="text-center py-16">
+                <div className="h-12 w-12 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                  <Users className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground">No drivers found for this view.</p>
               </div>
             )}
           </div>
