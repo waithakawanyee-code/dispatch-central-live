@@ -87,13 +87,13 @@ function matchesQuickKeySearch(vehicle: Vehicle, search: string): boolean {
   return false;
 }
 
-export function VehicleCombobox({
+export const VehicleCombobox = React.forwardRef<HTMLButtonElement, VehicleComboboxProps>(({
   vehicles,
   value,
   onValueChange,
   placeholder = "Select vehicle",
   includeNone = true,
-}: VehicleComboboxProps) {
+}, ref) => {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const [highlightedIndex, setHighlightedIndex] = React.useState(0);
@@ -209,6 +209,7 @@ export function VehicleCombobox({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          ref={ref}
           variant="outline"
           role="combobox"
           aria-expanded={open}
@@ -266,4 +267,6 @@ export function VehicleCombobox({
       </PopoverContent>
     </Popover>
   );
-}
+});
+
+VehicleCombobox.displayName = "VehicleCombobox";

@@ -118,7 +118,7 @@ const Drivers = () => {
   const [punchInVehicle, setPunchInVehicle] = useState<string>("__none__");
   const [punchInTabStage, setPunchInTabStage] = useState<1 | 2>(1);
   const punchInDriverRef = useRef<HTMLButtonElement>(null);
-  // VehicleCombobox handles its own keyboard navigation - no ref needed
+  const punchInVehicleRef = useRef<HTMLButtonElement>(null);
   const punchInTimeRef = useRef<HTMLInputElement>(null);
   const punchInButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -2337,17 +2337,23 @@ const Drivers = () => {
         <DialogContent className="sm:max-w-[350px]" onOpenAutoFocus={e => {
         e.preventDefault();
         setPunchInTabStage(1);
-        // Focus time input on open (VehicleCombobox handles its own focus)
+        // Smart focus: if vehicle is already assigned, skip to time
         setTimeout(() => {
-          punchInTimeRef.current?.focus();
-          punchInTimeRef.current?.select();
+          const hasVehicle = punchInVehicle && punchInVehicle !== "__none__";
+          if (hasVehicle) {
+            punchInTimeRef.current?.focus();
+            punchInTimeRef.current?.select();
+          } else {
+            punchInVehicleRef.current?.focus();
+          }
         }, 0);
       }} onKeyDown={e => {
+        const hasVehicle = punchInVehicle && punchInVehicle !== "__none__";
         const activeEl = document.activeElement;
 
-        // Handle Tab key navigation (simplified - VehicleCombobox handles its own)
+        // Handle Tab key navigation
         if (e.key === "Tab") {
-          // Stage 1: Minimal loop (Time → Punch In)
+          // Stage 1: Minimal loop
           if (punchInTabStage === 1) {
             if (!e.shiftKey) {
               // Forward Tab
@@ -2357,14 +2363,29 @@ const Drivers = () => {
                 setPunchInTabStage(2);
                 punchInDriverRef.current?.focus();
               } else if (activeEl === punchInTimeRef.current) {
-                // Time → Punch In
+                // Time → Punch In (skip Driver/Vehicle in Stage 1)
                 e.preventDefault();
                 punchInButtonRef.current?.focus();
+              } else if (activeEl === punchInVehicleRef.current && !hasVehicle) {
+                // Vehicle → Time (only if vehicle field is in the loop)
+                e.preventDefault();
+                punchInTimeRef.current?.focus();
+                punchInTimeRef.current?.select();
               }
             } else {
               // Shift+Tab in Stage 1
               if (activeEl === punchInTimeRef.current) {
-                // Time → Punch In (wrap)
+                if (hasVehicle) {
+                  // If vehicle assigned, Time is first field - wrap to Punch In
+                  e.preventDefault();
+                  punchInButtonRef.current?.focus();
+                } else {
+                  // Vehicle not assigned, go to Vehicle
+                  e.preventDefault();
+                  punchInVehicleRef.current?.focus();
+                }
+              } else if (activeEl === punchInVehicleRef.current) {
+                // Vehicle is first field in Stage 1 when no vehicle - wrap to Punch In
                 e.preventDefault();
                 punchInButtonRef.current?.focus();
               } else if (activeEl === punchInButtonRef.current) {
@@ -2375,7 +2396,7 @@ const Drivers = () => {
               }
             }
           } else {
-            // Stage 2: Driver → Time → Punch In → Driver (skip vehicle - it handles its own focus)
+            // Stage 2: Full cycle (Driver → Vehicle → Time → Punch In → Driver)
             if (!e.shiftKey) {
               // Forward Tab in Stage 2
               if (activeEl === punchInButtonRef.current) {
@@ -2383,7 +2404,11 @@ const Drivers = () => {
                 e.preventDefault();
                 punchInDriverRef.current?.focus();
               } else if (activeEl === punchInDriverRef.current) {
-                // Driver → Time
+                // Driver → Vehicle
+                e.preventDefault();
+                punchInVehicleRef.current?.focus();
+              } else if (activeEl === punchInVehicleRef.current) {
+                // Vehicle → Time
                 e.preventDefault();
                 punchInTimeRef.current?.focus();
                 punchInTimeRef.current?.select();
@@ -2398,10 +2423,14 @@ const Drivers = () => {
                 // Driver → Punch In (wrap backwards)
                 e.preventDefault();
                 punchInButtonRef.current?.focus();
-              } else if (activeEl === punchInTimeRef.current) {
-                // Time → Driver
+              } else if (activeEl === punchInVehicleRef.current) {
+                // Vehicle → Driver
                 e.preventDefault();
                 punchInDriverRef.current?.focus();
+              } else if (activeEl === punchInTimeRef.current) {
+                // Time → Vehicle
+                e.preventDefault();
+                punchInVehicleRef.current?.focus();
               } else if (activeEl === punchInButtonRef.current) {
                 // Punch In → Time
                 e.preventDefault();
@@ -2429,10 +2458,14 @@ const Drivers = () => {
                 setPunchInVehicle(newVehicle);
                 // Reset to Stage 1 when driver changes
                 setPunchInTabStage(1);
-                // Always focus time input (VehicleCombobox handles its own focus when clicked)
+                // Re-focus based on new vehicle state
                 setTimeout(() => {
-                  punchInTimeRef.current?.focus();
-                  punchInTimeRef.current?.select();
+                  if (newVehicle && newVehicle !== "__none__") {
+                    punchInTimeRef.current?.focus();
+                    punchInTimeRef.current?.select();
+                  } else {
+                    punchInVehicleRef.current?.focus();
+                  }
                 }, 0);
               }
             }}>
@@ -2454,6 +2487,7 @@ const Drivers = () => {
                 Vehicle {punchInDriver && drivers.find(d => d.id === punchInDriver.id)?.status === "unconfirmed" && <span className="text-amber-400 text-xs ml-1">(required)</span>}
               </Label>
               <VehicleCombobox
+                ref={punchInVehicleRef}
                 vehicles={vehicles.filter(v => v.status === "active")}
                 value={punchInVehicle}
                 onValueChange={(val) => {
