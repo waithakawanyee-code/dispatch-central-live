@@ -1418,7 +1418,34 @@ const Drivers = () => {
   };
 
   // Add off driver to today's schedule
-  const addOffDriverToSchedule = (driverId: string, driverName: string) => {
+  const addOffDriverToSchedule = async (driverId: string, driverName: string) => {
+    // First, delete their call_out record for today so they appear in the workbook
+    const todayStr = format(today, "yyyy-MM-dd");
+    const { error: deleteError } = await supabase
+      .from("call_outs")
+      .delete()
+      .eq("driver_id", driverId)
+      .eq("call_out_date", todayStr);
+    
+    if (deleteError) {
+      toast({
+        title: "Error removing OFF status",
+        description: deleteError.message,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Refresh call outs to update the UI
+    const { data: callOutsRes } = await supabase
+      .from("call_outs")
+      .select("*")
+      .eq("call_out_date", todayStr);
+    if (callOutsRes) {
+      setTodayCallOuts(callOutsRes as CallOut[]);
+    }
+
+    // Now open the assign dialog to optionally set vehicle/report time
     const driver = drivers.find(d => d.id === driverId);
     const defaultVehicle = (driver as any)?.default_vehicle;
     setAssigningDriver({
@@ -1429,6 +1456,12 @@ const Drivers = () => {
     setAssignVehicle(defaultVehicle || "__none__");
     setShowAssignDialog(true);
     setOffDriverSearch("");
+    
+    toast({
+      title: "Driver restored",
+      description: `${driverName} removed from OFF list`
+    });
+    
     // Focus report time after dialog opens
     setTimeout(() => {
       assignReportTimeRef.current?.focus();
