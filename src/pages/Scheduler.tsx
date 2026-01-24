@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Clock, UserCheck, UserX, Train, Stethoscope, Users, Eye, EyeOff, X, Save, Car, Sparkles } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Clock, UserCheck, UserX, Train, Stethoscope, Users, Eye, EyeOff, X, Save, Car, Sparkles, PhoneOff, MoreHorizontal, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -14,10 +14,22 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriverStatus = Database["public"]["Enums"]["driver_status"];
@@ -82,6 +94,7 @@ const shuttleStatusOptions: { value: DriverStatus; label: string; color: string;
 ];
 
 const Scheduler = () => {
+  const { user } = useAuth();
   const { drivers, updateDriverStatus } = useDispatchData();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [shuttleSchedules, setShuttleSchedules] = useState<ShuttleSchedule[]>([]);
@@ -94,6 +107,13 @@ const Scheduler = () => {
   const [editingBphTimes, setEditingBphTimes] = useState(false);
   const [bphTempStartTime, setBphTempStartTime] = useState("08:00");
   const [bphTempEndTime, setBphTempEndTime] = useState("16:00");
+
+  // Mark Off Dialog state
+  const [showMarkOffDialog, setShowMarkOffDialog] = useState(false);
+  const [markOffDriver, setMarkOffDriver] = useState<{ id: string; name: string } | null>(null);
+  const [isCallOut, setIsCallOut] = useState(false);
+  const [callOutNote, setCallOutNote] = useState("");
+  const [markingOff, setMarkingOff] = useState(false);
 
   useEffect(() => {
     fetchAllSchedules();
@@ -199,6 +219,103 @@ const Scheduler = () => {
   const handleStatusChange = async (driverId: string, newStatus: DriverStatus) => {
     await updateDriverStatus(driverId, newStatus);
     toast.success("Status updated");
+  };
+
+  // Open mark off dialog
+  const openMarkOffDialog = (driverId: string, driverName: string) => {
+    setMarkOffDriver({ id: driverId, name: driverName });
+    setIsCallOut(false);
+    setCallOutNote("");
+    setShowMarkOffDialog(true);
+  };
+
+  // Handle marking driver as off
+  const handleMarkOff = async () => {
+    if (!markOffDriver) return;
+    
+    setMarkingOff(true);
+    const dayOfWeek = getDayOfWeek(selectedDate);
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+
+    try {
+      // Check if schedule exists for this day
+      const existingSchedule = schedules.find(
+        s => s.driver_id === markOffDriver.id && s.day_of_week === dayOfWeek
+      );
+
+      if (existingSchedule) {
+        // Update existing schedule to mark as off
+        const { error } = await supabase
+          .from("driver_schedules")
+          .update({ is_off: true, start_time: null, end_time: null })
+          .eq("id", existingSchedule.id);
+
+        if (error) throw error;
+      } else {
+        // Create new schedule entry marked as off
+        const { error } = await supabase
+          .from("driver_schedules")
+          .insert({
+            driver_id: markOffDriver.id,
+            day_of_week: dayOfWeek,
+            is_off: true,
+            start_time: null,
+            end_time: null,
+          });
+
+        if (error) throw error;
+      }
+
+      // If it's a call out, record it
+      if (isCallOut) {
+        await supabase.from("call_outs").insert({
+          driver_id: markOffDriver.id,
+          driver_name: markOffDriver.name,
+          call_out_date: dateStr,
+          note: callOutNote.trim() || null,
+          created_by: user?.id || null,
+        });
+      }
+
+      toast.success(`${markOffDriver.name} marked as off for ${format(selectedDate, "EEEE")}`);
+      setShowMarkOffDialog(false);
+      fetchAllSchedules();
+    } catch (error) {
+      toast.error("Failed to mark driver as off");
+    } finally {
+      setMarkingOff(false);
+    }
+  };
+
+  // Handle restoring driver from off status
+  const handleRestoreFromOff = async (driverId: string, driverName: string) => {
+    const dayOfWeek = getDayOfWeek(selectedDate);
+    const existingSchedule = schedules.find(
+      s => s.driver_id === driverId && s.day_of_week === dayOfWeek
+    );
+
+    if (!existingSchedule) return;
+
+    const { error } = await supabase
+      .from("driver_schedules")
+      .update({ is_off: false })
+      .eq("id", existingSchedule.id);
+
+    if (error) {
+      toast.error("Failed to restore driver");
+      return;
+    }
+
+    // Also remove any call-out record for this date
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    await supabase
+      .from("call_outs")
+      .delete()
+      .eq("driver_id", driverId)
+      .eq("call_out_date", dateStr);
+
+    toast.success(`${driverName} restored for ${format(selectedDate, "EEEE")}`);
+    fetchAllSchedules();
   };
 
   const getStatusBadge = (status: DriverStatus) => {
@@ -371,33 +488,43 @@ const Scheduler = () => {
             )}
           </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className={cn(
-              "px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
-              statusBadge.color,
-              statusBadge.bgColor,
-              "border border-transparent hover:border-primary/20 hover:shadow-sm"
-            )}>
-              {statusBadge.label}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-popover/95 backdrop-blur-sm border-border/50">
-            {schedulerStatusOptions.map((option) => (
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
+                statusBadge.color,
+                statusBadge.bgColor,
+                "border border-transparent hover:border-primary/20 hover:shadow-sm"
+              )}>
+                {statusBadge.label}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-popover/95 backdrop-blur-sm border-border/50">
+              {schedulerStatusOptions.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => handleStatusChange(driver.id, option.value)}
+                  className={cn(
+                    "cursor-pointer gap-2",
+                    driver.status === option.value && "bg-primary/10"
+                  )}
+                >
+                  <span className={cn("h-2 w-2 rounded-full", option.bgColor)} />
+                  <span className={option.color}>{option.label}</span>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
               <DropdownMenuItem
-                key={option.value}
-                onClick={() => handleStatusChange(driver.id, option.value)}
-                className={cn(
-                  "cursor-pointer gap-2",
-                  driver.status === option.value && "bg-primary/10"
-                )}
+                onClick={() => openMarkOffDialog(driver.id, driver.name)}
+                className="cursor-pointer gap-2 text-amber-400"
               >
-                <span className={cn("h-2 w-2 rounded-full", option.bgColor)} />
-                <span className={option.color}>{option.label}</span>
+                <UserMinus className="h-3.5 w-3.5" />
+                Mark Off
               </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     );
   };
@@ -1004,12 +1131,12 @@ const Scheduler = () => {
 
                 {/* Off Drivers */}
                 {offDrivers.length > 0 && (
-                  <div className="rounded-2xl border border-border/50 bg-card/50 overflow-hidden">
-                    <div className="border-b border-border/50 bg-muted/30 px-4 py-3">
-                      <h3 className="font-semibold flex items-center gap-2 text-muted-foreground">
+                  <div className="rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-transparent overflow-hidden">
+                    <div className="border-b border-amber-500/10 bg-amber-500/5 px-4 py-3">
+                      <h3 className="font-semibold flex items-center gap-2 text-amber-400">
                         <UserX className="h-4 w-4" />
                         Day Off
-                        <span className="ml-auto text-sm font-normal">
+                        <span className="ml-auto text-sm font-normal text-muted-foreground">
                           {offDrivers.length} drivers
                         </span>
                       </h3>
@@ -1018,36 +1145,22 @@ const Scheduler = () => {
                       {offDrivers.map(driver => (
                         <div key={driver.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
                           <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-full bg-muted/50 flex items-center justify-center">
-                              <span className="text-sm font-medium text-muted-foreground">
+                            <div className="h-9 w-9 rounded-full bg-amber-500/10 flex items-center justify-center">
+                              <span className="text-sm font-medium text-amber-400">
                                 {driver.name.charAt(0)}
                               </span>
                             </div>
                             <span className="font-medium text-sm text-muted-foreground">{driver.name}</span>
                           </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button className={cn(
-                                "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-                                getStatusBadge(driver.status).color,
-                                getStatusBadge(driver.status).bgColor
-                              )}>
-                                {getStatusBadge(driver.status).label}
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-popover/95 backdrop-blur-sm">
-                              {schedulerStatusOptions.map((option) => (
-                                <DropdownMenuItem
-                                  key={option.value}
-                                  onClick={() => handleStatusChange(driver.id, option.value)}
-                                  className={cn("cursor-pointer gap-2", driver.status === option.value && "bg-primary/10")}
-                                >
-                                  <span className={cn("h-2 w-2 rounded-full", option.bgColor)} />
-                                  <span className={option.color}>{option.label}</span>
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs gap-1.5 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                            onClick={() => handleRestoreFromOff(driver.id, driver.name)}
+                          >
+                            <UserCheck className="h-3.5 w-3.5" />
+                            Restore
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -1119,6 +1232,93 @@ const Scheduler = () => {
           </div>
         )}
       </main>
+
+      {/* Mark Off Dialog */}
+      <Dialog open={showMarkOffDialog} onOpenChange={setShowMarkOffDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserMinus className="h-5 w-5 text-amber-400" />
+              Mark Driver Off
+            </DialogTitle>
+            <DialogDescription>
+              Mark {markOffDriver?.name} as off for {format(selectedDate, "EEEE, MMM d")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border/50">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-sm font-semibold text-primary">
+                  {markOffDriver?.name.charAt(0)}
+                </span>
+              </div>
+              <div>
+                <p className="font-medium">{markOffDriver?.name}</p>
+                <p className="text-xs text-muted-foreground">{format(selectedDate, "EEEE, MMMM d, yyyy")}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3 p-3 rounded-xl border border-amber-500/20 bg-amber-500/5">
+              <Checkbox
+                id="callout"
+                checked={isCallOut}
+                onCheckedChange={(checked) => setIsCallOut(checked === true)}
+                className="mt-0.5"
+              />
+              <div className="space-y-1">
+                <Label htmlFor="callout" className="text-sm font-medium flex items-center gap-2 cursor-pointer">
+                  <PhoneOff className="h-4 w-4 text-amber-400" />
+                  Driver called out
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Check if the driver notified of their absence
+                </p>
+              </div>
+            </div>
+
+            {isCallOut && (
+              <div className="space-y-2">
+                <Label htmlFor="note" className="text-xs text-muted-foreground uppercase tracking-wider">
+                  Note (optional)
+                </Label>
+                <Textarea
+                  id="note"
+                  placeholder="Reason for call out..."
+                  value={callOutNote}
+                  onChange={(e) => setCallOutNote(e.target.value)}
+                  className="min-h-[80px] resize-none"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowMarkOffDialog(false)}
+              disabled={markingOff}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleMarkOff}
+              disabled={markingOff}
+              className="gap-2"
+            >
+              {markingOff ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <UserMinus className="h-4 w-4" />
+                  Mark Off
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
