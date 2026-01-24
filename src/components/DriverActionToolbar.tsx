@@ -1,4 +1,4 @@
-import { UserPlus, Clock, LogOut, Power, Undo2, RotateCcw, Play, CheckCircle } from "lucide-react";
+import { UserPlus, Clock, LogOut, Power, Undo2, RotateCcw, Play, CheckCircle, Truck, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
@@ -12,6 +12,8 @@ interface DriverActionToolbarProps {
   onPunchIn: () => void;
   onQuickPunchIn?: () => void;
   onPunchOut: () => void;
+  onSwitchVehicle?: () => void;
+  onStartNewShift?: () => void;
   onMarkOff: () => void;
   onUnassign: () => void;
   onReset: () => void;
@@ -36,6 +38,8 @@ export function DriverActionToolbar({
   onPunchIn,
   onQuickPunchIn,
   onPunchOut,
+  onSwitchVehicle,
+  onStartNewShift,
   onMarkOff,
   onUnassign,
   onReset,
@@ -65,13 +69,20 @@ export function DriverActionToolbar({
         );
         return actions;
       case "on_the_clock":
-        return [
+        const onClockActions: ActionButton[] = [
           { label: "Punch Out", shortcut: "D", icon: LogOut, onClick: onPunchOut, variant: "default" },
         ];
+        if (onSwitchVehicle) {
+          onClockActions.push({ label: "Switch Vehicle", shortcut: "", icon: Truck, onClick: onSwitchVehicle, variant: "secondary" });
+        }
+        return onClockActions;
       case "done":
-        return [
-          { label: "Reset", shortcut: "", icon: Undo2, onClick: onReset, variant: "outline" },
-        ];
+        const doneActions: ActionButton[] = [];
+        if (onStartNewShift) {
+          doneActions.push({ label: "Start New Shift", shortcut: "", icon: RefreshCw, onClick: onStartNewShift, variant: "default" });
+        }
+        doneActions.push({ label: "Reset", shortcut: "", icon: Undo2, onClick: onReset, variant: "outline" });
+        return doneActions;
       default:
         return [];
     }
