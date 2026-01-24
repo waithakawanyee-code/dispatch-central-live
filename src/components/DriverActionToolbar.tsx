@@ -73,13 +73,13 @@ export function DriverActionToolbar({
           { label: "Punch Out", shortcut: "D", icon: LogOut, onClick: onPunchOut, variant: "default" },
         ];
         if (onSwitchVehicle) {
-          onClockActions.push({ label: "Switch Vehicle", shortcut: "", icon: Truck, onClick: onSwitchVehicle, variant: "secondary" });
+          onClockActions.push({ label: "Switch Vehicle", shortcut: "V", icon: Truck, onClick: onSwitchVehicle, variant: "secondary" });
         }
         return onClockActions;
       case "done":
         const doneActions: ActionButton[] = [];
         if (onStartNewShift) {
-          doneActions.push({ label: "Start New Shift", shortcut: "", icon: RefreshCw, onClick: onStartNewShift, variant: "default" });
+          doneActions.push({ label: "Start New Shift", shortcut: "N", icon: RefreshCw, onClick: onStartNewShift, variant: "default" });
         }
         doneActions.push({ label: "Reset", shortcut: "", icon: Undo2, onClick: onReset, variant: "outline" });
         return doneActions;

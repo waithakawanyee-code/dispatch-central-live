@@ -1605,10 +1605,18 @@ const Drivers = () => {
       }
     }
 
-    // "V" key toggles driver details panel
+    // V → Switch Vehicle (for on_the_clock drivers)
     if ((e.key === "v" || e.key === "V") && selectedDriverId) {
       e.preventDefault();
-      setShowDetailsPanel(prev => !prev);
+      executeSwitchVehicle(selectedDriverId);
+      return;
+    }
+
+    // N → Start New Shift (for done drivers)
+    if ((e.key === "n" || e.key === "N") && selectedDriverId) {
+      e.preventDefault();
+      executeStartNewShift(selectedDriverId);
+      return;
     }
 
     // Enter key progresses driver through workflow
@@ -1688,7 +1696,7 @@ const Drivers = () => {
         executeOff(selectedDriverId);
       }
     }
-  }, [selectedDriverId, showAssignDialog, showOffDialog, showDriverPicker, showDetailsPanel, getCurrentSection, driverSections, sectionOrder, isToday, drivers, executeAssign, executePunchIn, executeQuickPunchIn, executePunchOut, executeOff, executeUndo]);
+  }, [selectedDriverId, showAssignDialog, showOffDialog, showDriverPicker, showDetailsPanel, getCurrentSection, driverSections, sectionOrder, isToday, drivers, executeAssign, executePunchIn, executeQuickPunchIn, executePunchOut, executeOff, executeUndo, executeSwitchVehicle, executeStartNewShift]);
 
   // Handler for driver pill click - select and show details
   const handleDriverSelect = useCallback((driverId: string) => {
