@@ -261,6 +261,48 @@ export function DriverProfileDialog({
     return error;
   };
 
+  // Sync take-home vehicle assignment when driver default_vehicle changes
+  const syncVehicleAssignment = async (driverId: string, newVehicleUnit: string | null, oldVehicleUnit: string | null) => {
+    // If the vehicle changed, we need to update vehicle.assigned_driver_id
+    if (newVehicleUnit === oldVehicleUnit) return;
+
+    // Clear old vehicle's assigned_driver_id if it was a take_home assigned to this driver
+    if (oldVehicleUnit) {
+      const { data: oldVehicle } = await supabase
+        .from("vehicles")
+        .select("id, classification, assigned_driver_id")
+        .eq("unit", oldVehicleUnit)
+        .maybeSingle();
+
+      if (oldVehicle && oldVehicle.classification === "take_home" && oldVehicle.assigned_driver_id === driverId) {
+        await supabase
+          .from("vehicles")
+          .update({ assigned_driver_id: null })
+          .eq("id", oldVehicle.id);
+      }
+    }
+
+    // Set new vehicle's assigned_driver_id to this driver
+    if (newVehicleUnit) {
+      const { data: newVehicle } = await supabase
+        .from("vehicles")
+        .select("id, classification")
+        .eq("unit", newVehicleUnit)
+        .maybeSingle();
+
+      if (newVehicle) {
+        // Also update to take_home classification if it isn't already
+        await supabase
+          .from("vehicles")
+          .update({ 
+            assigned_driver_id: driverId,
+            classification: "take_home"
+          })
+          .eq("id", newVehicle.id);
+      }
+    }
+  };
+
   const handleSave = async () => {
     if (!formData.name.trim()) {
       toast({ title: "Error", description: "Name is required", variant: "destructive" });
@@ -306,6 +348,10 @@ export function DriverProfileDialog({
       } else {
         // Save schedule for the new driver
         await saveSchedule(newDriver.id);
+        
+        // Sync vehicle assignment
+        await syncVehicleAssignment(newDriver.id, formData.default_vehicle.trim() || null, null);
+        
         setSaving(false);
         toast({ title: "Success", description: "Driver added successfully" });
         onOpenChange(false);
@@ -318,6 +364,9 @@ export function DriverProfileDialog({
         return;
       }
 
+      const oldVehicleUnit = driver.default_vehicle || null;
+      const newVehicleUnit = formData.default_vehicle.trim() || null;
+
       const { error } = await supabase
         .from("drivers")
         .update({
@@ -329,7 +378,7 @@ export function DriverProfileDialog({
           is_active: formData.is_active,
           has_cdl: formData.has_cdl,
           notes: formData.notes.trim() || null,
-          default_vehicle: formData.default_vehicle.trim() || null,
+          default_vehicle: newVehicleUnit,
           emergency_contact_name: formData.emergency_contact_name.trim() || null,
           emergency_contact_phone: formData.emergency_contact_phone.trim() || null,
           emergency_contact_relationship: formData.emergency_contact_relationship.trim() || null,
@@ -353,6 +402,10 @@ export function DriverProfileDialog({
       } else {
         // Save schedule
         await saveSchedule(driver.id);
+        
+        // Sync vehicle assignment
+        await syncVehicleAssignment(driver.id, newVehicleUnit, oldVehicleUnit);
+        
         setSaving(false);
         toast({ title: "Success", description: "Driver profile updated" });
         onOpenChange(false);
@@ -836,13 +889,34 @@ export function DriverProfileDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">None</SelectItem>
-                  {vehicles.map((v) => (
-                    <SelectItem key={v.id} value={v.unit}>
-                      {v.unit}
-                    </SelectItem>
-                  ))}
+                  {vehicles
+                    .filter(v => v.status === "active" && v.primary_category === "above_all")
+                    .map((v) => {
+                      // Check if this vehicle is already assigned to another driver
+                      const isAssignedToOther = v.assigned_driver_id && v.assigned_driver_id !== driver?.id;
+                      const isCurrentlySelected = v.unit === formData.default_vehicle;
+                      
+                      return (
+                        <SelectItem 
+                          key={v.id} 
+                          value={v.unit}
+                          disabled={isAssignedToOther && !isCurrentlySelected}
+                        >
+                          {v.unit}
+                          {v.classification === "take_home" && v.assigned_driver_id === driver?.id && (
+                            <span className="ml-2 text-xs text-muted-foreground">(current)</span>
+                          )}
+                          {isAssignedToOther && (
+                            <span className="ml-2 text-xs text-muted-foreground">(assigned)</span>
+                          )}
+                        </SelectItem>
+                      );
+                    })}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                Setting a default vehicle will mark it as a take-home vehicle owned by this driver.
+              </p>
             </div>
           </div>
 
