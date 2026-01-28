@@ -1,4 +1,4 @@
-import { Clock, Home, CheckCircle2, User, Truck } from "lucide-react";
+import { Clock, Home, CheckCircle2, User, Truck, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -16,6 +16,7 @@ interface DriverWorkbookCardProps {
     report_time?: string | null;
     has_cdl?: boolean;
     default_vehicle?: string | null;
+    phone?: string | null;
   };
   shiftData?: {
     punch_in_at?: string | null;
@@ -27,6 +28,7 @@ interface DriverWorkbookCardProps {
   onClick?: () => void;
   onConfirm?: (driverId: string) => void;
   subcategory?: "has_vehicle" | "dispatched" | "report_time";
+  showPhoneTooltip?: boolean;
 }
 
 export function DriverWorkbookCard({
@@ -37,6 +39,7 @@ export function DriverWorkbookCard({
   onClick,
   onConfirm,
   subcategory,
+  showPhoneTooltip = false,
 }: DriverWorkbookCardProps) {
   const hasVehicle = !!driver.vehicle || !!shiftData?.vehicle_unit;
   const hasTakeHome = !!driver.default_vehicle;
@@ -103,7 +106,7 @@ export function DriverWorkbookCard({
     }
   };
 
-  return (
+  const cardContent = (
     <div
       onClick={onClick}
       className={cn(
@@ -163,4 +166,23 @@ export function DriverWorkbookCard({
       </div>
     </div>
   );
+
+  // Wrap in tooltip if phone number should be shown
+  if (showPhoneTooltip && driver.phone) {
+    return (
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {cardContent}
+          </TooltipTrigger>
+          <TooltipContent side="top" className="flex items-center gap-2 bg-popover border border-border">
+            <Phone className="h-3 w-3 text-primary" />
+            <span className="font-mono text-sm">{driver.phone}</span>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return cardContent;
 }

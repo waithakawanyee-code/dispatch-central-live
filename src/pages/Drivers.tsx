@@ -1902,7 +1902,8 @@ const Drivers = () => {
             ...d,
             has_cdl: (d as any).has_cdl || false,
             default_vehicle: (d as any).default_vehicle || d.vehicle || null,
-            shiftData: (d as any).shiftData || null
+            shiftData: (d as any).shiftData || null,
+            phone: (d as any).phone || null,
           }))} selectedDriverId={selectedDriverId} recentlyUpdatedDrivers={recentlyUpdatedDrivers} onDriverSelect={driverId => {
             handleDriverSelect(driverId);
             const driver = displayDrivers.find(d => d.id === driverId);
@@ -2081,7 +2082,8 @@ const Drivers = () => {
               {/* New Workbook Panel */}
               <DriverWorkbookPanel drivers={displayDrivers.map(d => ({
             ...d,
-            shiftData: (d as any).shiftData || null
+            shiftData: (d as any).shiftData || null,
+            phone: (d as any).phone || null,
           }))} selectedDriverId={selectedDriverId} recentlyUpdatedDrivers={recentlyUpdatedDrivers} onDriverSelect={handleDriverSelect} onConfirmDriver={handleConfirmDriver} cdlFilter={globalCdlFilter} isAdmin={isAdmin} />
 
               {/* OFF Drivers - Compact Tabbed Section */}
