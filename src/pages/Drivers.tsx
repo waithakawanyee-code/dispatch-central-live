@@ -8,7 +8,7 @@ import { DriverRow } from "@/components/DriverRow";
 import { DriverDetailsPanel } from "@/components/DriverDetailsPanel";
 import { DriverPicker } from "@/components/DriverPicker";
 import { DriverActionToolbar } from "@/components/DriverActionToolbar";
-import { DriverWorkbookPanel } from "@/components/drivers";
+import { DriverWorkbookPanel, OffDriversSection } from "@/components/drivers";
 import { QuickVehiclePickerDialog } from "@/components/QuickVehiclePickerDialog";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -2084,72 +2084,23 @@ const Drivers = () => {
             shiftData: (d as any).shiftData || null
           }))} selectedDriverId={selectedDriverId} recentlyUpdatedDrivers={recentlyUpdatedDrivers} onDriverSelect={handleDriverSelect} onConfirmDriver={handleConfirmDriver} cdlFilter={globalCdlFilter} isAdmin={isAdmin} />
 
-              {/* OFF Drivers - Collapsible */}
-              <Collapsible open={offDriversOpen} onOpenChange={setOffDriversOpen} className="mt-4">
-                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-border bg-card/50 px-4 py-2.5 hover:bg-card/80 transition-colors cursor-pointer">
-                  <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <ChevronDown className={cn("h-4 w-4 transition-transform", !offDriversOpen && "-rotate-90")} />
-                    <PhoneOff className="h-4 w-4" />
-                    OFF / Not Scheduled
-                    {calledOutCount > 0 && <span className="rounded-full bg-destructive/20 text-destructive px-2 py-0.5 font-mono text-xs">
-                        {calledOutCount} called out
-                      </span>}
-                    {markedOffCount > 0 && <span className="rounded-full bg-amber-500/20 text-amber-600 px-2 py-0.5 font-mono text-xs">
-                        {markedOffCount} marked off
-                      </span>}
-                  </span>
-                  <span className="rounded-full bg-muted px-2.5 py-0.5 font-mono text-xs text-muted-foreground">
-                    {offDriverCount}
-                  </span>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-3">
-                  {/* Search box for off drivers */}
-                  <div className="relative mb-3">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                    <Input type="text" placeholder="Search off drivers..." value={offDriverSearch} onChange={e => setOffDriverSearch(e.target.value)} className="h-9 pl-9 pr-9 text-sm bg-background/50 rounded-lg" />
-                    {offDriverSearch && <button onClick={() => setOffDriverSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                        <X className="h-4 w-4" />
-                      </button>}
-                  </div>
-                  
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 max-h-[300px] overflow-y-auto">
-                    {filteredOffDrivers.map(driver => {
-                  const markedOff = hasOffRecord(driver.id);
-                  const calledOut = isActualCallOut(driver.id);
-                  const note = getCallOutNote(driver.id);
-                  return <div key={driver.id} className={cn("group flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 text-sm transition-all duration-200", 
-                    calledOut ? "border-destructive/30 bg-destructive/5" : 
-                    markedOff ? "border-amber-500/30 bg-amber-500/5" : 
-                    "border-border hover:border-primary/30")}>
-                          <span className={cn("h-2 w-2 rounded-full shrink-0", 
-                            calledOut ? "bg-destructive" : 
-                            markedOff ? "bg-amber-500" : 
-                            "bg-muted-foreground")} />
-                          <span className="font-medium text-foreground flex-1 truncate">{driver.name}</span>
-                          {(driver as any).has_cdl && <span className="text-[9px] font-bold text-primary bg-primary/15 px-1.5 py-0.5 rounded uppercase">CDL</span>}
-                          {calledOut ? (
-                            <span className="flex items-center gap-1 text-destructive" title={note || "Called out"}>
-                              <PhoneOff className="h-3.5 w-3.5" />
-                              <span className="text-[10px] font-medium">Called Out</span>
-                            </span>
-                          ) : markedOff ? (
-                            <span className="flex items-center gap-1 text-amber-600" title="Marked off for today">
-                              <X className="h-3.5 w-3.5" />
-                              <span className="text-[10px] font-medium">Marked Off</span>
-                            </span>
-                          ) : null}
-                          {/* Add to schedule button */}
-                          <Button variant="ghost" size="sm" onClick={() => addOffDriverToSchedule(driver.id, driver.name)} className="h-7 px-2 gap-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 hover:text-primary" title="Add to today's schedule">
-                            <UserPlus className="h-3.5 w-3.5" />
-                            <span className="hidden sm:inline">Add</span>
-                          </Button>
-                        </div>;
-                })})
-                    {filteredOffDrivers.length === 0 && offDriverSearch && <p className="text-sm text-muted-foreground italic py-4 col-span-2 text-center">No matching drivers</p>}
-                    {offDriverCount === 0 && !offDriverSearch && <p className="text-sm text-muted-foreground italic py-4 col-span-2 text-center">No OFF drivers</p>}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
+              {/* OFF Drivers - Compact Tabbed Section */}
+              <OffDriversSection
+                drivers={offDrivers.map(d => ({
+                  id: d.id,
+                  name: d.name,
+                  code: d.code,
+                  has_cdl: (d as any).has_cdl,
+                }))}
+                isOpen={offDriversOpen}
+                onOpenChange={setOffDriversOpen}
+                calledOutCount={calledOutCount}
+                markedOffCount={markedOffCount}
+                hasOffRecord={hasOffRecord}
+                isActualCallOut={isActualCallOut}
+                getCallOutNote={getCallOutNote}
+                onAddToSchedule={addOffDriverToSchedule}
+              />
             </div>)}
         </section>
 
