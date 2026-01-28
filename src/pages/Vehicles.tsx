@@ -30,7 +30,9 @@ const Vehicles = () => {
 
   // Group vehicles by category and type
   const groupedVehicles = useMemo(() => {
-    const activeVehicles = vehicles.filter((v) => v.status === "active");
+    // Filter out inactive vehicles - they should only appear in admin
+    const nonInactiveVehicles = vehicles.filter((v) => v.status !== "inactive");
+    const activeVehicles = nonInactiveVehicles.filter((v) => v.status === "active");
     
     // Above All vehicles (Sedans and SUVs)
     const aboveAllVehicles = activeVehicles.filter((v) => 
@@ -50,8 +52,8 @@ const Vehicles = () => {
       (!ABOVE_ALL_TYPES.includes(v.vehicle_type || "") && v.primary_category !== "above_all")
     );
     
-    // Out of service
-    const outOfServiceVehicles = vehicles.filter((v) => v.status === "out-of-service");
+    // Out of service (excludes inactive)
+    const outOfServiceVehicles = nonInactiveVehicles.filter((v) => v.status === "out-of-service");
     
     return {
       activeVehicles,

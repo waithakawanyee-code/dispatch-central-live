@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 // New driver status model
 type DriverStatus = "unconfirmed" | "confirmed" | "on_the_clock" | "done" | "off";
-type VehicleStatus = "active" | "out-of-service" | "maintenance" | "returned";
+type VehicleStatus = "active" | "out-of-service" | "maintenance" | "returned" | "inactive";
 type CleanStatus = "clean" | "dirty" | "unknown";
 
 // Subcategory for unconfirmed drivers
@@ -90,6 +90,12 @@ const statusConfig: Record<string, {
     text: "text-status-available",
     border: "border-status-available/50",
     glow: "status-glow-available"
+  },
+  inactive: {
+    bg: "bg-muted/20",
+    text: "text-muted-foreground",
+    border: "border-muted-foreground/50",
+    glow: "status-glow-offline"
   },
   // Clean statuses
   clean: {

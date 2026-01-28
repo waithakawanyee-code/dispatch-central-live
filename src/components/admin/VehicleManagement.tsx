@@ -104,7 +104,7 @@ const initialFormData: VehicleFormData = {
   has_car_wash_subscription: false,
   always_clean: false
 };
-const validStatuses: VehicleStatus[] = ["active", "out-of-service"];
+const validStatuses: VehicleStatus[] = ["active", "out-of-service", "inactive"];
 const validCleanStatuses: CleanStatus[] = ["clean", "dirty"];
 const validVehicleTypes: VehicleType[] = VEHICLE_TYPES.map(t => t.value);
 export function VehicleManagement() {
@@ -783,7 +783,7 @@ export function VehicleManagement() {
                       <SelectContent>
                         <SelectItem value="active">Active</SelectItem>
                         <SelectItem value="out-of-service">Out of Service</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
+                        <SelectItem value="inactive">Inactive (Archived)</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground mt-1">Only active vehicles can be assigned</p>
@@ -852,6 +852,7 @@ export function VehicleManagement() {
               <DropdownMenuRadioItem value="all">All Status</DropdownMenuRadioItem>
               <DropdownMenuRadioItem value="active">Active</DropdownMenuRadioItem>
               <DropdownMenuRadioItem value="out-of-service">Out of Service</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="inactive">Inactive</DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
             <DropdownMenuSeparator />
             <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
@@ -1018,6 +1019,7 @@ export function VehicleManagement() {
                     <SelectContent>
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="out-of-service">Out of Service</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
                   <div className="flex justify-end gap-1">

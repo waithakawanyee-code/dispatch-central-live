@@ -65,6 +65,9 @@ export function useVehicleAvailability(
     const vehicle = vehicles.find((v) => v.id === vehicleId);
     if (!vehicle) return false;
 
+    // Inactive vehicles are never available
+    if (vehicle.status === "inactive") return false;
+
     // Vehicle must be active
     if (vehicle.status !== "active") return false;
 
@@ -104,6 +107,8 @@ export function useVehicleAvailability(
   const getVehicleAvailabilityReason = (vehicleId: string, driverId: string): string | null => {
     const vehicle = vehicles.find((v) => v.id === vehicleId);
     if (!vehicle) return "Vehicle not found";
+
+    if (vehicle.status === "inactive") return "Vehicle is inactive (archived)";
 
     if (vehicle.status !== "active") return "Vehicle is not active";
 

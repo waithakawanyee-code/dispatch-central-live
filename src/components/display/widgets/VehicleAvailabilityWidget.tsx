@@ -71,7 +71,10 @@ export function VehicleAvailabilityWidget() {
   }, []);
 
   const { availableSedans, availableSuvs, workingVehicles, outOfServiceCount } = useMemo(() => {
-    const aboveAll = vehicles.filter(
+    // Exclude inactive vehicles from all calculations
+    const nonInactiveVehicles = vehicles.filter((v) => v.status !== "inactive");
+    
+    const aboveAll = nonInactiveVehicles.filter(
       (v) => v.primary_category === "above_all" && v.status === "active"
     );
 
@@ -96,7 +99,7 @@ export function VehicleAvailabilityWidget() {
       .filter((v) => v.driver && onTheClockDriverNames.has(v.driver))
       .sort((a, b) => a.unit.localeCompare(b.unit, undefined, { numeric: true }));
 
-    const outOfServiceCount = vehicles.filter((v) => v.status === "out-of-service").length;
+    const outOfServiceCount = nonInactiveVehicles.filter((v) => v.status === "out-of-service").length;
 
     return { availableSedans, availableSuvs, workingVehicles, outOfServiceCount };
   }, [vehicles, drivers]);
