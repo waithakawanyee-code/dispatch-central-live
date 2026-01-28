@@ -1314,7 +1314,7 @@ export type Database = {
       ticket_status: "open" | "in_progress" | "waiting_parts" | "closed"
       vehicle_classification: "house" | "take_home" | "fleet"
       vehicle_primary_category: "above_all" | "specialty"
-      vehicle_status: "active" | "out-of-service"
+      vehicle_status: "active" | "out-of-service" | "inactive"
       vehicle_type:
         | "sedan_volvo"
         | "sedan_aviator"
@@ -1477,7 +1477,7 @@ export const Constants = {
       ticket_status: ["open", "in_progress", "waiting_parts", "closed"],
       vehicle_classification: ["house", "take_home", "fleet"],
       vehicle_primary_category: ["above_all", "specialty"],
-      vehicle_status: ["active", "out-of-service"],
+      vehicle_status: ["active", "out-of-service", "inactive"],
       vehicle_type: [
         "sedan_volvo",
         "sedan_aviator",
