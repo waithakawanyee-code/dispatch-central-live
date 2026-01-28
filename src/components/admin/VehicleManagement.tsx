@@ -78,28 +78,24 @@ export const VEHICLE_TYPES: {
 }];
 interface VehicleFormData {
   unit: string;
-  driver: string;
   status: VehicleStatus;
   clean_status: CleanStatus;
   vehicle_type: VehicleType | "";
   notes: string;
   primary_category: VehiclePrimaryCategory;
   classification: VehicleClassification;
-  assigned_driver_id: string;
   phone: string;
   has_car_wash_subscription: boolean;
   always_clean: boolean;
 }
 const initialFormData: VehicleFormData = {
   unit: "",
-  driver: "",
   status: "active",
   clean_status: "clean",
   vehicle_type: "",
   notes: "",
   primary_category: "above_all",
   classification: "fleet",
-  assigned_driver_id: "",
   phone: "",
   has_car_wash_subscription: false,
   always_clean: false
@@ -398,30 +394,18 @@ export function VehicleManagement() {
       });
       return;
     }
-    // Validate Take Home requires assigned driver
-    if (formData.primary_category === "above_all" && 
-        formData.classification === "take_home" && 
-        !formData.assigned_driver_id) {
-      toast({
-        title: "Error",
-        description: "Take Home vehicles require an assigned owner (driver)",
-        variant: "destructive"
-      });
-      return;
-    }
+    // Take Home owner is now managed from Driver Profile page
     const {
       error
     } = await supabase.from("vehicles").insert({
       unit: formData.unit.trim(),
       vehicle_type: formData.vehicle_type || null,
-      driver: formData.driver.trim() || null,
       phone: formData.phone.trim() || null,
       status: formData.status,
       clean_status: formData.clean_status,
       notes: formData.notes.trim() || null,
       primary_category: formData.primary_category,
       classification: formData.primary_category === "above_all" ? formData.classification : "fleet",
-      assigned_driver_id: formData.assigned_driver_id || null,
       always_clean: formData.always_clean
     });
     if (error) {
@@ -456,17 +440,7 @@ export function VehicleManagement() {
       });
       return;
     }
-    // Validate Take Home requires assigned driver
-    if (formData.primary_category === "above_all" && 
-        formData.classification === "take_home" && 
-        !formData.assigned_driver_id) {
-      toast({
-        title: "Error",
-        description: "Take Home vehicles require an assigned owner (driver)",
-        variant: "destructive"
-      });
-      return;
-    }
+    // Take Home owner is now managed from Driver Profile page
     
     const existingVehicle = vehicles.find(v => v.id === id);
     const now = new Date().toISOString();
@@ -476,14 +450,12 @@ export function VehicleManagement() {
     const updateData: Record<string, unknown> = {
       unit: formData.unit.trim(),
       vehicle_type: formData.vehicle_type || null,
-      driver: formData.driver.trim() || null,
       phone: formData.phone.trim() || null,
       status: formData.status,
       clean_status: formData.clean_status,
       notes: formData.notes.trim() || null,
       primary_category: formData.primary_category,
       classification: formData.primary_category === "above_all" ? formData.classification : "fleet",
-      assigned_driver_id: formData.assigned_driver_id || null,
       always_clean: formData.always_clean,
       updated_at: now
     };
@@ -559,13 +531,11 @@ export function VehicleManagement() {
     setFormData({
       unit: vehicle.unit,
       vehicle_type: vehicle.vehicle_type || "",
-      driver: vehicle.driver || "",
       status: vehicle.status,
       clean_status: vehicle.clean_status,
       notes: (vehicle as any).notes || "",
       primary_category: (vehicle as any).primary_category || "above_all",
       classification: (vehicle as any).classification === "house" ? "fleet" : ((vehicle as any).classification || "fleet"),
-      assigned_driver_id: (vehicle as any).assigned_driver_id || "",
       phone: (vehicle as any).phone || "",
       has_car_wash_subscription: (vehicle as any).has_car_wash_subscription || false,
       always_clean: (vehicle as any).always_clean || false
@@ -582,24 +552,6 @@ export function VehicleManagement() {
     if (!vehicleType) return false;
     const found = VEHICLE_TYPES.find(t => t.value === vehicleType);
     return found?.requiresCdl || false;
-  };
-
-  // Filter drivers based on vehicle type CDL requirement
-  const getAvailableDrivers = () => {
-    const activeDrivers = allDrivers.filter(d => d.is_active);
-    if (vehicleRequiresCdl(formData.vehicle_type)) {
-      return activeDrivers.filter(d => d.has_cdl);
-    }
-    return activeDrivers;
-  };
-
-  // Check for CDL mismatch warning
-  const hasCdlMismatch = () => {
-    if (!formData.driver || !formData.vehicle_type) return false;
-    const requiresCdl = vehicleRequiresCdl(formData.vehicle_type);
-    if (!requiresCdl) return false;
-    const driver = allDrivers.find(d => d.name === formData.driver);
-    return driver && !driver.has_cdl;
   };
 
   // Check if a specific vehicle has CDL mismatch
@@ -656,29 +608,7 @@ export function VehicleManagement() {
                   unit: e.target.value
                 })} placeholder="Veh ID" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="driver">
-                    Assigned Driver
-                    {vehicleRequiresCdl(formData.vehicle_type) && <span className="ml-2 text-xs text-amber-600">(CDL required)</span>}
-                  </Label>
-                  <Select value={formData.driver} onValueChange={value => setFormData({
-                  ...formData,
-                  driver: value === "_none" ? "" : value
-                })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select driver" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_none">No driver</SelectItem>
-                      {getAvailableDrivers().map(driver => <SelectItem key={driver.id} value={driver.name}>
-                          {driver.name} {driver.has_cdl && <span className="text-muted-foreground">(CDL)</span>}
-                        </SelectItem>)}
-                      {vehicleRequiresCdl(formData.vehicle_type) && getAvailableDrivers().length === 0 && <SelectItem value="_none" disabled>
-                          No CDL drivers available
-                        </SelectItem>}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Driver assignment removed - managed via Drivers page */}
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone</Label>
                   <Input id="phone" value={formData.phone} onChange={e => setFormData({
@@ -717,8 +647,7 @@ export function VehicleManagement() {
                   setFormData({
                     ...formData,
                     primary_category: value,
-                    classification: value === "specialty" ? "fleet" : formData.classification,
-                    assigned_driver_id: value === "specialty" ? "" : formData.assigned_driver_id
+                    classification: value === "specialty" ? "fleet" : formData.classification
                   });
                 }}>
                     <SelectTrigger>
@@ -735,8 +664,7 @@ export function VehicleManagement() {
                     <Select value={formData.classification} onValueChange={(value: VehicleClassification) => {
                   setFormData({
                     ...formData,
-                    classification: value,
-                    assigned_driver_id: value === "fleet" ? "" : formData.assigned_driver_id
+                    classification: value
                   });
                 }}>
                       <SelectTrigger>
@@ -749,26 +677,9 @@ export function VehicleManagement() {
                     </Select>
                   </div>}
                 {formData.primary_category === "above_all" && formData.classification === "take_home" && <div className="space-y-2">
-                    <Label className={!formData.assigned_driver_id ? "text-destructive" : ""}>
-                      Owner (Required) *
-                    </Label>
-                    <Select value={formData.assigned_driver_id || "_none"} onValueChange={value => setFormData({
-                  ...formData,
-                  assigned_driver_id: value === "_none" ? "" : value
-                })}>
-                      <SelectTrigger className={!formData.assigned_driver_id ? "border-destructive" : ""}>
-                        <SelectValue placeholder="Select owner" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_none">No owner assigned</SelectItem>
-                        {allDrivers.filter(d => d.is_active).map(driver => <SelectItem key={driver.id} value={driver.id}>
-                              {driver.name} {driver.has_cdl && <span className="text-muted-foreground">(CDL)</span>}
-                            </SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    {!formData.assigned_driver_id && (
-                      <p className="text-xs text-destructive">Take Home vehicles must have an owner assigned</p>
-                    )}
+                    <p className="text-xs text-muted-foreground italic">
+                      Take Home owner is managed from Driver Profile → Default Vehicle
+                    </p>
                   </div>}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -811,10 +722,6 @@ export function VehicleManagement() {
                   notes: e.target.value
                 })} placeholder="Maintenance notes, etc." rows={3} />
                 </div>
-                {hasCdlMismatch() && <div className="flex items-center gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-600">
-                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                    <span>Warning: {formData.driver} does not have a CDL but this vehicle type requires one.</span>
-                  </div>}
                 <Button onClick={handleAdd} className="w-full">
                   Add Vehicle
                 </Button>
@@ -1080,8 +987,7 @@ export function VehicleManagement() {
                   setFormData({
                     ...formData,
                     primary_category: value,
-                    classification: value === "specialty" ? "fleet" : formData.classification,
-                    assigned_driver_id: value === "specialty" ? "" : formData.assigned_driver_id
+                    classification: value === "specialty" ? "fleet" : formData.classification
                   });
                 }}>
                             <SelectTrigger className="h-8">
@@ -1098,8 +1004,7 @@ export function VehicleManagement() {
                             <Select value={formData.classification} onValueChange={(value: VehicleClassification) => {
                   setFormData({
                     ...formData,
-                    classification: value,
-                    assigned_driver_id: value === "fleet" ? "" : formData.assigned_driver_id
+                    classification: value
                   });
                 }}>
                               <SelectTrigger className="h-8">
@@ -1112,24 +1017,9 @@ export function VehicleManagement() {
                             </Select>
                           </div>}
                         {formData.primary_category === "above_all" && formData.classification === "take_home" && <div className="space-y-1">
-                            <Label className={`text-xs ${!formData.assigned_driver_id ? "text-destructive" : ""}`}>Owner *</Label>
-                            <Select value={formData.assigned_driver_id || "_none"} onValueChange={value => setFormData({
-                  ...formData,
-                  assigned_driver_id: value === "_none" ? "" : value
-                })}>
-                              <SelectTrigger className={`h-8 ${!formData.assigned_driver_id ? "border-destructive" : ""}`}>
-                                <SelectValue placeholder="Select owner" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="_none">No owner</SelectItem>
-                                {allDrivers.filter(d => d.is_active).map(driver => <SelectItem key={driver.id} value={driver.id}>
-                                    {driver.name}
-                                  </SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                            {!formData.assigned_driver_id && (
-                              <p className="text-[10px] text-destructive">Required</p>
-                            )}
+                            <p className="text-[10px] text-muted-foreground italic">
+                              Owner managed from Driver Profile
+                            </p>
                           </div>}
                       </div>
                       {formData.primary_category === "above_all" && <div className="flex items-center gap-4 pt-2">
@@ -1191,7 +1081,7 @@ export function VehicleManagement() {
                           <span className="font-medium">
                             {vehicle.assigned_driver_id 
                               ? allDrivers.find(d => d.id === vehicle.assigned_driver_id)?.name || "Unknown"
-                              : <span className="text-destructive">Not assigned (required)</span>
+                              : <span className="text-muted-foreground italic">Set via Driver Profile</span>
                             }
                           </span>
                         </div>
