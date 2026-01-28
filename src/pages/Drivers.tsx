@@ -2091,6 +2091,7 @@ const Drivers = () => {
                   name: d.name,
                   code: d.code,
                   has_cdl: (d as any).has_cdl,
+                  phone: (d as any).phone,
                 }))}
                 isOpen={offDriversOpen}
                 onOpenChange={setOffDriversOpen}

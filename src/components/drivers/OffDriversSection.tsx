@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
-import { ChevronDown, PhoneOff, Search, UserPlus, X, Truck } from "lucide-react";
+import { ChevronDown, PhoneOff, Search, UserPlus, X, Truck, Phone } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,7 @@ interface OffDriver {
   name: string;
   code?: string | null;
   has_cdl?: boolean;
+  phone?: string | null;
 }
 
 interface OffDriversSectionProps {
@@ -166,7 +168,7 @@ function OffDriverGrid({
   showCdlBadge,
   emptyMessage,
 }: {
-  drivers: { id: string; name: string; code?: string | null; has_cdl?: boolean }[];
+  drivers: { id: string; name: string; code?: string | null; has_cdl?: boolean; phone?: string | null }[];
   hasOffRecord: (id: string) => boolean;
   isActualCallOut: (id: string) => boolean;
   getCallOutNote: (id: string) => string | null;
@@ -183,76 +185,96 @@ function OffDriverGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 max-h-[280px] overflow-y-auto pr-1">
-      {drivers.map((driver) => {
-        const markedOff = hasOffRecord(driver.id);
-        const calledOut = isActualCallOut(driver.id);
-        const note = getCallOutNote(driver.id);
+    <TooltipProvider delayDuration={200}>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 max-h-[280px] overflow-y-auto pr-1">
+        {drivers.map((driver) => {
+          const markedOff = hasOffRecord(driver.id);
+          const calledOut = isActualCallOut(driver.id);
+          const note = getCallOutNote(driver.id);
 
-        return (
-          <div
-            key={driver.id}
-            className={cn(
-              "group flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs transition-all duration-150",
-              calledOut
-                ? "border-destructive/40 bg-destructive/10"
-                : markedOff
-                ? "border-amber-500/40 bg-amber-500/10"
-                : "border-border bg-card/60 hover:border-primary/40 hover:bg-card"
-            )}
-          >
-            {/* Status dot */}
-            <span
+          const cardContent = (
+            <div
               className={cn(
-                "h-1.5 w-1.5 rounded-full shrink-0",
-                calledOut ? "bg-destructive" : markedOff ? "bg-amber-500" : "bg-muted-foreground/50"
+                "group flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs transition-all duration-150",
+                calledOut
+                  ? "border-destructive/40 bg-destructive/10"
+                  : markedOff
+                  ? "border-amber-500/40 bg-amber-500/10"
+                  : "border-border bg-card/60 hover:border-primary/40 hover:bg-card"
               )}
-            />
-
-            {/* Driver name with code */}
-            <span className="flex-1 truncate font-medium text-foreground" title={driver.name}>
-              {driver.code ? (
-                <>
-                  <span className="text-muted-foreground">{driver.code}</span>
-                  <span className="mx-1">·</span>
-                  {driver.name.split(" ")[0]}
-                </>
-              ) : (
-                driver.name
-              )}
-            </span>
-
-            {/* Status icon */}
-            {calledOut ? (
-              <span title={note || "Called out"}>
-                <PhoneOff className="h-3 w-3 text-destructive shrink-0" />
-              </span>
-            ) : markedOff ? (
-              <span title="Marked off">
-                <X className="h-3 w-3 text-amber-500 shrink-0" />
-              </span>
-            ) : null}
-
-            {/* CDL badge */}
-            {showCdlBadge && (
-              <span className="text-[8px] font-bold text-primary bg-primary/15 px-1 py-0.5 rounded uppercase shrink-0">
-                CDL
-              </span>
-            )}
-
-            {/* Add button - appears on hover */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onAddToSchedule(driver.id, driver.name)}
-              className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 hover:text-primary shrink-0"
-              title="Add to today's schedule"
             >
-              <UserPlus className="h-3 w-3" />
-            </Button>
-          </div>
-        );
-      })}
-    </div>
+              {/* Status dot */}
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full shrink-0",
+                  calledOut ? "bg-destructive" : markedOff ? "bg-amber-500" : "bg-muted-foreground/50"
+                )}
+              />
+
+              {/* Driver name with code */}
+              <span className="flex-1 truncate font-medium text-foreground" title={driver.name}>
+                {driver.code ? (
+                  <>
+                    <span className="text-muted-foreground">{driver.code}</span>
+                    <span className="mx-1">·</span>
+                    {driver.name.split(" ")[0]}
+                  </>
+                ) : (
+                  driver.name
+                )}
+              </span>
+
+              {/* Status icon */}
+              {calledOut ? (
+                <PhoneOff className="h-3 w-3 text-destructive shrink-0" />
+              ) : markedOff ? (
+                <X className="h-3 w-3 text-amber-500 shrink-0" />
+              ) : null}
+
+              {/* CDL badge */}
+              {showCdlBadge && (
+                <span className="text-[8px] font-bold text-primary bg-primary/15 px-1 py-0.5 rounded uppercase shrink-0">
+                  CDL
+                </span>
+              )}
+
+              {/* Add button - appears on hover */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onAddToSchedule(driver.id, driver.name)}
+                className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 hover:text-primary shrink-0"
+                title="Add to today's schedule"
+              >
+                <UserPlus className="h-3 w-3" />
+              </Button>
+            </div>
+          );
+
+          // For called-out drivers, wrap in tooltip to show phone number
+          if (calledOut && driver.phone) {
+            return (
+              <Tooltip key={driver.id}>
+                <TooltipTrigger asChild>
+                  {cardContent}
+                </TooltipTrigger>
+                <TooltipContent side="top" className="flex items-center gap-2 bg-popover border border-border">
+                  <Phone className="h-3 w-3 text-primary" />
+                  <span className="font-mono text-sm">{driver.phone}</span>
+                  {note && (
+                    <>
+                      <span className="text-muted-foreground">·</span>
+                      <span className="text-xs text-muted-foreground italic max-w-[150px] truncate">{note}</span>
+                    </>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            );
+          }
+
+          return <div key={driver.id}>{cardContent}</div>;
+        })}
+      </div>
+    </TooltipProvider>
   );
 }
