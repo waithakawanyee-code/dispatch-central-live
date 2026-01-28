@@ -242,7 +242,16 @@ export function DriverManagement() {
       return matchesSearch && matchesCdl && matchesActive && matchesShuttle;
     })
     .sort((a, b) => {
-      if (sortBy === "name") return a.name.localeCompare(b.name);
+      if (sortBy === "name") {
+        // Extract last name (last word in the name) for sorting
+        const getLastName = (name: string) => {
+          const parts = name.trim().split(/\s+/);
+          return parts.length > 0 ? parts[parts.length - 1].toLowerCase() : "";
+        };
+        const aLastName = getLastName(a.name);
+        const bLastName = getLastName(b.name);
+        return aLastName.localeCompare(bLastName);
+      }
       if (sortBy === "status") {
         const aActive = (a as any).is_active !== false ? 1 : 0;
         const bActive = (b as any).is_active !== false ? 1 : 0;
