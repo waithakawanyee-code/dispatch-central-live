@@ -251,8 +251,8 @@ function OffDriverGrid({
             </div>
           );
 
-          // For called-out drivers, wrap in tooltip to show phone number
-          if (calledOut && driver.phone) {
+          // Wrap in tooltip to show phone number for all drivers
+          if (driver.phone) {
             return (
               <Tooltip key={driver.id}>
                 <TooltipTrigger asChild>
