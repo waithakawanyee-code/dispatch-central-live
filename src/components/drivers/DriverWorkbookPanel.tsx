@@ -18,6 +18,7 @@ interface DisplayDriver {
   report_time?: string | null;
   has_cdl?: boolean;
   default_vehicle?: string | null;
+  phone?: string | null;
   shiftData?: {
     punch_in_at?: string | null;
     punch_out_at?: string | null;
@@ -128,6 +129,7 @@ export function DriverWorkbookPanel({
                       onClick={() => onDriverSelect(driver.id)}
                       onConfirm={onConfirmDriver}
                       subcategory="has_vehicle"
+                      showPhoneTooltip
                     />
                   ))}
                 </DriverSubcategoryGroup>
@@ -144,6 +146,7 @@ export function DriverWorkbookPanel({
                       isSelected={selectedDriverId === driver.id}
                       isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                       onClick={() => onDriverSelect(driver.id)}
+                      showPhoneTooltip
                     />
                   ))}
                 </div>
