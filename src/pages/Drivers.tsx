@@ -1501,7 +1501,7 @@ const Drivers = () => {
   const markedOffCount = todayCallOuts.filter(c => !c.is_call_out).length;
 
   // Helper to sort drivers by code alphabetically (matches DriverWorkbookPanel sorting)
-  const sortByCode = (driverList: typeof displayDrivers) => {
+  const sortByCode = <T extends { code?: string | null }>(driverList: T[]): T[] => {
     return [...driverList].sort((a, b) => {
       const aCode = a.code || "zzz";
       const bCode = b.code || "zzz";
