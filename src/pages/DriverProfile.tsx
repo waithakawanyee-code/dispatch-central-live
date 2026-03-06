@@ -1,15 +1,22 @@
 import { useState, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { format, parseISO, differenceInMinutes, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
-import { ArrowLeft, User, Clock, CalendarOff, Calendar, AlertTriangle, Settings } from "lucide-react";
+import { ArrowLeft, User, Clock, CalendarOff, Calendar, AlertTriangle, Settings, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { useDriverTimeOff, type DriverTimeOff } from "@/hooks/useDriverTimeOff";
 import { useDriverShifts } from "@/hooks/useDriverShifts";
 import { DriverProfileForm } from "@/components/admin/DriverProfileForm";
+import { CalendarIcon } from "lucide-react";
 
 const TIME_OFF_LABELS: Record<DriverTimeOff["time_off_type"], string> = {
   vacation: "Vacation", sick: "Sick", personal: "Personal", fmla: "FMLA",
