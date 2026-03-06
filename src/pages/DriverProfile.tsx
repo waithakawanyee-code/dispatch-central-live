@@ -209,46 +209,144 @@ const DriverProfile = () => {
 
           {/* Time Off Tab */}
           <TabsContent value="timeoff">
-            {timeOffLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-muted-foreground">Time Off History</h3>
+                <Button size="sm" className="gap-1.5" onClick={() => setAddTimeOffOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  Add Time Off
+                </Button>
               </div>
-            ) : timeOffEntries.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">No time off records found</p>
-            ) : (
-              <div className="rounded-lg border border-border bg-card overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-secondary/50">
-                      <th className="text-left px-4 py-2 font-medium">Type</th>
-                      <th className="text-left px-4 py-2 font-medium">Start</th>
-                      <th className="text-left px-4 py-2 font-medium">End</th>
-                      <th className="text-left px-4 py-2 font-medium">Status</th>
-                      <th className="text-left px-4 py-2 font-medium">Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {timeOffEntries.map((entry) => (
-                      <tr key={entry.id} className="hover:bg-secondary/30">
-                        <td className="px-4 py-2.5">
-                          <Badge variant="outline" className={cn("text-xs", TYPE_COLORS[entry.time_off_type])}>
-                            {TIME_OFF_LABELS[entry.time_off_type]}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-2.5">{format(parseISO(entry.start_date), "MMM d, yyyy")}</td>
-                        <td className="px-4 py-2.5">{format(parseISO(entry.end_date), "MMM d, yyyy")}</td>
-                        <td className="px-4 py-2.5">
-                          <Badge variant="outline" className="text-xs capitalize">{entry.status}</Badge>
-                        </td>
-                        <td className="px-4 py-2.5 text-muted-foreground">{entry.notes || "-"}</td>
+
+              {timeOffLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              ) : timeOffEntries.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">No time off records found</p>
+              ) : (
+                <div className="rounded-lg border border-border bg-card overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-secondary/50">
+                        <th className="text-left px-4 py-2 font-medium">Type</th>
+                        <th className="text-left px-4 py-2 font-medium">Start</th>
+                        <th className="text-left px-4 py-2 font-medium">End</th>
+                        <th className="text-left px-4 py-2 font-medium">Status</th>
+                        <th className="text-left px-4 py-2 font-medium">Notes</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {timeOffEntries.map((entry) => (
+                        <tr key={entry.id} className="hover:bg-secondary/30">
+                          <td className="px-4 py-2.5">
+                            <Badge variant="outline" className={cn("text-xs", TYPE_COLORS[entry.time_off_type])}>
+                              {TIME_OFF_LABELS[entry.time_off_type]}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-2.5">{format(parseISO(entry.start_date), "MMM d, yyyy")}</td>
+                          <td className="px-4 py-2.5">{format(parseISO(entry.end_date), "MMM d, yyyy")}</td>
+                          <td className="px-4 py-2.5">
+                            <Badge variant="outline" className="text-xs capitalize">{entry.status}</Badge>
+                          </td>
+                          <td className="px-4 py-2.5 text-muted-foreground">{entry.notes || "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </TabsContent>
         </Tabs>
+
+        {/* Add Time Off Dialog */}
+        <Dialog open={addTimeOffOpen} onOpenChange={setAddTimeOffOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Time Off{driver ? ` — ${driver.name}` : ""}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <Select value={timeOffType} onValueChange={(v) => setTimeOffType(v as DriverTimeOff["time_off_type"])}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vacation">Vacation</SelectItem>
+                    <SelectItem value="sick">Sick</SelectItem>
+                    <SelectItem value="personal">Personal</SelectItem>
+                    <SelectItem value="fmla">FMLA</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Start Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !timeOffStartDate && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {timeOffStartDate ? format(timeOffStartDate, "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarPicker mode="single" selected={timeOffStartDate} onSelect={setTimeOffStartDate} initialFocus className="p-3 pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <Label>End Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !timeOffEndDate && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {timeOffEndDate ? format(timeOffEndDate, "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarPicker mode="single" selected={timeOffEndDate} onSelect={setTimeOffEndDate} initialFocus className="p-3 pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Notes (optional)</Label>
+                <Textarea value={timeOffNotes} onChange={(e) => setTimeOffNotes(e.target.value)} placeholder="Additional notes..." rows={2} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAddTimeOffOpen(false)}>Cancel</Button>
+              <Button
+                disabled={!timeOffStartDate || !timeOffEndDate || timeOffSaving}
+                onClick={async () => {
+                  if (!driver || !timeOffStartDate || !timeOffEndDate) return;
+                  setTimeOffSaving(true);
+                  try {
+                    await addTimeOff.mutateAsync({
+                      driver_id: driver.id,
+                      driver_name: driver.name,
+                      time_off_type: timeOffType,
+                      start_date: format(timeOffStartDate, "yyyy-MM-dd"),
+                      end_date: format(timeOffEndDate, "yyyy-MM-dd"),
+                      notes: timeOffNotes.trim() || undefined,
+                    });
+                    setAddTimeOffOpen(false);
+                    setTimeOffStartDate(undefined);
+                    setTimeOffEndDate(undefined);
+                    setTimeOffNotes("");
+                    setTimeOffType("vacation");
+                  } catch {
+                    // error handled by mutation
+                  } finally {
+                    setTimeOffSaving(false);
+                  }
+                }}
+              >
+                {timeOffSaving ? "Saving..." : "Add Time Off"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
