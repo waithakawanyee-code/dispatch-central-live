@@ -94,7 +94,6 @@ const defaultDisplayPrefs: DisplayPreferences = {
 export function DriverManagement() {
   const { allDrivers: drivers, vehicles } = useDispatchData();
   const { toast } = useToast();
-  const [isAddOpen, setIsAddOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
   const [parsedImportRows, setParsedImportRows] = useState<ReturnType<typeof validateImportRow>[]>([]);
@@ -510,10 +509,12 @@ export function DriverManagement() {
             className="hidden"
             onChange={handleFileSelect}
           />
-          <Button size="sm" className="gap-2" onClick={() => setIsAddOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Add Driver
-          </Button>
+          <Link to="/admin/driver/new">
+            <Button size="sm" className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Driver
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -700,14 +701,6 @@ export function DriverManagement() {
         </TabsContent>
       </Tabs>
 
-      {/* Driver Profile Dialog - Add Mode */}
-      <DriverProfileDialog
-        driver={null}
-        vehicles={vehicles}
-        open={isAddOpen}
-        onOpenChange={setIsAddOpen}
-        mode="add"
-      />
 
 
       {/* Import Preview Dialog */}

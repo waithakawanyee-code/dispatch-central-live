@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { format, parseISO, differenceInMinutes, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { ArrowLeft, User, Clock, CalendarOff, Calendar, AlertTriangle, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,12 +32,14 @@ function formatDuration(inAt: string, outAt: string | null): string {
 
 const DriverProfile = () => {
   const { driverId } = useParams<{ driverId: string }>();
+  const navigate = useNavigate();
+  const isNewDriver = driverId === "new";
   const { allDrivers, vehicles } = useDispatchData();
-  const { timeOffEntries, isLoading: timeOffLoading } = useDriverTimeOff(driverId);
-  const { shifts, isLoading: shiftsLoading, getTotalHours } = useDriverShifts(driverId);
+  const { timeOffEntries, isLoading: timeOffLoading } = useDriverTimeOff(isNewDriver ? undefined : driverId);
+  const { shifts, isLoading: shiftsLoading, getTotalHours } = useDriverShifts(isNewDriver ? undefined : driverId);
   const [activeTab, setActiveTab] = useState("profile");
 
-  const driver = allDrivers.find((d) => d.id === driverId);
+  const driver = isNewDriver ? null : allDrivers.find((d) => d.id === driverId);
 
   // Hours summary
   const now = new Date();
@@ -56,7 +58,7 @@ const DriverProfile = () => {
     return d >= monthStart && d <= monthEnd;
   }), [shifts, monthStart, monthEnd]);
 
-  if (!driver) {
+  if (!isNewDriver && !driver) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -82,32 +84,38 @@ const DriverProfile = () => {
             <span className="text-sm">Back to Admin</span>
           </Link>
           <div className="h-4 w-px bg-border" />
-          <h1 className="text-lg font-semibold text-foreground">{driver.name}</h1>
-          {driver.code && (
-            <Badge variant="outline" className="text-xs font-mono text-primary">{driver.code}</Badge>
+          <h1 className="text-lg font-semibold text-foreground">
+            {isNewDriver ? "Add New Driver" : driver!.name}
+          </h1>
+          {!isNewDriver && driver!.code && (
+            <Badge variant="outline" className="text-xs font-mono text-primary">{driver!.code}</Badge>
           )}
-          <Badge variant={driver.is_active ? "default" : "secondary"} className="text-xs">
-            {driver.is_active ? "Active" : "Inactive"}
-          </Badge>
+          {!isNewDriver && (
+            <Badge variant={driver!.is_active ? "default" : "secondary"} className="text-xs">
+              {driver!.is_active ? "Active" : "Inactive"}
+            </Badge>
+          )}
         </div>
       </header>
 
       <main className="p-4 max-w-5xl mx-auto space-y-6">
-        {/* Hours Summary Cards */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="rounded-lg border border-border bg-card p-4">
-            <p className="text-xs text-muted-foreground">This Week</p>
-            <p className="text-2xl font-bold">{getTotalHours(weekShifts).toFixed(1)}h</p>
+        {/* Hours Summary Cards - only for existing drivers */}
+        {!isNewDriver && (
+          <div className="grid grid-cols-3 gap-4">
+            <div className="rounded-lg border border-border bg-card p-4">
+              <p className="text-xs text-muted-foreground">This Week</p>
+              <p className="text-2xl font-bold">{getTotalHours(weekShifts).toFixed(1)}h</p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <p className="text-xs text-muted-foreground">This Month</p>
+              <p className="text-2xl font-bold">{getTotalHours(monthShifts).toFixed(1)}h</p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <p className="text-xs text-muted-foreground">Total Shifts</p>
+              <p className="text-2xl font-bold">{shifts.length}</p>
+            </div>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <p className="text-xs text-muted-foreground">This Month</p>
-            <p className="text-2xl font-bold">{getTotalHours(monthShifts).toFixed(1)}h</p>
-          </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <p className="text-xs text-muted-foreground">Total Shifts</p>
-            <p className="text-2xl font-bold">{shifts.length}</p>
-          </div>
-        </div>
+        )}
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -116,14 +124,18 @@ const DriverProfile = () => {
               <Settings className="h-3.5 w-3.5" />
               Profile
             </TabsTrigger>
-            <TabsTrigger value="hours" className="gap-1.5">
-              <Clock className="h-3.5 w-3.5" />
-              Hours
-            </TabsTrigger>
-            <TabsTrigger value="timeoff" className="gap-1.5">
-              <CalendarOff className="h-3.5 w-3.5" />
-              Time Off
-            </TabsTrigger>
+            {!isNewDriver && (
+              <>
+                <TabsTrigger value="hours" className="gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  Hours
+                </TabsTrigger>
+                <TabsTrigger value="timeoff" className="gap-1.5">
+                  <CalendarOff className="h-3.5 w-3.5" />
+                  Time Off
+                </TabsTrigger>
+              </>
+            )}
           </TabsList>
 
           {/* Profile Tab */}
@@ -133,9 +145,11 @@ const DriverProfile = () => {
                 driver={driver as any}
                 vehicles={vehicles}
                 onSaved={() => {
-                  // Data will refresh automatically via react-query
+                  if (isNewDriver) {
+                    navigate("/admin");
+                  }
                 }}
-                mode="edit"
+                mode={isNewDriver ? "add" : "edit"}
               />
             </div>
           </TabsContent>
