@@ -116,12 +116,17 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
   const { toast } = useToast();
   const [formData, setFormData] = useState<DriverProfileFormData>(initialFormData);
   const [schedule, setSchedule] = useState<WeeklySchedule>(initialSchedule);
+  const [shuttleSchedule, setShuttleSchedule] = useState<ShuttleWeeklySchedule>(initialShuttleSchedule);
   const [saving, setSaving] = useState(false);
   const isAddMode = mode === "add";
 
+  const isPrimaryShuttle = formData.amtrak_primary || formData.bph_primary;
+  const shuttleProgram = formData.amtrak_primary ? "amtrak" : formData.bph_primary ? "bph" : null;
+
   useEffect(() => {
-    const fetchSchedule = async () => {
+    const fetchSchedules = async () => {
       if (driver && !isAddMode) {
+        // Fetch regular schedule
         const { data } = await supabase.from("driver_schedules").select("*").eq("driver_id", driver.id);
         if (data && data.length > 0) {
           const scheduleMap: WeeklySchedule = { ...initialSchedule };
@@ -138,11 +143,32 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
         } else {
           setSchedule(initialSchedule);
         }
+
+        // Fetch shuttle schedule
+        const { data: shuttleData } = await supabase
+          .from("shuttle_schedules")
+          .select("*")
+          .eq("driver_id", driver.id);
+        if (shuttleData && shuttleData.length > 0) {
+          const shuttleMap: ShuttleWeeklySchedule = { ...initialShuttleSchedule };
+          // Mark all days as not working first, then set from data
+          Object.keys(shuttleMap).forEach(k => { shuttleMap[Number(k)] = { is_working: false, shift_number: 1 }; });
+          shuttleData.forEach((s) => {
+            shuttleMap[s.day_of_week] = {
+              is_working: true,
+              shift_number: s.shift_number,
+            };
+          });
+          setShuttleSchedule(shuttleMap);
+        } else {
+          setShuttleSchedule(initialShuttleSchedule);
+        }
       } else {
         setSchedule(initialSchedule);
+        setShuttleSchedule(initialShuttleSchedule);
       }
     };
-    fetchSchedule();
+    fetchSchedules();
   }, [driver, isAddMode]);
 
   useEffect(() => {
