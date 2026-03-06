@@ -97,7 +97,7 @@ export function DriverManagement() {
   const [importing, setImporting] = useState(false);
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
   const [parsedImportRows, setParsedImportRows] = useState<ReturnType<typeof validateImportRow>[]>([]);
-  const [cdlTab, setCdlTab] = useState<"cdl" | "non-cdl">("non-cdl");
+  const [cdlTab, setCdlTab] = useState<"cdl" | "non-cdl" | "shuttle">("non-cdl");
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("active");
   const [shuttleFilter, setShuttleFilter] = useState<"all" | "amtrak-primary" | "amtrak-trained" | "bph-primary" | "bph-trained">("all");
   const [searchQuery, setSearchQuery] = useState("");
