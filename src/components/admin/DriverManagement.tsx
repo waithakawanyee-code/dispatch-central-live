@@ -95,7 +95,6 @@ export function DriverManagement() {
   const { allDrivers: drivers, vehicles } = useDispatchData();
   const { toast } = useToast();
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [editingDriver, setEditingDriver] = useState<DriverRow | null>(null);
   const [importing, setImporting] = useState(false);
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
   const [parsedImportRows, setParsedImportRows] = useState<ReturnType<typeof validateImportRow>[]>([]);
@@ -460,9 +459,6 @@ export function DriverManagement() {
     }
   };
 
-  const openEditProfile = (driver: DriverRow) => {
-    setEditingDriver(driver);
-  };
 
   const toggleDriverActive = async (id: string, currentlyActive: boolean) => {
     const { error } = await supabase
@@ -713,14 +709,6 @@ export function DriverManagement() {
         mode="add"
       />
 
-      {/* Driver Profile Dialog - Edit Mode */}
-      <DriverProfileDialog
-        driver={editingDriver}
-        vehicles={vehicles}
-        open={editingDriver !== null}
-        onOpenChange={(open) => !open && setEditingDriver(null)}
-        mode="edit"
-      />
 
       {/* Import Preview Dialog */}
       <ImportPreviewDialog
@@ -934,9 +922,6 @@ export function DriverManagement() {
                         <ExternalLink className="h-4 w-4" />
                       </Button>
                     </Link>
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditProfile(driver as DriverRow)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive">
