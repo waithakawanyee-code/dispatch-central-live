@@ -51,20 +51,29 @@ interface DaySchedule {
 
 type WeeklySchedule = Record<number, DaySchedule>;
 
+interface ShuttleDaySchedule {
+  is_working: boolean;
+  shift_number: number;
+}
+
+type ShuttleWeeklySchedule = Record<number, ShuttleDaySchedule>;
+
 const AMTRAK_SHIFTS = [
   { number: 1, label: "Shift 1", start: "03:00", end: "11:00" },
   { number: 2, label: "Shift 2", start: "11:00", end: "19:00" },
   { number: 3, label: "Shift 3", start: "19:00", end: "03:00" },
 ];
 
+const BPH_SHIFT = { start: "06:00", end: "18:00", label: "06:00 AM – 06:00 PM" };
+
 const DAYS_OF_WEEK = [
-  { value: 0, label: "Monday", short: "Sun" },
-  { value: 1, label: "Tuesday", short: "Mon" },
-  { value: 2, label: "Wednesday", short: "Tue" },
-  { value: 3, label: "Thursday", short: "Wed" },
-  { value: 4, label: "Friday", short: "Thu" },
-  { value: 5, label: "Saturday", short: "Fri" },
-  { value: 6, label: "Sunday", short: "Sat" },
+  { value: 0, label: "Sunday", short: "Sun" },
+  { value: 1, label: "Monday", short: "Mon" },
+  { value: 2, label: "Tuesday", short: "Tue" },
+  { value: 3, label: "Wednesday", short: "Wed" },
+  { value: 4, label: "Thursday", short: "Thu" },
+  { value: 5, label: "Friday", short: "Fri" },
+  { value: 6, label: "Saturday", short: "Sat" },
 ];
 
 const initialSchedule: WeeklySchedule = {
@@ -75,6 +84,16 @@ const initialSchedule: WeeklySchedule = {
   4: { is_off: false, is_any_hours: false, start_time: "00:00", end_time: "", note: "" },
   5: { is_off: false, is_any_hours: false, start_time: "00:00", end_time: "", note: "" },
   6: { is_off: true, is_any_hours: false, start_time: "", end_time: "", note: "" },
+};
+
+const initialShuttleSchedule: ShuttleWeeklySchedule = {
+  0: { is_working: false, shift_number: 1 },
+  1: { is_working: true, shift_number: 1 },
+  2: { is_working: true, shift_number: 1 },
+  3: { is_working: true, shift_number: 1 },
+  4: { is_working: true, shift_number: 1 },
+  5: { is_working: true, shift_number: 1 },
+  6: { is_working: false, shift_number: 1 },
 };
 
 const initialFormData: DriverProfileFormData = {
