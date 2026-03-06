@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useDriverTimeOff } from "@/hooks/useDriverTimeOff";
 import type { Database } from "@/integrations/supabase/types";
 type DriverSchedule = Database["public"]["Tables"]["driver_schedules"]["Row"];
 interface CallOut {
@@ -62,6 +63,7 @@ const Drivers = () => {
   } = useUserRole();
   const [statsOpen, setStatsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
+  const { isDriverOffOnDate } = useDriverTimeOff();
 
   // Use shifts hook for selected workday
   const {
@@ -289,12 +291,16 @@ const Drivers = () => {
       // Also include drivers with base status of confirmed
       // EXCLUDE primary shuttle drivers (they have their own workflow on /scheduler)
       // EXCLUDE drivers who have been marked OFF (have a call-out record for today)
+      const todayStr = format(today, "yyyy-MM-dd");
       const todayDrivers = drivers.filter(d => {
         // Exclude primary shuttle drivers from this workflow
         if ((d as any).amtrak_primary || (d as any).bph_primary) return false;
         
         // Exclude drivers who have a call-out for today (they are OFF)
         if (calledOutDriverIds.has(d.id)) return false;
+
+        // Exclude drivers who are on planned time off today
+        if (isDriverOffOnDate(d.id, todayStr)) return false;
         
         const hasSchedule = scheduledDriverMap.has(d.id);
         const hasShiftActivity = driverShiftStatusMap.has(d.id);
@@ -365,11 +371,15 @@ const Drivers = () => {
     // Exclude drivers who are marked OFF
     // Exclude primary shuttle drivers (they have their own workflow on /scheduler)
     // All scheduled drivers show as "unconfirmed", take-home drivers show their default vehicle
+    const futureDateStr = format(selectedDate, "yyyy-MM-dd");
     const futureDrivers = (getAvailableDriversWithSchedule || []).filter(driver => {
       // Exclude primary shuttle drivers
       if ((driver as any).amtrak_primary || (driver as any).bph_primary) return false;
       // Exclude drivers marked off
-      return !offDriverIds.has(driver.id);
+      if (offDriverIds.has(driver.id)) return false;
+      // Exclude drivers on planned time off
+      if (isDriverOffOnDate(driver.id, futureDateStr)) return false;
+      return true;
     }).map(driver => {
       const assignment = assignedMap.get(driver.id);
       if (assignment) {

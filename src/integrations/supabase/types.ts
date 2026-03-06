@@ -357,6 +357,56 @@ export type Database = {
           },
         ]
       }
+      driver_time_off: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          driver_id: string
+          driver_name: string
+          end_date: string
+          id: string
+          notes: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["time_off_status"]
+          time_off_type: Database["public"]["Enums"]["time_off_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          driver_id: string
+          driver_name: string
+          end_date: string
+          id?: string
+          notes?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["time_off_status"]
+          time_off_type: Database["public"]["Enums"]["time_off_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          driver_id?: string
+          driver_name?: string
+          end_date?: string
+          id?: string
+          notes?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["time_off_status"]
+          time_off_type?: Database["public"]["Enums"]["time_off_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_time_off_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drivers: {
         Row: {
           address: string | null
@@ -1312,6 +1362,8 @@ export type Database = {
       queue_item_urgency: "NORMAL" | "HIGH" | "CRITICAL"
       queue_type: "SPECIALTY" | "GENERAL"
       ticket_status: "open" | "in_progress" | "waiting_parts" | "closed"
+      time_off_status: "scheduled" | "active" | "completed" | "cancelled"
+      time_off_type: "vacation" | "sick" | "personal" | "fmla"
       vehicle_classification: "house" | "take_home" | "fleet"
       vehicle_primary_category: "above_all" | "specialty"
       vehicle_status: "active" | "out-of-service" | "inactive"
@@ -1475,6 +1527,8 @@ export const Constants = {
       queue_item_urgency: ["NORMAL", "HIGH", "CRITICAL"],
       queue_type: ["SPECIALTY", "GENERAL"],
       ticket_status: ["open", "in_progress", "waiting_parts", "closed"],
+      time_off_status: ["scheduled", "active", "completed", "cancelled"],
+      time_off_type: ["vacation", "sick", "personal", "fmla"],
       vehicle_classification: ["house", "take_home", "fleet"],
       vehicle_primary_category: ["above_all", "specialty"],
       vehicle_status: ["active", "out-of-service", "inactive"],

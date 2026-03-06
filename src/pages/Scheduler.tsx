@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useDriverTimeOff } from "@/hooks/useDriverTimeOff";
 import { useAuth } from "@/hooks/useAuth";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -96,6 +97,7 @@ const shuttleStatusOptions: { value: DriverStatus; label: string; color: string;
 const Scheduler = () => {
   const { user } = useAuth();
   const { drivers, updateDriverStatus } = useDispatchData();
+  const { isDriverOffOnDate } = useDriverTimeOff();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [shuttleSchedules, setShuttleSchedules] = useState<ShuttleSchedule[]>([]);
   // Scheduler starts from tomorrow - today is managed in the Driver Workbook
@@ -427,15 +429,16 @@ const Scheduler = () => {
     return [];
   }, [driversWithSchedules, scheduleTab]);
   
+  const schedulerDateStr = format(selectedDate, "yyyy-MM-dd");
   const availableDrivers = filteredDrivers
-    .filter(d => d.schedule && !d.schedule.is_off)
+    .filter(d => d.schedule && !d.schedule.is_off && !isDriverOffOnDate(d.id, schedulerDateStr))
     .sort((a, b) => {
       const timeA = a.schedule?.start_time || "99:99";
       const timeB = b.schedule?.start_time || "99:99";
       return timeA.localeCompare(timeB);
     });
-  const offDrivers = filteredDrivers.filter(d => d.schedule?.is_off);
-  const unscheduledDrivers = filteredDrivers.filter(d => !d.schedule);
+  const offDrivers = filteredDrivers.filter(d => d.schedule?.is_off || isDriverOffOnDate(d.id, schedulerDateStr));
+  const unscheduledDrivers = filteredDrivers.filter(d => !d.schedule && !isDriverOffOnDate(d.id, schedulerDateStr));
 
   // Week days start from tomorrow (excludes today)
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfDay(new Date()), i + 1));

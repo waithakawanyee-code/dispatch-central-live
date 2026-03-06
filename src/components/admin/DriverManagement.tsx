@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, Pencil, Trash2, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, Home, Phone, User, Circle, UserCheck, UserX, CheckCircle, XCircle, Train, Stethoscope, MoreHorizontal } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Plus, Pencil, Trash2, Download, Upload, Search, SlidersHorizontal, StickyNote, ChevronDown, ChevronRight, ChevronLeft, Home, Phone, User, Circle, UserCheck, UserX, CheckCircle, XCircle, Train, Stethoscope, MoreHorizontal, ExternalLink } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -928,6 +929,11 @@ export function DriverManagement() {
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
+                    <Link to={`/admin/driver/${driver.id}`}>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-primary" title="View Profile">
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </Link>
                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditProfile(driver as DriverRow)}>
                       <Pencil className="h-4 w-4" />
                     </Button>

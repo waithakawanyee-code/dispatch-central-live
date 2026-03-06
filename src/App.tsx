@@ -17,6 +17,7 @@ import Display from "./pages/Display";
 import CleaningQueues from "./pages/CleaningQueues";
 import WasherDashboard from "./pages/WasherDashboard";
 import NotFound from "./pages/NotFound";
+import DriverProfile from "./pages/DriverProfile";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/shuttle-schedules" element={<ProtectedRoute allowedRoles={['ADMIN', 'DISPATCHER', 'USER']}><ShuttleSchedules /></ProtectedRoute>} />
             <Route path="/cleaning-queues" element={<ProtectedRoute allowedRoles={['ADMIN', 'DISPATCHER']}><CleaningQueues /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><Admin /></ProtectedRoute>} />
+            <Route path="/admin/driver/:driverId" element={<ProtectedRoute allowedRoles={['ADMIN']}><DriverProfile /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
