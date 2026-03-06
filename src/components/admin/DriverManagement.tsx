@@ -1101,4 +1101,103 @@ export function DriverManagement() {
       </div>
     );
   }
+
+  function renderShuttleDriverTable() {
+    const amtrakDrivers = filteredDrivers.filter(d => (d as any).amtrak_primary === true);
+    const bphDrivers = filteredDrivers.filter(d => (d as any).bph_primary === true && (d as any).amtrak_primary !== true);
+
+    const renderShuttleGroup = (title: string, icon: React.ReactNode, groupDrivers: DriverRow[]) => (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 px-2">
+          {icon}
+          <span className="text-sm font-medium">{title}</span>
+          <Badge variant="secondary" className="text-xs">{groupDrivers.length}</Badge>
+        </div>
+        {groupDrivers.length === 0 ? (
+          <div className="px-4 py-4 text-center text-sm text-muted-foreground border border-border rounded-lg bg-card">
+            No primary {title.toLowerCase()} found
+          </div>
+        ) : (
+          <div className="rounded-lg border border-border bg-card">
+            <div className="grid grid-cols-[32px_24px_minmax(200px,1fr)_100px_60px_80px] gap-2 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+              <span></span>
+              <span></span>
+              <span>Name</span>
+              <span>Program</span>
+              <span>Code</span>
+              <span className="text-right">Actions</span>
+            </div>
+            {groupDrivers.map((driver) => {
+              const isInactive = (driver as any).is_active === false;
+              const isAmtrak = (driver as any).amtrak_primary === true;
+              const isBph = (driver as any).bph_primary === true;
+              return (
+                <div key={driver.id} className="border-b border-border last:border-0">
+                  <div className={`grid grid-cols-[32px_24px_minmax(200px,1fr)_100px_60px_80px] gap-2 px-4 py-2 text-sm items-center ${isInactive ? "bg-muted/30" : ""}`}>
+                    <Checkbox
+                      checked={selectedIds.has(driver.id)}
+                      onCheckedChange={() => toggleSelectDriver(driver.id)}
+                      aria-label={`Select ${driver.name}`}
+                    />
+                    <Circle 
+                      className={`h-3 w-3 ${isInactive ? "text-muted-foreground/40" : "text-green-500 fill-green-500"}`}
+                    />
+                    <span className={`font-medium ${isInactive ? "line-through text-muted-foreground" : ""}`}>
+                      {driver.name}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {isAmtrak && (
+                        <Badge variant="outline" className="text-[10px] gap-1 border-blue-500/30 text-blue-400">
+                          <Train className="h-3 w-3" />
+                          Amtrak
+                        </Badge>
+                      )}
+                      {isBph && !isAmtrak && (
+                        <Badge variant="outline" className="text-[10px] gap-1 border-green-500/30 text-green-400">
+                          <Stethoscope className="h-3 w-3" />
+                          BPH
+                        </Badge>
+                      )}
+                    </div>
+                    <span className={`font-mono text-xs ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.code || "-"}</span>
+                    <div className="flex justify-end gap-1">
+                      <Link to={`/admin/driver/${driver.id}`}>
+                        <Button size="icon" variant="ghost" className="h-7 w-7">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                      </Link>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete {driver.name}?</AlertDialogTitle>
+                            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(driver.id)}>Delete</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+
+    return (
+      <div className="space-y-6">
+        {renderShuttleGroup("Amtrak Shuttle", <Train className="h-4 w-4 text-blue-500" />, amtrakDrivers)}
+        {renderShuttleGroup("Boston Public Health (BPH)", <Stethoscope className="h-4 w-4 text-green-500" />, bphDrivers)}
+      </div>
+    );
+  }
 }
