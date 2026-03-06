@@ -67,7 +67,7 @@ interface ScheduleColorConfig {
 
 interface DisplayPreferences {
   defaultPageSize: number;
-  defaultDriverTab: "cdl" | "non-cdl";
+  defaultDriverTab: "cdl" | "non-cdl" | "shuttle";
   defaultActiveFilter: "all" | "active" | "inactive";
   showScheduleInTable: boolean;
   showColorLegend: boolean;
@@ -97,7 +97,7 @@ export function DriverManagement() {
   const [importing, setImporting] = useState(false);
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
   const [parsedImportRows, setParsedImportRows] = useState<ReturnType<typeof validateImportRow>[]>([]);
-  const [cdlTab, setCdlTab] = useState<"cdl" | "non-cdl">("non-cdl");
+  const [cdlTab, setCdlTab] = useState<"cdl" | "non-cdl" | "shuttle">("non-cdl");
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("active");
   const [shuttleFilter, setShuttleFilter] = useState<"all" | "amtrak-primary" | "amtrak-trained" | "bph-primary" | "bph-trained">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -222,23 +222,36 @@ export function DriverManagement() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isShuttlePrimary = (d: DriverRow) => (d as any).amtrak_primary === true || (d as any).bph_primary === true;
+
   const filteredDrivers = drivers
     .filter((driver) => {
       const matchesSearch = searchQuery === "" || 
         driver.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (driver.code?.toLowerCase().includes(searchQuery.toLowerCase()));
-      const matchesCdl = cdlTab === "cdl" ? (driver as any).has_cdl === true : (driver as any).has_cdl !== true;
+      
+      let matchesTab = false;
+      if (cdlTab === "shuttle") {
+        matchesTab = isShuttlePrimary(driver);
+      } else if (cdlTab === "cdl") {
+        matchesTab = (driver as any).has_cdl === true && !isShuttlePrimary(driver);
+      } else {
+        matchesTab = (driver as any).has_cdl !== true && !isShuttlePrimary(driver);
+      }
+      
       const matchesActive = activeFilter === "all" || 
         (activeFilter === "active" ? (driver as any).is_active !== false : (driver as any).is_active === false);
       
-      // Shuttle filter
+      // Shuttle filter (only applies to non-shuttle tabs)
       let matchesShuttle = true;
-      if (shuttleFilter === "amtrak-primary") matchesShuttle = (driver as any).amtrak_primary === true;
-      else if (shuttleFilter === "amtrak-trained") matchesShuttle = (driver as any).amtrak_trained === true;
-      else if (shuttleFilter === "bph-primary") matchesShuttle = (driver as any).bph_primary === true;
-      else if (shuttleFilter === "bph-trained") matchesShuttle = (driver as any).bph_trained === true;
+      if (cdlTab !== "shuttle") {
+        if (shuttleFilter === "amtrak-primary") matchesShuttle = (driver as any).amtrak_primary === true;
+        else if (shuttleFilter === "amtrak-trained") matchesShuttle = (driver as any).amtrak_trained === true;
+        else if (shuttleFilter === "bph-primary") matchesShuttle = (driver as any).bph_primary === true;
+        else if (shuttleFilter === "bph-trained") matchesShuttle = (driver as any).bph_trained === true;
+      }
       
-      return matchesSearch && matchesCdl && matchesActive && matchesShuttle;
+      return matchesSearch && matchesTab && matchesActive && matchesShuttle;
     })
     .sort((a, b) => {
       if (sortBy === "name") {
@@ -472,8 +485,9 @@ export function DriverManagement() {
     }
   };
 
-  const cdlCount = drivers.filter(d => (d as any).has_cdl === true).length;
-  const nonCdlCount = drivers.filter(d => (d as any).has_cdl !== true).length;
+  const shuttleCount = drivers.filter(d => isShuttlePrimary(d)).length;
+  const cdlCount = drivers.filter(d => (d as any).has_cdl === true && !isShuttlePrimary(d)).length;
+  const nonCdlCount = drivers.filter(d => (d as any).has_cdl !== true && !isShuttlePrimary(d)).length;
 
   return (
     <div className="space-y-4">
@@ -635,7 +649,7 @@ export function DriverManagement() {
         </div>
       )}
 
-      <Tabs value={cdlTab} onValueChange={(v) => { setCdlTab(v as "cdl" | "non-cdl"); setCurrentPage(1); }}>
+      <Tabs value={cdlTab} onValueChange={(v) => { setCdlTab(v as "cdl" | "non-cdl" | "shuttle"); setCurrentPage(1); }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <TabsList>
@@ -646,6 +660,11 @@ export function DriverManagement() {
               <TabsTrigger value="cdl" className="gap-2">
                 CDL Drivers
                 <Badge variant="secondary" className="text-xs">{cdlCount}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="shuttle" className="gap-2">
+                <Train className="h-3.5 w-3.5" />
+                Shuttle Drivers
+                <Badge variant="secondary" className="text-xs">{shuttleCount}</Badge>
               </TabsTrigger>
             </TabsList>
             <Button
@@ -664,7 +683,7 @@ export function DriverManagement() {
         </div>
 
         {/* Schedule Color Legend */}
-        {displayPrefs.showColorLegend && displayPrefs.showScheduleInTable && (
+        {cdlTab !== "shuttle" && displayPrefs.showColorLegend && displayPrefs.showScheduleInTable && (
           <div className="flex items-center gap-4 mt-3 text-[10px] text-muted-foreground">
             <span className="font-medium">Schedule:</span>
             <div className="flex items-center gap-1">
@@ -698,6 +717,9 @@ export function DriverManagement() {
         </TabsContent>
         <TabsContent value="non-cdl" className="mt-4">
           {renderDriverTable()}
+        </TabsContent>
+        <TabsContent value="shuttle" className="mt-4">
+          {renderShuttleDriverTable()}
         </TabsContent>
       </Tabs>
 
@@ -1076,6 +1098,105 @@ export function DriverManagement() {
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  function renderShuttleDriverTable() {
+    const amtrakDrivers = filteredDrivers.filter(d => (d as any).amtrak_primary === true);
+    const bphDrivers = filteredDrivers.filter(d => (d as any).bph_primary === true && (d as any).amtrak_primary !== true);
+
+    const renderShuttleGroup = (title: string, icon: React.ReactNode, groupDrivers: DriverRow[]) => (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 px-2">
+          {icon}
+          <span className="text-sm font-medium">{title}</span>
+          <Badge variant="secondary" className="text-xs">{groupDrivers.length}</Badge>
+        </div>
+        {groupDrivers.length === 0 ? (
+          <div className="px-4 py-4 text-center text-sm text-muted-foreground border border-border rounded-lg bg-card">
+            No primary {title.toLowerCase()} found
+          </div>
+        ) : (
+          <div className="rounded-lg border border-border bg-card">
+            <div className="grid grid-cols-[32px_24px_minmax(200px,1fr)_100px_60px_80px] gap-2 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+              <span></span>
+              <span></span>
+              <span>Name</span>
+              <span>Program</span>
+              <span>Code</span>
+              <span className="text-right">Actions</span>
+            </div>
+            {groupDrivers.map((driver) => {
+              const isInactive = (driver as any).is_active === false;
+              const isAmtrak = (driver as any).amtrak_primary === true;
+              const isBph = (driver as any).bph_primary === true;
+              return (
+                <div key={driver.id} className="border-b border-border last:border-0">
+                  <div className={`grid grid-cols-[32px_24px_minmax(200px,1fr)_100px_60px_80px] gap-2 px-4 py-2 text-sm items-center ${isInactive ? "bg-muted/30" : ""}`}>
+                    <Checkbox
+                      checked={selectedIds.has(driver.id)}
+                      onCheckedChange={() => toggleSelectDriver(driver.id)}
+                      aria-label={`Select ${driver.name}`}
+                    />
+                    <Circle 
+                      className={`h-3 w-3 ${isInactive ? "text-muted-foreground/40" : "text-green-500 fill-green-500"}`}
+                    />
+                    <span className={`font-medium ${isInactive ? "line-through text-muted-foreground" : ""}`}>
+                      {driver.name}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {isAmtrak && (
+                        <Badge variant="outline" className="text-[10px] gap-1 border-blue-500/30 text-blue-400">
+                          <Train className="h-3 w-3" />
+                          Amtrak
+                        </Badge>
+                      )}
+                      {isBph && !isAmtrak && (
+                        <Badge variant="outline" className="text-[10px] gap-1 border-green-500/30 text-green-400">
+                          <Stethoscope className="h-3 w-3" />
+                          BPH
+                        </Badge>
+                      )}
+                    </div>
+                    <span className={`font-mono text-xs ${isInactive ? "text-muted-foreground" : "text-primary"}`}>{driver.code || "-"}</span>
+                    <div className="flex justify-end gap-1">
+                      <Link to={`/admin/driver/${driver.id}`}>
+                        <Button size="icon" variant="ghost" className="h-7 w-7">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                      </Link>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete {driver.name}?</AlertDialogTitle>
+                            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(driver.id)}>Delete</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+
+    return (
+      <div className="space-y-6">
+        {renderShuttleGroup("Amtrak Shuttle", <Train className="h-4 w-4 text-blue-500" />, amtrakDrivers)}
+        {renderShuttleGroup("Boston Public Health (BPH)", <Stethoscope className="h-4 w-4 text-green-500" />, bphDrivers)}
       </div>
     );
   }
