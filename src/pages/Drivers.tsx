@@ -1500,7 +1500,84 @@ const Drivers = () => {
   const calledOutCount = todayCallOuts.filter(c => c.is_call_out).length;
   const markedOffCount = todayCallOuts.filter(c => !c.is_call_out).length;
 
-  // Create section-based driver lists for keyboard navigation
+  // Helper to sort drivers by code alphabetically (matches DriverWorkbookPanel sorting)
+  const sortByCode = (driverList: typeof displayDrivers) => {
+    return [...driverList].sort((a, b) => {
+      const aCode = a.code || "zzz";
+      const bCode = b.code || "zzz";
+      return aCode.localeCompare(bCode);
+    });
+  };
+
+  // Create visual sub-group driver lists matching the actual rendered grids in DriverWorkbookPanel
+  // Each sub-group corresponds to a separate grid-cols-3 grid on screen
+  const driverSubGroups = useMemo(() => {
+    const unconfirmed = displayDrivers.filter(d => d.status === "unconfirmed");
+    const confirmed = displayDrivers.filter(d => d.status === "confirmed");
+
+    return {
+      // Unconfirmed - split into "has vehicle" and "no vehicle" (separate grids)
+      unconfirmed_with_vehicle: sortByCode(unconfirmed.filter(d => d.vehicle || d.default_vehicle)),
+      unconfirmed_no_vehicle: sortByCode(unconfirmed.filter(d => !d.vehicle && !d.default_vehicle)),
+      // Confirmed - split into "report time" and "dispatched" (separate grids)
+      confirmed_report_time: sortByCode(confirmed.filter(d => !d.vehicle && !(d as any).shiftData?.vehicle_unit)),
+      confirmed_dispatched: sortByCode(confirmed.filter(d => d.vehicle || (d as any).shiftData?.vehicle_unit)),
+      // On the clock & done - single grids each
+      on_the_clock: sortByCode(displayDrivers.filter(d => d.status === "on_the_clock")),
+      done: sortByCode(displayDrivers.filter(d => d.status === "done")),
+    };
+  }, [displayDrivers]);
+
+  // Sub-group order for arrow key navigation (each is a visual grid)
+  type SubGroupKey = keyof typeof driverSubGroups;
+  const subGroupOrder: SubGroupKey[] = useMemo(() => {
+    if (isToday) {
+      return [
+        "unconfirmed_with_vehicle", "unconfirmed_no_vehicle",
+        "confirmed_report_time", "confirmed_dispatched",
+        "on_the_clock", "done"
+      ];
+    }
+    return ["unconfirmed_with_vehicle", "unconfirmed_no_vehicle", "confirmed_report_time", "confirmed_dispatched"];
+  }, [isToday]);
+
+  // Main category groupings for Tab navigation
+  const mainCategories = useMemo(() => {
+    return {
+      unconfirmed: ["unconfirmed_with_vehicle", "unconfirmed_no_vehicle"] as SubGroupKey[],
+      confirmed: ["confirmed_report_time", "confirmed_dispatched"] as SubGroupKey[],
+      on_the_clock: ["on_the_clock"] as SubGroupKey[],
+      done: ["done"] as SubGroupKey[],
+    };
+  }, []);
+
+  const mainCategoryOrder = isToday
+    ? ["unconfirmed", "confirmed", "on_the_clock", "done"] as const
+    : ["unconfirmed", "confirmed"] as const;
+
+  // Get current sub-group for selected driver
+  const getCurrentSubGroup = useCallback((driverId: string | null): SubGroupKey | null => {
+    if (!driverId) return null;
+    for (const key of subGroupOrder) {
+      if (driverSubGroups[key]?.some(d => d.id === driverId)) {
+        return key;
+      }
+    }
+    return null;
+  }, [driverSubGroups, subGroupOrder]);
+
+  // Get main category for a driver
+  const getCurrentMainCategory = useCallback((driverId: string | null) => {
+    if (!driverId) return null;
+    const subGroup = getCurrentSubGroup(driverId);
+    if (!subGroup) return null;
+    for (const [cat, groups] of Object.entries(mainCategories)) {
+      if ((groups as SubGroupKey[]).includes(subGroup)) return cat;
+    }
+    return null;
+  }, [getCurrentSubGroup, mainCategories]);
+
+  // Legacy driverSections for compatibility (used by action toolbar etc.)
   const driverSections = useMemo(() => {
     if (isToday) {
       return {
@@ -1519,10 +1596,10 @@ const Drivers = () => {
     }
   }, [displayDrivers, isToday]);
 
-  // Section order for Tab navigation
+  // Section order for Tab navigation (legacy)
   const sectionOrder = isToday ? ["assigned", "unassigned", "working", "punchedOut"] as const : ["unassigned", "assigned"] as const;
 
-  // Get current section for selected driver
+  // Get current section for selected driver (legacy - used by action toolbar)
   const getCurrentSection = useCallback((driverId: string | null) => {
     if (!driverId) return null;
     for (const section of sectionOrder) {
