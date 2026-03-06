@@ -371,11 +371,15 @@ const Drivers = () => {
     // Exclude drivers who are marked OFF
     // Exclude primary shuttle drivers (they have their own workflow on /scheduler)
     // All scheduled drivers show as "unconfirmed", take-home drivers show their default vehicle
+    const futureDateStr = format(selectedDate, "yyyy-MM-dd");
     const futureDrivers = (getAvailableDriversWithSchedule || []).filter(driver => {
       // Exclude primary shuttle drivers
       if ((driver as any).amtrak_primary || (driver as any).bph_primary) return false;
       // Exclude drivers marked off
-      return !offDriverIds.has(driver.id);
+      if (offDriverIds.has(driver.id)) return false;
+      // Exclude drivers on planned time off
+      if (isDriverOffOnDate(driver.id, futureDateStr)) return false;
+      return true;
     }).map(driver => {
       const assignment = assignedMap.get(driver.id);
       if (assignment) {
