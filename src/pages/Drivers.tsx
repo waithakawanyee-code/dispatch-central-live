@@ -1654,6 +1654,11 @@ const Drivers = () => {
         e.preventDefault();
         setSelectedDriverId(nextSectionDrivers[0].id);
         setShowDetailsPanel(false);
+        // Scroll selected driver into view
+        setTimeout(() => {
+          const el = document.querySelector(`[data-driver-id="${nextSectionDrivers[0].id}"]`);
+          el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }, 0);
       }
     }
 
