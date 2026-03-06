@@ -291,12 +291,16 @@ const Drivers = () => {
       // Also include drivers with base status of confirmed
       // EXCLUDE primary shuttle drivers (they have their own workflow on /scheduler)
       // EXCLUDE drivers who have been marked OFF (have a call-out record for today)
+      const todayStr = format(today, "yyyy-MM-dd");
       const todayDrivers = drivers.filter(d => {
         // Exclude primary shuttle drivers from this workflow
         if ((d as any).amtrak_primary || (d as any).bph_primary) return false;
         
         // Exclude drivers who have a call-out for today (they are OFF)
         if (calledOutDriverIds.has(d.id)) return false;
+
+        // Exclude drivers who are on planned time off today
+        if (isDriverOffOnDate(d.id, todayStr)) return false;
         
         const hasSchedule = scheduledDriverMap.has(d.id);
         const hasShiftActivity = driverShiftStatusMap.has(d.id);
