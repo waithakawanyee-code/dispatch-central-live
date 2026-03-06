@@ -108,6 +108,7 @@ export function DriverWorkbookCard({
 
   const cardContent = (
     <div
+      data-driver-id={driver.id}
       onClick={onClick}
       className={cn(
         "flex items-center gap-1.5 rounded border border-border bg-card px-1.5 py-1 transition-all duration-200 cursor-pointer",

@@ -1588,7 +1588,7 @@ const Drivers = () => {
 
     // Arrow keys navigate in 4 directions within current section
     // Left/Right: move horizontally (prev/next in list)
-    // Up/Down: move vertically (estimate row based on ~4 items per row)
+    // Up/Down: move vertically (3 items per row matching grid-cols-3)
     if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
       e.preventDefault();
       const currentSection = getCurrentSection(selectedDriverId);
@@ -1598,7 +1598,7 @@ const Drivers = () => {
       const currentIndex = sectionDrivers.findIndex(d => d.id === selectedDriverId);
       if (currentIndex === -1) return;
       let newIndex: number = currentIndex;
-      const itemsPerRow = 4; // Approximate number of items per row
+      const itemsPerRow = 3; // Matches grid-cols-3
 
       switch (e.key) {
         case "ArrowLeft":
@@ -1608,10 +1608,8 @@ const Drivers = () => {
           newIndex = currentIndex >= sectionDrivers.length - 1 ? 0 : currentIndex + 1;
           break;
         case "ArrowUp":
-          // Move up by one row (itemsPerRow items back)
           newIndex = currentIndex - itemsPerRow;
           if (newIndex < 0) {
-            // Wrap to last row, try to maintain column position
             const totalRows = Math.ceil(sectionDrivers.length / itemsPerRow);
             const currentCol = currentIndex % itemsPerRow;
             const lastRowStart = (totalRows - 1) * itemsPerRow;
@@ -1619,10 +1617,8 @@ const Drivers = () => {
           }
           break;
         case "ArrowDown":
-          // Move down by one row (itemsPerRow items forward)
           newIndex = currentIndex + itemsPerRow;
           if (newIndex >= sectionDrivers.length) {
-            // Wrap to first row, try to maintain column position
             const currentCol = currentIndex % itemsPerRow;
             newIndex = Math.min(currentCol, sectionDrivers.length - 1);
           }
@@ -1631,6 +1627,11 @@ const Drivers = () => {
       if (sectionDrivers[newIndex]) {
         setSelectedDriverId(sectionDrivers[newIndex].id);
         setShowDetailsPanel(false);
+        // Scroll selected driver into view
+        setTimeout(() => {
+          const el = document.querySelector(`[data-driver-id="${sectionDrivers[newIndex].id}"]`);
+          el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }, 0);
       }
     }
 
@@ -1653,6 +1654,11 @@ const Drivers = () => {
         e.preventDefault();
         setSelectedDriverId(nextSectionDrivers[0].id);
         setShowDetailsPanel(false);
+        // Scroll selected driver into view
+        setTimeout(() => {
+          const el = document.querySelector(`[data-driver-id="${nextSectionDrivers[0].id}"]`);
+          el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }, 0);
       }
     }
 
