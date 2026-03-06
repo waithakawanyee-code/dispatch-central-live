@@ -1876,7 +1876,7 @@ const Drivers = () => {
         executeOff(selectedDriverId);
       }
     }
-  }, [selectedDriverId, showAssignDialog, showOffDialog, showDriverPicker, showDetailsPanel, getCurrentSection, driverSections, sectionOrder, isToday, drivers, executeAssign, executePunchIn, executeQuickPunchIn, executePunchOut, executeOff, executeUndo, executeSwitchVehicle, executeStartNewShift]);
+  }, [selectedDriverId, showAssignDialog, showOffDialog, showDriverPicker, showDetailsPanel, getCurrentSubGroup, getCurrentMainCategory, driverSubGroups, subGroupOrder, mainCategories, mainCategoryOrder, getCurrentSection, driverSections, sectionOrder, isToday, drivers, executeAssign, executePunchIn, executeQuickPunchIn, executePunchOut, executeOff, executeUndo, executeSwitchVehicle, executeStartNewShift]);
 
   // Handler for driver pill click - select and show details
   const handleDriverSelect = useCallback((driverId: string) => {
