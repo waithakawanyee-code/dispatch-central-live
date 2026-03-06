@@ -649,7 +649,7 @@ export function DriverManagement() {
         </div>
       )}
 
-      <Tabs value={cdlTab} onValueChange={(v) => { setCdlTab(v as "cdl" | "non-cdl"); setCurrentPage(1); }}>
+      <Tabs value={cdlTab} onValueChange={(v) => { setCdlTab(v as "cdl" | "non-cdl" | "shuttle"); setCurrentPage(1); }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <TabsList>
@@ -660,6 +660,11 @@ export function DriverManagement() {
               <TabsTrigger value="cdl" className="gap-2">
                 CDL Drivers
                 <Badge variant="secondary" className="text-xs">{cdlCount}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="shuttle" className="gap-2">
+                <Train className="h-3.5 w-3.5" />
+                Shuttle Drivers
+                <Badge variant="secondary" className="text-xs">{shuttleCount}</Badge>
               </TabsTrigger>
             </TabsList>
             <Button
@@ -678,7 +683,7 @@ export function DriverManagement() {
         </div>
 
         {/* Schedule Color Legend */}
-        {displayPrefs.showColorLegend && displayPrefs.showScheduleInTable && (
+        {cdlTab !== "shuttle" && displayPrefs.showColorLegend && displayPrefs.showScheduleInTable && (
           <div className="flex items-center gap-4 mt-3 text-[10px] text-muted-foreground">
             <span className="font-medium">Schedule:</span>
             <div className="flex items-center gap-1">
@@ -712,6 +717,9 @@ export function DriverManagement() {
         </TabsContent>
         <TabsContent value="non-cdl" className="mt-4">
           {renderDriverTable()}
+        </TabsContent>
+        <TabsContent value="shuttle" className="mt-4">
+          {renderShuttleDriverTable()}
         </TabsContent>
       </Tabs>
 
