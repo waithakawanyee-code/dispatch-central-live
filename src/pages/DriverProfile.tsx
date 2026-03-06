@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { format, parseISO, differenceInMinutes, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { ArrowLeft, User, Clock, CalendarOff, Calendar, AlertTriangle, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,12 +32,14 @@ function formatDuration(inAt: string, outAt: string | null): string {
 
 const DriverProfile = () => {
   const { driverId } = useParams<{ driverId: string }>();
+  const navigate = useNavigate();
+  const isNewDriver = driverId === "new";
   const { allDrivers, vehicles } = useDispatchData();
-  const { timeOffEntries, isLoading: timeOffLoading } = useDriverTimeOff(driverId);
-  const { shifts, isLoading: shiftsLoading, getTotalHours } = useDriverShifts(driverId);
+  const { timeOffEntries, isLoading: timeOffLoading } = useDriverTimeOff(isNewDriver ? undefined : driverId);
+  const { shifts, isLoading: shiftsLoading, getTotalHours } = useDriverShifts(isNewDriver ? undefined : driverId);
   const [activeTab, setActiveTab] = useState("profile");
 
-  const driver = allDrivers.find((d) => d.id === driverId);
+  const driver = isNewDriver ? null : allDrivers.find((d) => d.id === driverId);
 
   // Hours summary
   const now = new Date();
@@ -56,7 +58,7 @@ const DriverProfile = () => {
     return d >= monthStart && d <= monthEnd;
   }), [shifts, monthStart, monthEnd]);
 
-  if (!driver) {
+  if (!isNewDriver && !driver) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
