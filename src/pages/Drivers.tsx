@@ -1663,79 +1663,125 @@ const Drivers = () => {
     // Don't process other shortcuts if dialog is open or input is focused
     if (dialogOpen || isInputFocused) return;
 
-    // Arrow keys navigate in 4 directions within current section
-    // Left/Right: move horizontally (prev/next in list)
-    // Up/Down: move vertically (3 items per row matching grid-cols-3)
+    // Arrow keys navigate within the current visual sub-group (matching rendered grids)
     if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
       e.preventDefault();
-      const currentSection = getCurrentSection(selectedDriverId);
-      if (!currentSection) return;
-      const sectionDrivers = driverSections[currentSection] || [];
-      if (sectionDrivers.length === 0) return;
-      const currentIndex = sectionDrivers.findIndex(d => d.id === selectedDriverId);
+      const currentSubGroup = getCurrentSubGroup(selectedDriverId);
+      if (!currentSubGroup) return;
+      const groupDrivers = driverSubGroups[currentSubGroup] || [];
+      if (groupDrivers.length === 0) return;
+      const currentIndex = groupDrivers.findIndex(d => d.id === selectedDriverId);
       if (currentIndex === -1) return;
       let newIndex: number = currentIndex;
       const itemsPerRow = 3; // Matches grid-cols-3
 
       switch (e.key) {
         case "ArrowLeft":
-          newIndex = currentIndex <= 0 ? sectionDrivers.length - 1 : currentIndex - 1;
+          newIndex = currentIndex <= 0 ? groupDrivers.length - 1 : currentIndex - 1;
           break;
         case "ArrowRight":
-          newIndex = currentIndex >= sectionDrivers.length - 1 ? 0 : currentIndex + 1;
+          newIndex = currentIndex >= groupDrivers.length - 1 ? 0 : currentIndex + 1;
           break;
         case "ArrowUp":
           newIndex = currentIndex - itemsPerRow;
           if (newIndex < 0) {
-            const totalRows = Math.ceil(sectionDrivers.length / itemsPerRow);
+            // Move to the previous sub-group's last row
+            const currentSubGroupIdx = subGroupOrder.indexOf(currentSubGroup);
+            let prevIdx = currentSubGroupIdx - 1;
+            while (prevIdx >= 0 && driverSubGroups[subGroupOrder[prevIdx]].length === 0) prevIdx--;
+            if (prevIdx >= 0) {
+              const prevGroup = driverSubGroups[subGroupOrder[prevIdx]];
+              const currentCol = currentIndex % itemsPerRow;
+              const totalRows = Math.ceil(prevGroup.length / itemsPerRow);
+              const lastRowStart = (totalRows - 1) * itemsPerRow;
+              newIndex = Math.min(lastRowStart + currentCol, prevGroup.length - 1);
+              if (prevGroup[newIndex]) {
+                setSelectedDriverId(prevGroup[newIndex].id);
+                setShowDetailsPanel(false);
+                setTimeout(() => {
+                  const el = document.querySelector(`[data-driver-id="${prevGroup[newIndex].id}"]`);
+                  el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                }, 0);
+                return;
+              }
+            }
+            // Wrap within current group
+            const totalRows = Math.ceil(groupDrivers.length / itemsPerRow);
             const currentCol = currentIndex % itemsPerRow;
             const lastRowStart = (totalRows - 1) * itemsPerRow;
-            newIndex = Math.min(lastRowStart + currentCol, sectionDrivers.length - 1);
+            newIndex = Math.min(lastRowStart + currentCol, groupDrivers.length - 1);
           }
           break;
         case "ArrowDown":
           newIndex = currentIndex + itemsPerRow;
-          if (newIndex >= sectionDrivers.length) {
+          if (newIndex >= groupDrivers.length) {
+            // Move to the next sub-group's first row
+            const currentSubGroupIdx = subGroupOrder.indexOf(currentSubGroup);
+            let nextIdx = currentSubGroupIdx + 1;
+            while (nextIdx < subGroupOrder.length && driverSubGroups[subGroupOrder[nextIdx]].length === 0) nextIdx++;
+            if (nextIdx < subGroupOrder.length) {
+              const nextGroup = driverSubGroups[subGroupOrder[nextIdx]];
+              const currentCol = currentIndex % itemsPerRow;
+              newIndex = Math.min(currentCol, nextGroup.length - 1);
+              if (nextGroup[newIndex]) {
+                setSelectedDriverId(nextGroup[newIndex].id);
+                setShowDetailsPanel(false);
+                setTimeout(() => {
+                  const el = document.querySelector(`[data-driver-id="${nextGroup[newIndex].id}"]`);
+                  el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                }, 0);
+                return;
+              }
+            }
+            // Wrap within current group
             const currentCol = currentIndex % itemsPerRow;
-            newIndex = Math.min(currentCol, sectionDrivers.length - 1);
+            newIndex = Math.min(currentCol, groupDrivers.length - 1);
           }
           break;
       }
-      if (sectionDrivers[newIndex]) {
-        setSelectedDriverId(sectionDrivers[newIndex].id);
+      if (groupDrivers[newIndex]) {
+        setSelectedDriverId(groupDrivers[newIndex].id);
         setShowDetailsPanel(false);
-        // Scroll selected driver into view
         setTimeout(() => {
-          const el = document.querySelector(`[data-driver-id="${sectionDrivers[newIndex].id}"]`);
+          const el = document.querySelector(`[data-driver-id="${groupDrivers[newIndex].id}"]`);
           el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
         }, 0);
       }
     }
 
-    // Tab/Shift+Tab switches between sections
+    // Tab/Shift+Tab switches between main categories (unconfirmed, confirmed, on_the_clock, done)
     if (e.key === "Tab" && !e.ctrlKey && !e.altKey && !e.metaKey) {
-      const currentSection = getCurrentSection(selectedDriverId);
-      const currentSectionIndex = currentSection ? sectionOrder.indexOf(currentSection as any) : -1;
+      const currentCat = getCurrentMainCategory(selectedDriverId);
+      const currentCatIndex = currentCat ? mainCategoryOrder.indexOf(currentCat as any) : -1;
 
-      // Find next section with drivers
+      // Find next main category with drivers
       const direction = e.shiftKey ? -1 : 1;
-      let nextSectionIndex = currentSectionIndex;
+      let nextCatIndex = currentCatIndex;
       let attempts = 0;
       do {
-        nextSectionIndex = (nextSectionIndex + direction + sectionOrder.length) % sectionOrder.length;
+        nextCatIndex = (nextCatIndex + direction + mainCategoryOrder.length) % mainCategoryOrder.length;
         attempts++;
-      } while ((driverSections[sectionOrder[nextSectionIndex]]?.length || 0) === 0 && attempts < sectionOrder.length);
-      const nextSection = sectionOrder[nextSectionIndex];
-      const nextSectionDrivers = driverSections[nextSection] || [];
-      if (nextSectionDrivers.length > 0 && nextSection !== currentSection) {
-        e.preventDefault();
-        setSelectedDriverId(nextSectionDrivers[0].id);
-        setShowDetailsPanel(false);
-        // Scroll selected driver into view
-        setTimeout(() => {
-          const el = document.querySelector(`[data-driver-id="${nextSectionDrivers[0].id}"]`);
-          el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-        }, 0);
+        // Check if any sub-group in this category has drivers
+        const catSubGroups = mainCategories[mainCategoryOrder[nextCatIndex]];
+        const hasDrivers = catSubGroups.some(sg => driverSubGroups[sg]?.length > 0);
+        if (hasDrivers) break;
+      } while (attempts < mainCategoryOrder.length);
+
+      const nextCat = mainCategoryOrder[nextCatIndex];
+      if (nextCat !== currentCat) {
+        // Find the first non-empty sub-group in the target category
+        const catSubGroups = mainCategories[nextCat];
+        const firstNonEmptyGroup = catSubGroups.find(sg => driverSubGroups[sg]?.length > 0);
+        if (firstNonEmptyGroup) {
+          const firstDriver = driverSubGroups[firstNonEmptyGroup][0];
+          e.preventDefault();
+          setSelectedDriverId(firstDriver.id);
+          setShowDetailsPanel(false);
+          setTimeout(() => {
+            const el = document.querySelector(`[data-driver-id="${firstDriver.id}"]`);
+            el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+          }, 0);
+        }
       }
     }
 
