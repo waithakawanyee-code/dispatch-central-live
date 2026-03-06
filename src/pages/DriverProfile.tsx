@@ -42,9 +42,15 @@ const DriverProfile = () => {
   const navigate = useNavigate();
   const isNewDriver = driverId === "new";
   const { allDrivers, vehicles } = useDispatchData();
-  const { timeOffEntries, isLoading: timeOffLoading } = useDriverTimeOff(isNewDriver ? undefined : driverId);
+  const { timeOffEntries, isLoading: timeOffLoading, addTimeOff } = useDriverTimeOff(isNewDriver ? undefined : driverId);
   const { shifts, isLoading: shiftsLoading, getTotalHours } = useDriverShifts(isNewDriver ? undefined : driverId);
   const [activeTab, setActiveTab] = useState("profile");
+  const [addTimeOffOpen, setAddTimeOffOpen] = useState(false);
+  const [timeOffType, setTimeOffType] = useState<DriverTimeOff["time_off_type"]>("vacation");
+  const [timeOffStartDate, setTimeOffStartDate] = useState<Date>();
+  const [timeOffEndDate, setTimeOffEndDate] = useState<Date>();
+  const [timeOffNotes, setTimeOffNotes] = useState("");
+  const [timeOffSaving, setTimeOffSaving] = useState(false);
 
   const driver = isNewDriver ? null : allDrivers.find((d) => d.id === driverId);
 
