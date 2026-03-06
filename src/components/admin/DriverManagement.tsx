@@ -94,7 +94,6 @@ const defaultDisplayPrefs: DisplayPreferences = {
 export function DriverManagement() {
   const { allDrivers: drivers, vehicles } = useDispatchData();
   const { toast } = useToast();
-  const [isAddOpen, setIsAddOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
   const [parsedImportRows, setParsedImportRows] = useState<ReturnType<typeof validateImportRow>[]>([]);
