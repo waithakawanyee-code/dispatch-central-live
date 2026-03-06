@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { format, parseISO, differenceInHours, differenceInMinutes, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
-import { ArrowLeft, User, Clock, CalendarOff, Calendar, Phone, Mail, MapPin, AlertTriangle } from "lucide-react";
+import { format, parseISO, differenceInMinutes, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
+import { ArrowLeft, User, Clock, CalendarOff, Calendar, AlertTriangle, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,12 +9,10 @@ import { cn } from "@/lib/utils";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { useDriverTimeOff, type DriverTimeOff } from "@/hooks/useDriverTimeOff";
 import { useDriverShifts } from "@/hooks/useDriverShifts";
+import { DriverProfileForm } from "@/components/admin/DriverProfileForm";
 
 const TIME_OFF_LABELS: Record<DriverTimeOff["time_off_type"], string> = {
-  vacation: "Vacation",
-  sick: "Sick",
-  personal: "Personal",
-  fmla: "FMLA",
+  vacation: "Vacation", sick: "Sick", personal: "Personal", fmla: "FMLA",
 };
 
 const TYPE_COLORS: Record<DriverTimeOff["time_off_type"], string> = {
@@ -34,10 +32,10 @@ function formatDuration(inAt: string, outAt: string | null): string {
 
 const DriverProfile = () => {
   const { driverId } = useParams<{ driverId: string }>();
-  const { allDrivers } = useDispatchData();
+  const { allDrivers, vehicles } = useDispatchData();
   const { timeOffEntries, isLoading: timeOffLoading } = useDriverTimeOff(driverId);
   const { shifts, isLoading: shiftsLoading, getTotalHours } = useDriverShifts(driverId);
-  const [activeTab, setActiveTab] = useState("hours");
+  const [activeTab, setActiveTab] = useState("profile");
 
   const driver = allDrivers.find((d) => d.id === driverId);
 
@@ -84,53 +82,17 @@ const DriverProfile = () => {
             <span className="text-sm">Back to Admin</span>
           </Link>
           <div className="h-4 w-px bg-border" />
-          <h1 className="text-lg font-semibold text-foreground">Driver Profile</h1>
+          <h1 className="text-lg font-semibold text-foreground">{driver.name}</h1>
+          {driver.code && (
+            <Badge variant="outline" className="text-xs font-mono text-primary">{driver.code}</Badge>
+          )}
+          <Badge variant={driver.is_active ? "default" : "secondary"} className="text-xs">
+            {driver.is_active ? "Active" : "Inactive"}
+          </Badge>
         </div>
       </header>
 
       <main className="p-4 max-w-5xl mx-auto space-y-6">
-        {/* Profile Header */}
-        <div className="rounded-lg border border-border bg-card p-5">
-          <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-              <User className="h-7 w-7 text-primary" />
-            </div>
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-bold">{driver.name}</h2>
-                {driver.code && (
-                  <Badge variant="outline" className="text-xs font-mono text-primary">
-                    {driver.code}
-                  </Badge>
-                )}
-                <Badge variant={driver.is_active ? "default" : "secondary"} className="text-xs">
-                  {driver.is_active ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                {driver.phone && (
-                  <span className="flex items-center gap-1">
-                    <Phone className="h-3.5 w-3.5" />
-                    {driver.phone}
-                  </span>
-                )}
-                {driver.email && (
-                  <span className="flex items-center gap-1">
-                    <Mail className="h-3.5 w-3.5" />
-                    {driver.email}
-                  </span>
-                )}
-                {driver.address && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5" />
-                    {driver.address}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Hours Summary Cards */}
         <div className="grid grid-cols-3 gap-4">
           <div className="rounded-lg border border-border bg-card p-4">
@@ -150,6 +112,10 @@ const DriverProfile = () => {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
+            <TabsTrigger value="profile" className="gap-1.5">
+              <Settings className="h-3.5 w-3.5" />
+              Profile
+            </TabsTrigger>
             <TabsTrigger value="hours" className="gap-1.5">
               <Clock className="h-3.5 w-3.5" />
               Hours
@@ -158,11 +124,21 @@ const DriverProfile = () => {
               <CalendarOff className="h-3.5 w-3.5" />
               Time Off
             </TabsTrigger>
-            <TabsTrigger value="schedule" className="gap-1.5">
-              <Calendar className="h-3.5 w-3.5" />
-              Schedule
-            </TabsTrigger>
           </TabsList>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile">
+            <div className="rounded-lg border border-border bg-card p-5 max-w-2xl">
+              <DriverProfileForm
+                driver={driver as any}
+                vehicles={vehicles}
+                onSaved={() => {
+                  // Data will refresh automatically via react-query
+                }}
+                mode="edit"
+              />
+            </div>
+          </TabsContent>
 
           {/* Hours Tab */}
           <TabsContent value="hours">
@@ -244,11 +220,6 @@ const DriverProfile = () => {
                 </table>
               </div>
             )}
-          </TabsContent>
-
-          {/* Schedule Tab - placeholder */}
-          <TabsContent value="schedule">
-            <p className="text-center py-8 text-muted-foreground">Weekly schedule view — managed from Admin → Schedules</p>
           </TabsContent>
         </Tabs>
       </main>
