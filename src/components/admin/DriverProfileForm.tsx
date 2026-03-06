@@ -363,6 +363,8 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
         toast({ title: "Error", description: "Failed to update driver", variant: "destructive" });
       } else {
         await saveSchedule(driver.id);
+        if (formData.amtrak_primary) await saveShuttleSchedule(driver.id, "amtrak");
+        if (formData.bph_primary) await saveShuttleSchedule(driver.id, "bph");
         await syncVehicleAssignment(driver.id, newVehicleUnit, oldVehicleUnit);
         setSaving(false);
         toast({ title: "Success", description: "Driver profile updated" });
