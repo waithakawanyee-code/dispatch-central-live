@@ -222,23 +222,36 @@ export function DriverManagement() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isShuttlePrimary = (d: DriverRow) => (d as any).amtrak_primary === true || (d as any).bph_primary === true;
+
   const filteredDrivers = drivers
     .filter((driver) => {
       const matchesSearch = searchQuery === "" || 
         driver.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (driver.code?.toLowerCase().includes(searchQuery.toLowerCase()));
-      const matchesCdl = cdlTab === "cdl" ? (driver as any).has_cdl === true : (driver as any).has_cdl !== true;
+      
+      let matchesTab = false;
+      if (cdlTab === "shuttle") {
+        matchesTab = isShuttlePrimary(driver);
+      } else if (cdlTab === "cdl") {
+        matchesTab = (driver as any).has_cdl === true && !isShuttlePrimary(driver);
+      } else {
+        matchesTab = (driver as any).has_cdl !== true && !isShuttlePrimary(driver);
+      }
+      
       const matchesActive = activeFilter === "all" || 
         (activeFilter === "active" ? (driver as any).is_active !== false : (driver as any).is_active === false);
       
-      // Shuttle filter
+      // Shuttle filter (only applies to non-shuttle tabs)
       let matchesShuttle = true;
-      if (shuttleFilter === "amtrak-primary") matchesShuttle = (driver as any).amtrak_primary === true;
-      else if (shuttleFilter === "amtrak-trained") matchesShuttle = (driver as any).amtrak_trained === true;
-      else if (shuttleFilter === "bph-primary") matchesShuttle = (driver as any).bph_primary === true;
-      else if (shuttleFilter === "bph-trained") matchesShuttle = (driver as any).bph_trained === true;
+      if (cdlTab !== "shuttle") {
+        if (shuttleFilter === "amtrak-primary") matchesShuttle = (driver as any).amtrak_primary === true;
+        else if (shuttleFilter === "amtrak-trained") matchesShuttle = (driver as any).amtrak_trained === true;
+        else if (shuttleFilter === "bph-primary") matchesShuttle = (driver as any).bph_primary === true;
+        else if (shuttleFilter === "bph-trained") matchesShuttle = (driver as any).bph_trained === true;
+      }
       
-      return matchesSearch && matchesCdl && matchesActive && matchesShuttle;
+      return matchesSearch && matchesTab && matchesActive && matchesShuttle;
     })
     .sort((a, b) => {
       if (sortBy === "name") {
