@@ -51,20 +51,29 @@ interface DaySchedule {
 
 type WeeklySchedule = Record<number, DaySchedule>;
 
+interface ShuttleDaySchedule {
+  is_working: boolean;
+  shift_number: number;
+}
+
+type ShuttleWeeklySchedule = Record<number, ShuttleDaySchedule>;
+
 const AMTRAK_SHIFTS = [
   { number: 1, label: "Shift 1", start: "03:00", end: "11:00" },
   { number: 2, label: "Shift 2", start: "11:00", end: "19:00" },
   { number: 3, label: "Shift 3", start: "19:00", end: "03:00" },
 ];
 
+const BPH_SHIFT = { start: "06:00", end: "18:00", label: "06:00 AM – 06:00 PM" };
+
 const DAYS_OF_WEEK = [
-  { value: 0, label: "Monday", short: "Sun" },
-  { value: 1, label: "Tuesday", short: "Mon" },
-  { value: 2, label: "Wednesday", short: "Tue" },
-  { value: 3, label: "Thursday", short: "Wed" },
-  { value: 4, label: "Friday", short: "Thu" },
-  { value: 5, label: "Saturday", short: "Fri" },
-  { value: 6, label: "Sunday", short: "Sat" },
+  { value: 0, label: "Sunday", short: "Sun" },
+  { value: 1, label: "Monday", short: "Mon" },
+  { value: 2, label: "Tuesday", short: "Tue" },
+  { value: 3, label: "Wednesday", short: "Wed" },
+  { value: 4, label: "Thursday", short: "Thu" },
+  { value: 5, label: "Friday", short: "Fri" },
+  { value: 6, label: "Saturday", short: "Sat" },
 ];
 
 const initialSchedule: WeeklySchedule = {
@@ -75,6 +84,16 @@ const initialSchedule: WeeklySchedule = {
   4: { is_off: false, is_any_hours: false, start_time: "00:00", end_time: "", note: "" },
   5: { is_off: false, is_any_hours: false, start_time: "00:00", end_time: "", note: "" },
   6: { is_off: true, is_any_hours: false, start_time: "", end_time: "", note: "" },
+};
+
+const initialShuttleSchedule: ShuttleWeeklySchedule = {
+  0: { is_working: false, shift_number: 1 },
+  1: { is_working: true, shift_number: 1 },
+  2: { is_working: true, shift_number: 1 },
+  3: { is_working: true, shift_number: 1 },
+  4: { is_working: true, shift_number: 1 },
+  5: { is_working: true, shift_number: 1 },
+  6: { is_working: false, shift_number: 1 },
 };
 
 const initialFormData: DriverProfileFormData = {
@@ -97,12 +116,17 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
   const { toast } = useToast();
   const [formData, setFormData] = useState<DriverProfileFormData>(initialFormData);
   const [schedule, setSchedule] = useState<WeeklySchedule>(initialSchedule);
+  const [shuttleSchedule, setShuttleSchedule] = useState<ShuttleWeeklySchedule>(initialShuttleSchedule);
   const [saving, setSaving] = useState(false);
   const isAddMode = mode === "add";
 
+  const isPrimaryShuttle = formData.amtrak_primary || formData.bph_primary;
+  const shuttleProgram = formData.amtrak_primary ? "amtrak" : formData.bph_primary ? "bph" : null;
+
   useEffect(() => {
-    const fetchSchedule = async () => {
+    const fetchSchedules = async () => {
       if (driver && !isAddMode) {
+        // Fetch regular schedule
         const { data } = await supabase.from("driver_schedules").select("*").eq("driver_id", driver.id);
         if (data && data.length > 0) {
           const scheduleMap: WeeklySchedule = { ...initialSchedule };
@@ -119,11 +143,32 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
         } else {
           setSchedule(initialSchedule);
         }
+
+        // Fetch shuttle schedule
+        const { data: shuttleData } = await supabase
+          .from("shuttle_schedules")
+          .select("*")
+          .eq("driver_id", driver.id);
+        if (shuttleData && shuttleData.length > 0) {
+          const shuttleMap: ShuttleWeeklySchedule = { ...initialShuttleSchedule };
+          // Mark all days as not working first, then set from data
+          Object.keys(shuttleMap).forEach(k => { shuttleMap[Number(k)] = { is_working: false, shift_number: 1 }; });
+          shuttleData.forEach((s) => {
+            shuttleMap[s.day_of_week] = {
+              is_working: true,
+              shift_number: s.shift_number,
+            };
+          });
+          setShuttleSchedule(shuttleMap);
+        } else {
+          setShuttleSchedule(initialShuttleSchedule);
+        }
       } else {
         setSchedule(initialSchedule);
+        setShuttleSchedule(initialShuttleSchedule);
       }
     };
-    fetchSchedule();
+    fetchSchedules();
   }, [driver, isAddMode]);
 
   useEffect(() => {
@@ -191,6 +236,33 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
     return error;
   };
 
+  const saveShuttleSchedule = async (driverId: string, program: string) => {
+    // Delete existing shuttle schedules for this driver and program
+    await supabase.from("shuttle_schedules").delete().eq("driver_id", driverId).eq("program", program);
+    
+    const workingDays = Object.entries(shuttleSchedule)
+      .filter(([_, data]) => data.is_working)
+      .map(([day, data]) => {
+        const shift = program === "amtrak" 
+          ? AMTRAK_SHIFTS.find(s => s.number === data.shift_number) || AMTRAK_SHIFTS[0]
+          : null;
+        return {
+          driver_id: driverId,
+          day_of_week: parseInt(day),
+          shift_number: data.shift_number,
+          program,
+          start_time: program === "amtrak" ? shift!.start : BPH_SHIFT.start,
+          end_time: program === "amtrak" ? shift!.end : BPH_SHIFT.end,
+        };
+      });
+    
+    if (workingDays.length > 0) {
+      const { error } = await supabase.from("shuttle_schedules").insert(workingDays);
+      return error;
+    }
+    return null;
+  };
+
   const syncVehicleAssignment = async (driverId: string, newVehicleUnit: string | null, oldVehicleUnit: string | null) => {
     if (newVehicleUnit === oldVehicleUnit) return;
     if (oldVehicleUnit) {
@@ -249,6 +321,8 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
         toast({ title: "Error", description: "Failed to add driver", variant: "destructive" });
       } else {
         await saveSchedule(newDriver.id);
+        if (formData.amtrak_primary) await saveShuttleSchedule(newDriver.id, "amtrak");
+        if (formData.bph_primary) await saveShuttleSchedule(newDriver.id, "bph");
         await syncVehicleAssignment(newDriver.id, formData.default_vehicle.trim() || null, null);
         setSaving(false);
         toast({ title: "Success", description: "Driver added successfully" });
@@ -289,6 +363,8 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
         toast({ title: "Error", description: "Failed to update driver", variant: "destructive" });
       } else {
         await saveSchedule(driver.id);
+        if (formData.amtrak_primary) await saveShuttleSchedule(driver.id, "amtrak");
+        if (formData.bph_primary) await saveShuttleSchedule(driver.id, "bph");
         await syncVehicleAssignment(driver.id, newVehicleUnit, oldVehicleUnit);
         setSaving(false);
         toast({ title: "Success", description: "Driver profile updated" });
@@ -468,17 +544,9 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
                 onCheckedChange={(checked) => setFormData({ ...formData, amtrak_primary: checked, amtrak_trained: checked ? true : formData.amtrak_trained })} />
             </div>
             {formData.amtrak_primary && (
-              <div className="p-2 rounded bg-blue-500/10 border border-blue-500/20">
-                <p className="text-xs text-blue-600 mb-2">Fixed Amtrak Shifts:</p>
-                <div className="space-y-1 text-xs text-muted-foreground">
-                  {AMTRAK_SHIFTS.map((shift) => (
-                    <div key={shift.number} className="flex items-center gap-2">
-                      <span className="font-mono">{shift.label}:</span>
-                      <span>{shift.start} – {shift.end}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <p className="text-xs text-muted-foreground italic p-2 rounded bg-muted/50 border border-border">
+                Configure work days and shifts in the Shuttle Schedule section below.
+              </p>
             )}
             {(formData.amtrak_trained || formData.amtrak_primary) && (
               <div className="space-y-2">
@@ -508,8 +576,8 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
                 onCheckedChange={(checked) => setFormData({ ...formData, bph_primary: checked, bph_trained: checked ? true : formData.bph_trained })} />
             </div>
             {formData.bph_primary && (
-              <p className="text-xs text-muted-foreground italic p-2 rounded bg-green-500/10 border border-green-500/20">
-                BPH uses custom shift times per day. Configure in the Scheduler.
+              <p className="text-xs text-muted-foreground italic p-2 rounded bg-muted/50 border border-border">
+                Configure work days in the Shuttle Schedule section below.
               </p>
             )}
             {(formData.bph_trained || formData.bph_primary) && (
@@ -526,86 +594,157 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
 
       <Separator />
 
-      {/* Weekly Schedule */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      {/* Schedule Section - Shuttle or Regular */}
+      {isPrimaryShuttle ? (
+        <div className="space-y-4">
           <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <Calendar className="h-4 w-4" />
-            Weekly Schedule
+            {shuttleProgram === "amtrak" ? "Amtrak" : "BPH"} Shuttle Schedule
           </h3>
-          <Button type="button" variant="outline" size="sm" onClick={copyMondayToAll} className="text-xs">
-            <Copy className="h-3 w-3 mr-1" />
-            Copy All
-          </Button>
-        </div>
-        <div className="space-y-3">
-          {DAYS_OF_WEEK.map((day) => (
-            <div key={day.value}
-              className={`flex flex-col gap-2 p-2 rounded-lg transition-colors ${schedule[day.value]?.is_off ? "bg-muted/50" : ""}`}>
-              <div className="grid grid-cols-[80px_60px_1fr] gap-3 items-center">
-                <span className="text-sm font-medium">{day.short}</span>
-                <div className="flex items-center gap-2">
-                  <Switch id={`day-off-${day.value}`}
-                    checked={!schedule[day.value]?.is_off}
-                    onCheckedChange={(checked) => updateDaySchedule(day.value, "is_off", !checked)} />
-                  <Label htmlFor={`day-off-${day.value}`} className="text-xs text-muted-foreground">
-                    {schedule[day.value]?.is_off ? "Off" : "On"}
-                  </Label>
-                </div>
-                {!schedule[day.value]?.is_off && (
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3 text-muted-foreground" />
-                      <Input type="time" value={schedule[day.value]?.start_time || ""}
-                        onChange={(e) => updateDaySchedule(day.value, "start_time", e.target.value)}
-                        className="h-8 w-[100px] text-xs" />
-                    </div>
-                    <span className="text-muted-foreground text-xs">to</span>
-                    {schedule[day.value]?.end_time ? (
-                      <div className="flex items-center gap-1">
-                        <Input type="time" value={schedule[day.value]?.end_time || ""}
-                          onChange={(e) => updateDaySchedule(day.value, "end_time", e.target.value)}
-                          className="h-8 w-[100px] text-xs" />
-                        <Button type="button" variant="ghost" size="icon"
-                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                          onClick={() => updateDaySchedule(day.value, "end_time", "")}>
-                          <X className="h-3 w-3" />
-                        </Button>
-                        <span className="text-xs font-medium text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded">Strict Out</span>
-                      </div>
-                    ) : (
-                      <Button type="button" variant="outline" size="sm"
-                        className="h-8 text-xs text-muted-foreground"
-                        onClick={() => updateDaySchedule(day.value, "end_time", "17:00")}>
-                        <Plus className="h-3 w-3 mr-1" />End Time
-                      </Button>
-                    )}
-                  </div>
-                )}
-                {schedule[day.value]?.is_off && (
-                  <span className="text-xs text-muted-foreground italic">Day off</span>
+          {shuttleProgram === "amtrak" && (
+            <div className="p-2 rounded bg-muted/50 border border-border">
+              <p className="text-xs text-muted-foreground mb-1">Available Shifts:</p>
+              <div className="flex gap-4 text-xs text-muted-foreground">
+                {AMTRAK_SHIFTS.map((s) => (
+                  <span key={s.number} className="font-mono">{s.label}: {s.start}–{s.end}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {shuttleProgram === "bph" && (
+            <div className="p-2 rounded bg-muted/50 border border-border">
+              <p className="text-xs text-muted-foreground">Fixed shift: {BPH_SHIFT.label}</p>
+            </div>
+          )}
+          <div className="space-y-2">
+            {DAYS_OF_WEEK.map((day) => (
+              <div key={day.value}
+                className={`flex items-center gap-3 p-2.5 rounded-lg transition-colors ${
+                  shuttleSchedule[day.value]?.is_working ? "" : "bg-muted/50"
+                }`}>
+                <span className="text-sm font-medium w-[60px]">{day.short}</span>
+                <Switch
+                  checked={shuttleSchedule[day.value]?.is_working || false}
+                  onCheckedChange={(checked) =>
+                    setShuttleSchedule((prev) => ({
+                      ...prev,
+                      [day.value]: { ...prev[day.value], is_working: checked },
+                    }))
+                  }
+                />
+                {shuttleSchedule[day.value]?.is_working ? (
+                  shuttleProgram === "amtrak" ? (
+                    <Select
+                      value={String(shuttleSchedule[day.value]?.shift_number || 1)}
+                      onValueChange={(v) =>
+                        setShuttleSchedule((prev) => ({
+                          ...prev,
+                          [day.value]: { ...prev[day.value], shift_number: parseInt(v) },
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="w-[180px] h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {AMTRAK_SHIFTS.map((s) => (
+                          <SelectItem key={s.number} value={String(s.number)}>
+                            {s.label} ({s.start}–{s.end})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">{BPH_SHIFT.label}</span>
+                  )
+                ) : (
+                  <span className="text-xs text-muted-foreground italic">Off</span>
                 )}
               </div>
-              {!schedule[day.value]?.is_off && (
-                <div className="ml-[140px] flex items-center gap-2">
-                  <MessageSquare className="h-3 w-3 text-muted-foreground" />
-                  <Input type="text" placeholder="Add note (e.g., sick, doctor appt)"
-                    value={schedule[day.value]?.note || ""}
-                    onChange={(e) => updateDaySchedule(day.value, "note", e.target.value)}
-                    className="h-7 text-xs flex-1" />
-                  <div className="flex items-center gap-1.5 ml-2">
-                    <Checkbox id={`any-hours-${day.value}`}
-                      checked={schedule[day.value]?.is_any_hours || false}
-                      onCheckedChange={(checked) => updateDaySchedule(day.value, "is_any_hours", checked === true)}
-                      className="h-3.5 w-3.5" />
-                    <Label htmlFor={`any-hours-${day.value}`} className="text-[10px] text-muted-foreground cursor-pointer">Any</Label>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Weekly Schedule
+            </h3>
+            <Button type="button" variant="outline" size="sm" onClick={copyMondayToAll} className="text-xs">
+              <Copy className="h-3 w-3 mr-1" />
+              Copy All
+            </Button>
+          </div>
+          <div className="space-y-3">
+            {DAYS_OF_WEEK.map((day) => (
+              <div key={day.value}
+                className={`flex flex-col gap-2 p-2 rounded-lg transition-colors ${schedule[day.value]?.is_off ? "bg-muted/50" : ""}`}>
+                <div className="grid grid-cols-[80px_60px_1fr] gap-3 items-center">
+                  <span className="text-sm font-medium">{day.short}</span>
+                  <div className="flex items-center gap-2">
+                    <Switch id={`day-off-${day.value}`}
+                      checked={!schedule[day.value]?.is_off}
+                      onCheckedChange={(checked) => updateDaySchedule(day.value, "is_off", !checked)} />
+                    <Label htmlFor={`day-off-${day.value}`} className="text-xs text-muted-foreground">
+                      {schedule[day.value]?.is_off ? "Off" : "On"}
+                    </Label>
+                  </div>
+                  {!schedule[day.value]?.is_off && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-muted-foreground" />
+                        <Input type="time" value={schedule[day.value]?.start_time || ""}
+                          onChange={(e) => updateDaySchedule(day.value, "start_time", e.target.value)}
+                          className="h-8 w-[100px] text-xs" />
+                      </div>
+                      <span className="text-muted-foreground text-xs">to</span>
+                      {schedule[day.value]?.end_time ? (
+                        <div className="flex items-center gap-1">
+                          <Input type="time" value={schedule[day.value]?.end_time || ""}
+                            onChange={(e) => updateDaySchedule(day.value, "end_time", e.target.value)}
+                            className="h-8 w-[100px] text-xs" />
+                          <Button type="button" variant="ghost" size="icon"
+                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                            onClick={() => updateDaySchedule(day.value, "end_time", "")}>
+                            <X className="h-3 w-3" />
+                          </Button>
+                          <span className="text-xs font-medium text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded">Strict Out</span>
+                        </div>
+                      ) : (
+                        <Button type="button" variant="outline" size="sm"
+                          className="h-8 text-xs text-muted-foreground"
+                          onClick={() => updateDaySchedule(day.value, "end_time", "17:00")}>
+                          <Plus className="h-3 w-3 mr-1" />End Time
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  {schedule[day.value]?.is_off && (
+                    <span className="text-xs text-muted-foreground italic">Day off</span>
+                  )}
+                </div>
+                {!schedule[day.value]?.is_off && (
+                  <div className="ml-[140px] flex items-center gap-2">
+                    <MessageSquare className="h-3 w-3 text-muted-foreground" />
+                    <Input type="text" placeholder="Add note (e.g., sick, doctor appt)"
+                      value={schedule[day.value]?.note || ""}
+                      onChange={(e) => updateDaySchedule(day.value, "note", e.target.value)}
+                      className="h-7 text-xs flex-1" />
+                    <div className="flex items-center gap-1.5 ml-2">
+                      <Checkbox id={`any-hours-${day.value}`}
+                        checked={schedule[day.value]?.is_any_hours || false}
+                        onCheckedChange={(checked) => updateDaySchedule(day.value, "is_any_hours", checked === true)}
+                        className="h-3.5 w-3.5" />
+                      <Label htmlFor={`any-hours-${day.value}`} className="text-[10px] text-muted-foreground cursor-pointer">Any</Label>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <Separator />
 
