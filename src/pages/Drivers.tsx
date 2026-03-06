@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useDriverTimeOff } from "@/hooks/useDriverTimeOff";
 import type { Database } from "@/integrations/supabase/types";
 type DriverSchedule = Database["public"]["Tables"]["driver_schedules"]["Row"];
 interface CallOut {
@@ -62,6 +63,7 @@ const Drivers = () => {
   } = useUserRole();
   const [statsOpen, setStatsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
+  const { isDriverOffOnDate } = useDriverTimeOff();
 
   // Use shifts hook for selected workday
   const {
