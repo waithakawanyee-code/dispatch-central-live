@@ -158,9 +158,7 @@ const DriverProfile = () => {
                 driver={driver as any}
                 vehicles={vehicles}
                 onSaved={() => {
-                  if (isNewDriver) {
-                    navigate("/admin");
-                  }
+                  navigate("/admin");
                 }}
                 mode={isNewDriver ? "add" : "edit"}
               />
