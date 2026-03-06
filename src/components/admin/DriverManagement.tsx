@@ -67,7 +67,7 @@ interface ScheduleColorConfig {
 
 interface DisplayPreferences {
   defaultPageSize: number;
-  defaultDriverTab: "cdl" | "non-cdl";
+  defaultDriverTab: "cdl" | "non-cdl" | "shuttle";
   defaultActiveFilter: "all" | "active" | "inactive";
   showScheduleInTable: boolean;
   showColorLegend: boolean;
