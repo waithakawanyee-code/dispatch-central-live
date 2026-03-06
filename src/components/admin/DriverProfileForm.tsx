@@ -544,17 +544,9 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
                 onCheckedChange={(checked) => setFormData({ ...formData, amtrak_primary: checked, amtrak_trained: checked ? true : formData.amtrak_trained })} />
             </div>
             {formData.amtrak_primary && (
-              <div className="p-2 rounded bg-blue-500/10 border border-blue-500/20">
-                <p className="text-xs text-blue-600 mb-2">Fixed Amtrak Shifts:</p>
-                <div className="space-y-1 text-xs text-muted-foreground">
-                  {AMTRAK_SHIFTS.map((shift) => (
-                    <div key={shift.number} className="flex items-center gap-2">
-                      <span className="font-mono">{shift.label}:</span>
-                      <span>{shift.start} – {shift.end}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <p className="text-xs text-muted-foreground italic p-2 rounded bg-muted/50 border border-border">
+                Configure work days and shifts in the Shuttle Schedule section below.
+              </p>
             )}
             {(formData.amtrak_trained || formData.amtrak_primary) && (
               <div className="space-y-2">
@@ -584,8 +576,8 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
                 onCheckedChange={(checked) => setFormData({ ...formData, bph_primary: checked, bph_trained: checked ? true : formData.bph_trained })} />
             </div>
             {formData.bph_primary && (
-              <p className="text-xs text-muted-foreground italic p-2 rounded bg-green-500/10 border border-green-500/20">
-                BPH uses custom shift times per day. Configure in the Scheduler.
+              <p className="text-xs text-muted-foreground italic p-2 rounded bg-muted/50 border border-border">
+                Configure work days in the Shuttle Schedule section below.
               </p>
             )}
             {(formData.bph_trained || formData.bph_primary) && (
