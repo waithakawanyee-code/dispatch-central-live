@@ -485,8 +485,9 @@ export function DriverManagement() {
     }
   };
 
-  const cdlCount = drivers.filter(d => (d as any).has_cdl === true).length;
-  const nonCdlCount = drivers.filter(d => (d as any).has_cdl !== true).length;
+  const shuttleCount = drivers.filter(d => isShuttlePrimary(d)).length;
+  const cdlCount = drivers.filter(d => (d as any).has_cdl === true && !isShuttlePrimary(d)).length;
+  const nonCdlCount = drivers.filter(d => (d as any).has_cdl !== true && !isShuttlePrimary(d)).length;
 
   return (
     <div className="space-y-4">
