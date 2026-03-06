@@ -236,6 +236,33 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
     return error;
   };
 
+  const saveShuttleSchedule = async (driverId: string, program: string) => {
+    // Delete existing shuttle schedules for this driver and program
+    await supabase.from("shuttle_schedules").delete().eq("driver_id", driverId).eq("program", program);
+    
+    const workingDays = Object.entries(shuttleSchedule)
+      .filter(([_, data]) => data.is_working)
+      .map(([day, data]) => {
+        const shift = program === "amtrak" 
+          ? AMTRAK_SHIFTS.find(s => s.number === data.shift_number) || AMTRAK_SHIFTS[0]
+          : null;
+        return {
+          driver_id: driverId,
+          day_of_week: parseInt(day),
+          shift_number: data.shift_number,
+          program,
+          start_time: program === "amtrak" ? shift!.start : BPH_SHIFT.start,
+          end_time: program === "amtrak" ? shift!.end : BPH_SHIFT.end,
+        };
+      });
+    
+    if (workingDays.length > 0) {
+      const { error } = await supabase.from("shuttle_schedules").insert(workingDays);
+      return error;
+    }
+    return null;
+  };
+
   const syncVehicleAssignment = async (driverId: string, newVehicleUnit: string | null, oldVehicleUnit: string | null) => {
     if (newVehicleUnit === oldVehicleUnit) return;
     if (oldVehicleUnit) {
