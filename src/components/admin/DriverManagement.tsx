@@ -1114,12 +1114,12 @@ export function DriverManagement() {
           <Badge variant="secondary" className="text-xs">{groupDrivers.length}</Badge>
         </div>
         {groupDrivers.length === 0 ? (
-          <div className="px-4 py-4 text-center text-sm text-muted-foreground border border-border rounded-lg bg-card">
+          <div className="px-4 py-4 text-center text-[11px] text-muted-foreground/60 border border-border/50 rounded-lg bg-card/60">
             No primary {title.toLowerCase()} found
           </div>
         ) : (
-          <div className="rounded-lg border border-border bg-card">
-            <div className="grid grid-cols-[32px_24px_minmax(200px,1fr)_100px_60px_80px] gap-2 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+          <div className="rounded-lg border border-border/50 bg-card/60">
+            <div className="grid grid-cols-[32px_24px_minmax(200px,1fr)_100px_60px_80px] gap-2 border-b border-border/40 bg-muted/20 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground items-center">
               <span></span>
               <span></span>
               <span>Name</span>
@@ -1132,8 +1132,8 @@ export function DriverManagement() {
               const isAmtrak = (driver as any).amtrak_primary === true;
               const isBph = (driver as any).bph_primary === true;
               return (
-                <div key={driver.id} className="border-b border-border last:border-0">
-                  <div className={`grid grid-cols-[32px_24px_minmax(200px,1fr)_100px_60px_80px] gap-2 px-4 py-2 text-sm items-center ${isInactive ? "bg-muted/30" : ""}`}>
+                <div key={driver.id} className="border-b border-border/30 last:border-0">
+                  <div className={`grid grid-cols-[32px_24px_minmax(200px,1fr)_100px_60px_80px] gap-2 px-4 py-2 text-sm items-center transition-colors hover:bg-accent/20 ${isInactive ? "bg-muted/20" : ""}`}>
                     <Checkbox
                       checked={selectedIds.has(driver.id)}
                       onCheckedChange={() => toggleSelectDriver(driver.id)}
