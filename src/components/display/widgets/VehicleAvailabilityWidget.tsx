@@ -140,7 +140,7 @@ export function VehicleAvailabilityWidget() {
           <VehicleList items={availableSuvs} label="SUVs Available" colorClass="text-emerald-400" />
         </div>
 
-        <div className="border-t border-border/30 pt-3 mt-2">
+        <div className="border-t border-border/40 pt-3 mt-2">
           <VehicleList items={workingVehicles} label="Working" colorClass="text-sky-400" />
         </div>
 
