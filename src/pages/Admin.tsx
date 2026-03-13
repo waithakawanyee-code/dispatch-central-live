@@ -167,14 +167,14 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/80">
+      <header className="border-b border-border/50 bg-card/80 backdrop-blur-sm">
         <div className="px-4 py-3 flex items-center gap-4">
           <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-4 w-4" />
             <span className="text-sm">Back to Dispatch</span>
           </Link>
-          <div className="h-4 w-px bg-border" />
-          <h1 className="text-lg font-semibold text-foreground">Admin Panel</h1>
+          <div className="h-4 w-px bg-border/50" />
+          <h1 className="text-lg font-bold text-foreground tracking-tight">Admin Panel</h1>
         </div>
         
         {/* Navigation Bar */}
@@ -226,7 +226,7 @@ const Admin = () => {
           })}
           
           {/* Current section indicator */}
-          <div className="ml-auto text-xs text-muted-foreground">
+          <div className="ml-auto text-[11px] font-medium text-muted-foreground/70 uppercase tracking-widest">
             {getCurrentLabel()}
           </div>
         </div>

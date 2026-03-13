@@ -91,7 +91,7 @@ export function ShuttleSummaryWidget() {
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-border bg-card p-4">
+      <div className="rounded-lg border border-border/50 bg-card/60 p-4">
         <div className="flex items-center gap-2 mb-4">
           <Train className="h-5 w-5 text-muted-foreground" />
           <h3 className="font-semibold">Shuttle Programs</h3>
@@ -104,9 +104,9 @@ export function ShuttleSummaryWidget() {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden">
+    <div className="rounded-lg border border-border/50 bg-card/60 overflow-hidden">
       {/* Header */}
-      <div className="border-b border-border bg-secondary/30 px-4 py-3 flex items-center justify-between">
+      <div className="border-b border-border/40 bg-muted/20 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Train className="h-5 w-5 text-primary" />
           <h3 className="font-semibold">Shuttle Coverage</h3>

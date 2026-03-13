@@ -492,7 +492,7 @@ export function DriverManagement() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Manage Drivers</h2>
+        <h2 className="text-lg font-bold tracking-tight">Manage Drivers</h2>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -766,8 +766,8 @@ export function DriverManagement() {
     const allCurrentPageSelected = paginatedDrivers.length > 0 && paginatedDrivers.every(d => selectedIds.has(d.id));
 
     return (
-      <div className="rounded-lg border border-border bg-card">
-        <div className={`grid ${gridCols} gap-2 border-b border-border bg-secondary/50 px-4 ${rowPadding} text-xs font-medium uppercase text-muted-foreground items-center`}>
+      <div className="rounded-lg border border-border/50 bg-card/60">
+        <div className={`grid ${gridCols} gap-2 border-b border-border/40 bg-muted/20 px-4 ${rowPadding} text-[10px] font-semibold uppercase tracking-widest text-muted-foreground items-center`}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center justify-center">
@@ -813,7 +813,7 @@ export function DriverManagement() {
         </div>
         
         {filteredDrivers.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+          <div className="px-4 py-8 text-center text-[11px] text-muted-foreground/60">
             {searchQuery === "" && activeFilter === "all" 
               ? `No ${cdlTab === "cdl" ? "CDL" : "Non-CDL"} drivers found. Add your first driver above.` 
               : "No drivers match the selected filters."}
@@ -825,9 +825,9 @@ export function DriverManagement() {
             const isExpanded = expandedIds.has(driver.id);
             const driverSchedule = schedules[driver.id] || {};
             return (
-              <div key={driver.id} className="border-b border-border last:border-0">
+              <div key={driver.id} className="border-b border-border/30 last:border-0">
                 <div
-                  className={`grid ${gridCols} gap-2 px-4 ${rowPadding} text-sm items-center ${isInactive ? "bg-muted/30" : ""} ${selectedIds.has(driver.id) ? "bg-primary/5" : ""}`}
+                  className={`grid ${gridCols} gap-2 px-4 ${rowPadding} text-sm items-center transition-colors hover:bg-accent/20 ${isInactive ? "bg-muted/20" : ""} ${selectedIds.has(driver.id) ? "bg-primary/5" : ""}`}
                 >
                   <Checkbox
                     checked={selectedIds.has(driver.id)}
@@ -1114,12 +1114,12 @@ export function DriverManagement() {
           <Badge variant="secondary" className="text-xs">{groupDrivers.length}</Badge>
         </div>
         {groupDrivers.length === 0 ? (
-          <div className="px-4 py-4 text-center text-sm text-muted-foreground border border-border rounded-lg bg-card">
+          <div className="px-4 py-4 text-center text-[11px] text-muted-foreground/60 border border-border/50 rounded-lg bg-card/60">
             No primary {title.toLowerCase()} found
           </div>
         ) : (
-          <div className="rounded-lg border border-border bg-card">
-            <div className="grid grid-cols-[32px_24px_minmax(200px,1fr)_100px_60px_80px] gap-2 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+          <div className="rounded-lg border border-border/50 bg-card/60">
+            <div className="grid grid-cols-[32px_24px_minmax(200px,1fr)_100px_60px_80px] gap-2 border-b border-border/40 bg-muted/20 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground items-center">
               <span></span>
               <span></span>
               <span>Name</span>
@@ -1132,8 +1132,8 @@ export function DriverManagement() {
               const isAmtrak = (driver as any).amtrak_primary === true;
               const isBph = (driver as any).bph_primary === true;
               return (
-                <div key={driver.id} className="border-b border-border last:border-0">
-                  <div className={`grid grid-cols-[32px_24px_minmax(200px,1fr)_100px_60px_80px] gap-2 px-4 py-2 text-sm items-center ${isInactive ? "bg-muted/30" : ""}`}>
+                <div key={driver.id} className="border-b border-border/30 last:border-0">
+                  <div className={`grid grid-cols-[32px_24px_minmax(200px,1fr)_100px_60px_80px] gap-2 px-4 py-2 text-sm items-center transition-colors hover:bg-accent/20 ${isInactive ? "bg-muted/20" : ""}`}>
                     <Checkbox
                       checked={selectedIds.has(driver.id)}
                       onCheckedChange={() => toggleSelectDriver(driver.id)}

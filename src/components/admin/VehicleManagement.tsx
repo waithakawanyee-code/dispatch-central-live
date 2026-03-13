@@ -564,7 +564,7 @@ export function VehicleManagement() {
   };
   return <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Manage Vehicles</h2>
+        <h2 className="text-lg font-bold tracking-tight">Manage Vehicles</h2>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -847,8 +847,8 @@ export function VehicleManagement() {
           </Button>
         </div>}
 
-      <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[40px_100px_120px_110px_90px_90px] gap-3 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground items-center">
+      <div className="rounded-lg border border-border/50 bg-card/60">
+        <div className="grid grid-cols-[40px_100px_120px_110px_90px_90px] gap-3 border-b border-border/40 bg-muted/20 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground items-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="w-[40px] flex items-center justify-center shrink-0">
@@ -879,9 +879,9 @@ export function VehicleManagement() {
           <span className="text-right">Actions</span>
         </div>
 
-        {filteredVehicles.length === 0 ? <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+        {filteredVehicles.length === 0 ? <div className="px-4 py-8 text-center text-[11px] text-muted-foreground/60">
             {vehicles.length === 0 ? "No vehicles found. Add your first vehicle above." : "No vehicles match the current filters."}
-          </div> : paginatedVehicles.map(vehicle => <div key={vehicle.id} className="grid grid-cols-[40px_100px_120px_110px_90px_90px] gap-3 border-b border-border px-4 py-3 text-sm last:border-0 items-center">
+          </div> : paginatedVehicles.map(vehicle => <div key={vehicle.id} className="grid grid-cols-[40px_100px_120px_110px_90px_90px] gap-3 border-b border-border/30 px-4 py-2.5 text-sm last:border-0 items-center transition-colors hover:bg-accent/20">
               <div className="w-[40px] flex items-center justify-center shrink-0">
                 <Checkbox checked={selectedIds.has(vehicle.id)} onCheckedChange={() => toggleSelectVehicle(vehicle.id)} aria-label={`Select ${vehicle.unit}`} />
               </div>
