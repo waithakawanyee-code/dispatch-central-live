@@ -41,14 +41,12 @@ export function OffDriversSection({
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"regular" | "cdl">("regular");
 
-  // Separate CDL and non-CDL drivers
   const { regularDrivers, cdlDrivers } = useMemo(() => {
     const regular = drivers.filter(d => !d.has_cdl);
     const cdl = drivers.filter(d => d.has_cdl);
     return { regularDrivers: regular, cdlDrivers: cdl };
   }, [drivers]);
 
-  // Filter by search
   const filteredRegular = useMemo(() => {
     if (!search) return regularDrivers;
     const query = search.toLowerCase();
@@ -71,60 +69,60 @@ export function OffDriversSection({
 
   return (
     <Collapsible open={isOpen} onOpenChange={onOpenChange} className="mt-4">
-      <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-border bg-card/50 px-4 py-2.5 hover:bg-card/80 transition-colors cursor-pointer">
-        <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <ChevronDown className={cn("h-4 w-4 transition-transform", !isOpen && "-rotate-90")} />
-          <PhoneOff className="h-4 w-4" />
-          OFF / Not Scheduled
+      <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border border-border/50 bg-card/30 px-4 py-2.5 hover:bg-accent/20 transition-colors cursor-pointer">
+        <span className="flex items-center gap-2.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !isOpen && "-rotate-90")} />
+          <PhoneOff className="h-3.5 w-3.5 opacity-70" />
+          Off / Not Scheduled
           {calledOutCount > 0 && (
-            <span className="rounded-full bg-destructive/20 text-destructive px-2 py-0.5 font-mono text-xs">
+            <span className="rounded-md bg-destructive/15 text-destructive px-2 py-0.5 font-mono text-[10px] border border-destructive/20 normal-case tracking-normal">
               {calledOutCount} called out
             </span>
           )}
           {markedOffCount > 0 && (
-            <span className="rounded-full bg-amber-500/20 text-amber-600 px-2 py-0.5 font-mono text-xs">
+            <span className="rounded-md bg-amber-500/15 text-amber-500 px-2 py-0.5 font-mono text-[10px] border border-amber-500/20 normal-case tracking-normal">
               {markedOffCount} marked off
             </span>
           )}
         </span>
-        <span className="rounded-full bg-muted px-2.5 py-0.5 font-mono text-xs text-muted-foreground">
+        <span className="rounded-md bg-muted/50 px-2 py-0.5 font-mono text-xs text-muted-foreground border border-border/50">
           {totalCount}
         </span>
       </CollapsibleTrigger>
       <CollapsibleContent className="pt-3">
-        {/* Search box */}
+        {/* Search */}
         <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50 pointer-events-none" />
           <Input
             type="text"
             placeholder="Search off drivers..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="h-9 pl-9 pr-9 text-sm bg-background/50 rounded-lg"
+            className="h-8 pl-9 pr-9 text-xs bg-background/50 rounded-md border-border/50"
           />
           {search && (
             <button
               onClick={() => setSearch("")}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
 
-        {/* Tabbed content */}
+        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "regular" | "cdl")} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 h-8 mb-3">
+          <TabsList className="grid w-full grid-cols-2 h-8 mb-3 bg-muted/30">
             <TabsTrigger value="regular" className="text-xs h-7 gap-1.5">
               Regular
-              <span className="bg-muted-foreground/20 text-muted-foreground px-1.5 py-0.5 rounded text-[10px] font-mono">
+              <span className="bg-muted-foreground/15 text-muted-foreground px-1.5 py-0.5 rounded text-[10px] font-mono">
                 {filteredRegular.length}
               </span>
             </TabsTrigger>
             <TabsTrigger value="cdl" className="text-xs h-7 gap-1.5">
               <Truck className="h-3 w-3" />
               CDL
-              <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[10px] font-mono">
+              <span className="bg-primary/15 text-primary px-1.5 py-0.5 rounded text-[10px] font-mono">
                 {filteredCdl.length}
               </span>
             </TabsTrigger>
@@ -158,7 +156,6 @@ export function OffDriversSection({
   );
 }
 
-// Compact driver grid component
 function OffDriverGrid({
   drivers,
   hasOffRecord,
@@ -178,9 +175,11 @@ function OffDriverGrid({
 }) {
   if (drivers.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground italic py-4 text-center">
-        {emptyMessage}
-      </p>
+      <div className="flex items-center justify-center py-6 rounded-md border border-dashed border-border/30">
+        <p className="text-sm text-muted-foreground/50">
+          {emptyMessage}
+        </p>
+      </div>
     );
   }
 
@@ -195,28 +194,28 @@ function OffDriverGrid({
           const cardContent = (
             <div
               className={cn(
-                "group flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs transition-all duration-150",
+                "group flex items-center gap-2 rounded-md border px-2.5 py-2 text-xs transition-all duration-150",
                 calledOut
-                  ? "border-destructive/40 bg-destructive/10"
+                  ? "border-destructive/30 bg-destructive/8"
                   : markedOff
-                  ? "border-amber-500/40 bg-amber-500/10"
-                  : "border-border bg-card/60 hover:border-primary/40 hover:bg-card"
+                  ? "border-amber-500/30 bg-amber-500/8"
+                  : "border-border/50 bg-card/40 hover:bg-accent/20 hover:border-border"
               )}
             >
               {/* Status dot */}
               <span
                 className={cn(
                   "h-1.5 w-1.5 rounded-full shrink-0",
-                  calledOut ? "bg-destructive" : markedOff ? "bg-amber-500" : "bg-muted-foreground/50"
+                  calledOut ? "bg-destructive" : markedOff ? "bg-amber-500" : "bg-muted-foreground/30"
                 )}
               />
 
-              {/* Driver name with code */}
+              {/* Driver name */}
               <span className="flex-1 truncate font-medium text-foreground" title={driver.name}>
                 {driver.code ? (
                   <>
                     <span className="text-muted-foreground">{driver.code}</span>
-                    <span className="mx-1">·</span>
+                    <span className="mx-1 text-border">·</span>
                     {driver.name.split(" ")[0]}
                   </>
                 ) : (
@@ -226,19 +225,19 @@ function OffDriverGrid({
 
               {/* Status icon */}
               {calledOut ? (
-                <PhoneOff className="h-3 w-3 text-destructive shrink-0" />
+                <PhoneOff className="h-3 w-3 text-destructive/70 shrink-0" />
               ) : markedOff ? (
-                <X className="h-3 w-3 text-amber-500 shrink-0" />
+                <X className="h-3 w-3 text-amber-500/70 shrink-0" />
               ) : null}
 
               {/* CDL badge */}
               {showCdlBadge && (
-                <span className="text-[8px] font-bold text-primary bg-primary/15 px-1 py-0.5 rounded uppercase shrink-0">
+                <span className="text-[8px] font-bold text-primary bg-primary/10 border border-primary/20 px-1 py-0.5 rounded uppercase shrink-0 tracking-wider">
                   CDL
                 </span>
               )}
 
-              {/* Add button - appears on hover */}
+              {/* Add button */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -251,7 +250,6 @@ function OffDriverGrid({
             </div>
           );
 
-          // Wrap in tooltip to show phone number for all drivers
           if (driver.phone) {
             return (
               <Tooltip key={driver.id}>
