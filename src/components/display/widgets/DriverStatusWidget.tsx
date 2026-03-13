@@ -85,15 +85,15 @@ export function DriverStatusWidget() {
     status: DriverStatus;
     colorClass: string;
   }) => (
-    <div className="mb-3">
-      <div className={cn("flex items-center gap-2 mb-1 pb-1 border-b border-border/20", colorClass)}>
-        <span className="font-mono text-xs uppercase tracking-wide">{title}</span>
-        <span className="font-mono text-lg font-bold">{driverList.length}</span>
+    <div className="mb-4">
+      <div className={cn("flex items-center justify-between pb-1.5 mb-2 border-b border-border/40", colorClass)}>
+        <span className="font-mono text-[10px] uppercase tracking-widest">{title}</span>
+        <span className="font-mono text-base font-bold">{driverList.length}</span>
       </div>
       {driverList.length > 0 ? (
         renderDriverList(driverList, status)
       ) : (
-        <div className="text-xs text-muted-foreground/50 font-mono">—</div>
+        <div className="text-[10px] text-muted-foreground/40 font-mono">—</div>
       )}
     </div>
   );

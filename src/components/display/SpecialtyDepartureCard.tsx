@@ -12,11 +12,9 @@ interface SpecialtyDepartureCardProps {
 }
 
 export function SpecialtyDepartureCard({ vehicle, departureTime, driver }: SpecialtyDepartureCardProps) {
-  // Format time to 24-hour format
   const formatTime = (timeStr: string | null | undefined) => {
     if (!timeStr) return "--:--";
     try {
-      // Handle HH:MM:SS format
       if (timeStr.includes(':')) {
         const [hours, minutes] = timeStr.split(':').map(Number);
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
@@ -28,11 +26,11 @@ export function SpecialtyDepartureCard({ vehicle, departureTime, driver }: Speci
   };
 
   return (
-    <div className="flex items-center gap-3 rounded border border-border bg-card px-3 py-2 border-l-4 border-l-purple-500">
-      {/* Departure time - prominent */}
+    <div className="flex items-center gap-3 rounded-md border border-border/60 bg-card px-3 py-2 border-l-[3px] border-l-purple-500">
+      {/* Departure time */}
       <div className="flex items-center gap-1.5 min-w-[60px]">
         <Clock className="h-3.5 w-3.5 text-purple-400" />
-        <span className="font-mono text-sm font-semibold text-purple-400">
+        <span className="font-mono text-sm font-semibold text-purple-400 tabular-nums">
           {formatTime(departureTime)}
         </span>
       </div>
@@ -40,7 +38,7 @@ export function SpecialtyDepartureCard({ vehicle, departureTime, driver }: Speci
       {/* Vehicle unit */}
       <div className="flex items-center gap-1.5">
         <Truck className="h-3.5 w-3.5 text-primary" />
-        <span className="font-mono text-sm font-medium text-foreground">
+        <span className="font-mono text-sm font-semibold text-foreground">
           {vehicle.unit}
         </span>
       </div>
@@ -49,13 +47,13 @@ export function SpecialtyDepartureCard({ vehicle, departureTime, driver }: Speci
       <div className="flex items-center gap-1.5 ml-auto">
         {driver ? (
           <>
-            <User className="h-3 w-3 text-muted-foreground" />
-            <span className="font-mono text-xs text-muted-foreground">
+            <User className="h-3 w-3 text-muted-foreground/70" />
+            <span className="font-mono text-[10px] text-muted-foreground/80">
               {driver.code || driver.name.split(' ')[0]}
             </span>
           </>
         ) : (
-          <span className="text-xs text-muted-foreground italic">Unassigned</span>
+          <span className="text-[10px] text-muted-foreground/50">Unassigned</span>
         )}
       </div>
     </div>

@@ -21,14 +21,14 @@ const Display = () => {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-background p-4 flex flex-col">
-      {/* Header bar - minimal, airport style */}
-      <header className="flex items-center justify-between border-b border-border/30 pb-3 mb-4">
+      {/* Header bar */}
+      <header className="flex items-center justify-between border-b border-border/40 pb-3 mb-4">
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-bold tracking-tight text-foreground uppercase">
             Command Center
           </h1>
           <div className="h-4 w-px bg-border/50" />
-          <span className="text-sm text-muted-foreground font-mono">
+          <span className="text-[11px] text-muted-foreground/70 font-mono uppercase tracking-widest">
             {format(currentTime, "EEEE, MMM d")}
           </span>
         </div>

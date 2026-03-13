@@ -108,24 +108,24 @@ export function SpecialtyDeparturesWidget() {
     <WidgetCard title="Specialty Departures" className="h-full">
       <div className="h-full overflow-auto">
         {departures.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-muted-foreground font-mono text-sm">
-            NO SCHEDULED DEPARTURES
+          <div className="flex h-full items-center justify-center text-muted-foreground/50 font-mono text-[11px] uppercase tracking-widest">
+            No scheduled departures
           </div>
         ) : (
           <div className="space-y-1">
             {/* Header row */}
-            <div className="grid grid-cols-2 gap-4 text-[10px] font-mono uppercase text-muted-foreground border-b border-border/30 pb-1 mb-2">
+            <div className="grid grid-cols-2 gap-4 text-[10px] font-mono uppercase text-muted-foreground/70 border-b border-border/40 pb-1.5 mb-2 tracking-widest">
               <span>Time</span>
               <span>Vehicle</span>
             </div>
 
-            {/* Departure rows - flight board style */}
+            {/* Departure rows */}
             {departures.map((dep) => (
               <div
                 key={dep.vehicleId}
-                className="grid grid-cols-2 gap-4 py-1.5 border-b border-border/10 font-mono"
+                className="grid grid-cols-2 gap-4 py-1.5 border-b border-border/20 font-mono"
               >
-                <span className="text-lg font-bold text-purple-400">
+                <span className="text-lg font-bold text-purple-400 tabular-nums">
                   {formatTime(dep.departureTime)}
                 </span>
                 <span className="text-lg font-bold text-foreground">

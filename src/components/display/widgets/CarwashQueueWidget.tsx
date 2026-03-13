@@ -134,15 +134,15 @@ export function CarwashQueueWidget() {
     <WidgetCard title="Carwash Queue" className="h-full">
       <div className="h-full overflow-auto font-mono">
         {items.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
-            QUEUE EMPTY
+          <div className="flex h-full items-center justify-center text-muted-foreground/50 text-[11px] uppercase tracking-widest">
+            Queue Empty
           </div>
         ) : (
           <div className="space-y-4">
             {/* Specialty section */}
             {specialtyItems.length > 0 && (
               <div>
-                <div className="text-[10px] uppercase text-purple-400 mb-1 tracking-wider">
+                <div className="text-[10px] uppercase text-purple-400 mb-1.5 tracking-widest font-semibold">
                   Specialty ({specialtyItems.length})
                 </div>
                 <div className="space-y-0.5">
@@ -186,7 +186,7 @@ export function CarwashQueueWidget() {
             {/* General section */}
             {generalItems.length > 0 && (
               <div>
-                <div className="text-[10px] uppercase text-muted-foreground mb-1 tracking-wider">
+                <div className="text-[10px] uppercase text-muted-foreground mb-1.5 tracking-widest font-semibold">
                   General ({generalItems.length})
                 </div>
                 <div className="space-y-0.5">
