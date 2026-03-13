@@ -153,12 +153,11 @@ const Vehicles = () => {
   // Helper to split vehicles into unassigned/assigned/on-the-road columns or flat grid
   const renderVehicleColumns = (vehicleList: typeof vehicles) => {
     if (compactView) {
-      // Compact view: single flat 2-column grid, no headers
       return (
         <div className="grid grid-cols-2 gap-1.5">
           {vehicleList.map(renderVehicleRow)}
           {vehicleList.length === 0 && (
-            <p className="text-xs text-muted-foreground italic py-1 col-span-2">None</p>
+            <p className="text-[11px] text-muted-foreground/60 py-3 col-span-2 text-center">No vehicles</p>
           )}
         </div>
       );
