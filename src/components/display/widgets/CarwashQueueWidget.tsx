@@ -186,7 +186,7 @@ export function CarwashQueueWidget() {
             {/* General section */}
             {generalItems.length > 0 && (
               <div>
-                <div className="text-[10px] uppercase text-muted-foreground mb-1 tracking-wider">
+                <div className="text-[10px] uppercase text-muted-foreground mb-1.5 tracking-widest font-semibold">
                   General ({generalItems.length})
                 </div>
                 <div className="space-y-0.5">

@@ -145,7 +145,7 @@ export function VehicleAvailabilityWidget() {
         </div>
 
         {outOfServiceCount > 0 && (
-          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
+          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/40">
             <span className="h-2 w-2 rounded-full bg-red-500" />
             <span className="text-red-400 font-mono text-sm">{outOfServiceCount} OOS</span>
           </div>
