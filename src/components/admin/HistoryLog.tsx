@@ -34,14 +34,14 @@ export function HistoryLog() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Status Change History</h2>
-        <span className="rounded bg-secondary px-2 py-1 text-xs text-muted-foreground">
+        <h2 className="text-lg font-bold tracking-tight">Status Change History</h2>
+        <span className="rounded-md bg-secondary/80 px-2 py-0.5 font-mono text-xs font-medium text-secondary-foreground border border-border/50">
           {history.length} entries
         </span>
       </div>
 
-      <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[140px_80px_1fr_1fr_1fr] gap-4 border-b border-border bg-secondary/50 px-4 py-2 text-xs font-medium uppercase text-muted-foreground">
+      <div className="rounded-lg border border-border/50 bg-card/60">
+        <div className="grid grid-cols-[140px_80px_1fr_1fr_1fr] gap-4 border-b border-border/40 bg-muted/20 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
           <span>Time</span>
           <span>Type</span>
           <span>Name</span>
@@ -50,7 +50,7 @@ export function HistoryLog() {
         </div>
 
         {history.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+          <div className="px-4 py-12 text-center text-[11px] text-muted-foreground/60">
             No status changes recorded yet. Changes will appear here in real-time.
           </div>
         ) : (
@@ -58,9 +58,9 @@ export function HistoryLog() {
             {history.map((entry) => (
               <div
                 key={entry.id}
-                className="grid grid-cols-[140px_80px_1fr_1fr_1fr] gap-4 border-b border-border px-4 py-3 text-sm last:border-0"
+                className="grid grid-cols-[140px_80px_1fr_1fr_1fr] gap-4 border-b border-border/30 px-4 py-2.5 text-sm last:border-0 hover:bg-accent/20 transition-colors"
               >
-                <span className="font-mono text-xs text-muted-foreground">
+                <span className="font-mono text-xs text-muted-foreground/80">
                   {formatTime(entry.changed_at)}
                 </span>
                 <div className="flex items-center gap-1.5">
@@ -74,14 +74,14 @@ export function HistoryLog() {
                 <span className="font-medium truncate" title={entry.entity_name}>
                   {entry.entity_name}
                 </span>
-                <span className="text-muted-foreground text-xs">
+                <span className="text-muted-foreground/70 text-xs">
                   {formatFieldName(entry.field_changed)}
                 </span>
                 <div className="flex items-center gap-2">
                   {entry.old_value && (
                     <>
                       <StatusBadge status={entry.old_value as any} size="sm" />
-                      <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                      <ArrowRight className="h-3 w-3 text-muted-foreground/50" />
                     </>
                   )}
                   <StatusBadge status={entry.new_value as any} size="sm" />
