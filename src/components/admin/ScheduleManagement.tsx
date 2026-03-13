@@ -188,8 +188,8 @@ export function ScheduleManagement() {
       </div>
 
       {selectedDriverId && (
-        <div className="rounded-lg border border-border bg-card">
-          <div className="border-b border-border bg-secondary/50 px-4 py-3">
+        <div className="rounded-lg border border-border/50 bg-card/60">
+          <div className="border-b border-border/40 bg-muted/20 px-4 py-3">
             <h3 className="font-medium">{selectedDriver?.name}'s Weekly Schedule</h3>
             <p className="text-xs text-muted-foreground mt-1">Click a day to set or edit the schedule</p>
           </div>
