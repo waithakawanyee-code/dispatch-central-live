@@ -766,8 +766,8 @@ export function DriverManagement() {
     const allCurrentPageSelected = paginatedDrivers.length > 0 && paginatedDrivers.every(d => selectedIds.has(d.id));
 
     return (
-      <div className="rounded-lg border border-border bg-card">
-        <div className={`grid ${gridCols} gap-2 border-b border-border bg-secondary/50 px-4 ${rowPadding} text-xs font-medium uppercase text-muted-foreground items-center`}>
+      <div className="rounded-lg border border-border/50 bg-card/60">
+        <div className={`grid ${gridCols} gap-2 border-b border-border/40 bg-muted/20 px-4 ${rowPadding} text-[10px] font-semibold uppercase tracking-widest text-muted-foreground items-center`}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center justify-center">
