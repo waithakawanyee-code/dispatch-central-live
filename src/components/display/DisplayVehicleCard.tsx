@@ -27,51 +27,38 @@ export function DisplayVehicleCard({ vehicle, drivers = [] }: DisplayVehicleCard
     }
   };
 
-  const getStatusBgClass = () => {
+  const getStatusAccent = () => {
     if (vehicle.status === "out-of-service") {
-      return "bg-status-out-of-service/20";
+      return "border-l-status-out-of-service";
     }
-    switch (vehicle.clean_status) {
-      case "clean":
-        return "bg-status-active/20";
-      case "dirty":
-        return "bg-amber-500/20";
-      default:
-        return "bg-muted/20";
-    }
-  };
-
-  const getBorderClass = () => {
-    if (vehicle.status === "out-of-service") {
-      return "border-l-4 border-l-status-out-of-service";
-    }
-    return vehicle.clean_status === "clean" 
-      ? "border-l-4 border-l-status-active" 
-      : vehicle.clean_status === "dirty" 
-        ? "border-l-4 border-l-amber-500" 
-        : "";
+    return vehicle.clean_status === "clean"
+      ? "border-l-status-active"
+      : vehicle.clean_status === "dirty"
+        ? "border-l-amber-500"
+        : "border-l-border";
   };
 
   return (
     <div
       className={cn(
-        "flex items-center gap-1.5 rounded border border-border bg-card px-1.5 py-1 transition-all duration-200",
-        getBorderClass(),
-        vehicle.status === "out-of-service" && "opacity-60"
+        "flex items-center gap-2 rounded-md border border-border/60 bg-card px-2 py-1.5 transition-all duration-200",
+        "border-l-[3px]",
+        getStatusAccent(),
+        vehicle.status === "out-of-service" && "opacity-50"
       )}
     >
       {/* Left icon */}
-      <div className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded", getStatusBgClass())}>
+      <div className="flex h-4 w-4 shrink-0 items-center justify-center">
         {vehicle.status === "out-of-service" ? (
-          <Wrench className={cn("h-2.5 w-2.5", getIconColor())} />
+          <Wrench className={cn("h-3 w-3", getIconColor())} />
         ) : (
-          <Truck className={cn("h-2.5 w-2.5", getIconColor())} />
+          <Truck className={cn("h-3 w-3", getIconColor())} />
         )}
       </div>
 
       {/* Vehicle unit */}
       <span className={cn(
-        "font-mono text-xs font-medium",
+        "font-mono text-xs font-semibold",
         vehicle.status === "out-of-service" ? "text-muted-foreground" : "text-foreground"
       )}>
         {vehicle.unit}
@@ -92,7 +79,7 @@ export function DisplayVehicleCard({ vehicle, drivers = [] }: DisplayVehicleCard
 
         {/* Driver code */}
         {assignedDriver?.code && (
-          <span className="font-mono text-[9px] text-muted-foreground">
+          <span className="font-mono text-[9px] text-muted-foreground/80">
             {assignedDriver.code}
           </span>
         )}
