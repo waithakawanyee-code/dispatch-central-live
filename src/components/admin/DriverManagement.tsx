@@ -813,7 +813,7 @@ export function DriverManagement() {
         </div>
         
         {filteredDrivers.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+          <div className="px-4 py-8 text-center text-[11px] text-muted-foreground/60">
             {searchQuery === "" && activeFilter === "all" 
               ? `No ${cdlTab === "cdl" ? "CDL" : "Non-CDL"} drivers found. Add your first driver above.` 
               : "No drivers match the selected filters."}
@@ -825,9 +825,9 @@ export function DriverManagement() {
             const isExpanded = expandedIds.has(driver.id);
             const driverSchedule = schedules[driver.id] || {};
             return (
-              <div key={driver.id} className="border-b border-border last:border-0">
+              <div key={driver.id} className="border-b border-border/30 last:border-0">
                 <div
-                  className={`grid ${gridCols} gap-2 px-4 ${rowPadding} text-sm items-center ${isInactive ? "bg-muted/30" : ""} ${selectedIds.has(driver.id) ? "bg-primary/5" : ""}`}
+                  className={`grid ${gridCols} gap-2 px-4 ${rowPadding} text-sm items-center transition-colors hover:bg-accent/20 ${isInactive ? "bg-muted/20" : ""} ${selectedIds.has(driver.id) ? "bg-primary/5" : ""}`}
                 >
                   <Checkbox
                     checked={selectedIds.has(driver.id)}
