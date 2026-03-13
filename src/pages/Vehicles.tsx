@@ -131,17 +131,19 @@ const Vehicles = () => {
     return (
       <div>
         {showHeader && (
-          <h4 className="flex items-center justify-between text-[10px] font-medium text-muted-foreground uppercase tracking-wide border-b border-border pb-1 mb-1.5">
-            <span>{headerLabel}</span>
-            <span className="rounded bg-secondary px-1 py-0.5 font-mono text-[9px]">
+          <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-border/40">
+            <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              {headerLabel}
+            </h4>
+            <span className="rounded-md bg-secondary/80 px-1.5 py-0.5 font-mono text-[10px] font-medium text-secondary-foreground border border-border/50">
               {vehicleList.length}
             </span>
-          </h4>
+          </div>
         )}
         <div className="grid grid-cols-2 gap-1.5">
           {vehicleList.map(renderVehicleRow)}
           {vehicleList.length === 0 && (
-            <p className="text-xs text-muted-foreground italic py-1 col-span-2">None</p>
+            <p className="text-[11px] text-muted-foreground/60 py-3 col-span-2 text-center">No vehicles</p>
           )}
         </div>
       </div>
