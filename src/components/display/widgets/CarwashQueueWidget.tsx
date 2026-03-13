@@ -134,8 +134,8 @@ export function CarwashQueueWidget() {
     <WidgetCard title="Carwash Queue" className="h-full">
       <div className="h-full overflow-auto font-mono">
         {items.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
-            QUEUE EMPTY
+          <div className="flex h-full items-center justify-center text-muted-foreground/50 text-[11px] uppercase tracking-widest">
+            Queue Empty
           </div>
         ) : (
           <div className="space-y-4">
