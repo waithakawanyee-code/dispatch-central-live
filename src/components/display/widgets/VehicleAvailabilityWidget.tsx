@@ -115,10 +115,10 @@ export function VehicleAvailabilityWidget() {
   }
 
   const VehicleList = ({ items, label, colorClass }: { items: VehicleSummary[]; label: string; colorClass: string }) => (
-    <div className="mb-3">
-      <div className={`flex items-center gap-2 mb-1 border-b border-border/20 pb-1 ${colorClass}`}>
-        <span className="font-mono text-xs uppercase tracking-wide">{label}</span>
-        <span className="font-mono text-lg font-bold">{items.length}</span>
+    <div className="mb-4">
+      <div className={`flex items-center justify-between mb-2 border-b border-border/40 pb-1.5 ${colorClass}`}>
+        <span className="font-mono text-[10px] uppercase tracking-widest">{label}</span>
+        <span className="font-mono text-base font-bold">{items.length}</span>
       </div>
       {items.length > 0 ? (
         <div className="grid grid-cols-6 gap-1 font-mono text-sm">
@@ -127,7 +127,7 @@ export function VehicleAvailabilityWidget() {
           ))}
         </div>
       ) : (
-        <div className="text-xs text-muted-foreground/50 font-mono">—</div>
+        <div className="text-[10px] text-muted-foreground/40 font-mono">—</div>
       )}
     </div>
   );
