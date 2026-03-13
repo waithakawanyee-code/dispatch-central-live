@@ -98,7 +98,7 @@ export function DriverWorkbookPanel({
   }, [drivers, cdlFilter]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* LEFT COLUMN - UNCONFIRMED */}
       <div className="space-y-6">
         <DriverStatusSection
@@ -108,9 +108,11 @@ export function DriverWorkbookPanel({
           variant="default"
         >
           {categorizedDrivers.unconfirmed.total === 0 ? (
-            <p className="text-sm text-muted-foreground italic py-4 text-center">
-              All drivers confirmed
-            </p>
+            <div className="flex items-center justify-center py-8 rounded-md border border-dashed border-border/50">
+              <p className="text-sm text-muted-foreground/60">
+                All drivers confirmed
+              </p>
+            </div>
           ) : (
             <div className="space-y-4">
               {/* Has Vehicle subcategory - take-home drivers not yet confirmed */}
@@ -137,7 +139,7 @@ export function DriverWorkbookPanel({
 
               {/* Regular unconfirmed drivers (no vehicle) - no subcategory label */}
               {categorizedDrivers.unconfirmed.noVehicle.length > 0 && (
-                <div className="grid grid-cols-3 gap-1">
+                <div className="grid grid-cols-3 gap-1.5">
                   {categorizedDrivers.unconfirmed.noVehicle.map((driver) => (
                     <DriverWorkbookCard
                       key={driver.id}
@@ -166,9 +168,11 @@ export function DriverWorkbookPanel({
           variant="success"
         >
           {categorizedDrivers.confirmed.total === 0 ? (
-            <p className="text-sm text-muted-foreground italic py-4 text-center">
-              No drivers confirmed yet
-            </p>
+            <div className="flex items-center justify-center py-8 rounded-md border border-dashed border-emerald-500/20">
+              <p className="text-sm text-muted-foreground/60">
+                No drivers confirmed yet
+              </p>
+            </div>
           ) : (
             <div className="space-y-4">
               {/* Report Time - confirmed but needs vehicle (on top) */}
@@ -222,11 +226,13 @@ export function DriverWorkbookPanel({
           variant="success"
         >
           {categorizedDrivers.onTheClock.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic py-4 text-center">
-              No drivers on the clock
-            </p>
+            <div className="flex items-center justify-center py-8 rounded-md border border-dashed border-emerald-500/20">
+              <p className="text-sm text-muted-foreground/60">
+                No drivers on the clock
+              </p>
+            </div>
           ) : (
-            <div className="grid grid-cols-3 gap-1">
+            <div className="grid grid-cols-3 gap-1.5">
               {categorizedDrivers.onTheClock.map((driver) => (
                 <DriverWorkbookCard
                   key={driver.id}
@@ -269,32 +275,36 @@ function DoneSection({
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className="rounded-lg border bg-card">
+      <div className="rounded-md border border-border/50 bg-card/50">
         <CollapsibleTrigger asChild>
-          <button className="flex w-full items-center justify-between p-3 hover:bg-muted/50 transition-colors rounded-lg">
+          <button className="flex w-full items-center justify-between px-4 py-2.5 hover:bg-accent/20 transition-colors rounded-md">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium text-sm">Done</span>
-              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+              <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground/70" />
+              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Done</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="rounded-md px-2 py-0.5 font-mono text-xs text-muted-foreground bg-muted/50 border border-border/50">
                 {drivers.length}
               </span>
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 text-muted-foreground/50 transition-transform duration-200",
+                  isOpen && "rotate-180"
+                )}
+              />
             </div>
-            <ChevronDown
-              className={cn(
-                "h-4 w-4 text-muted-foreground transition-transform duration-200",
-                isOpen && "rotate-180"
-              )}
-            />
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="px-3 pb-3">
+          <div className="px-3 pb-3 pt-1">
             {drivers.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic py-4 text-center">
-                No drivers done for the day
-              </p>
+              <div className="flex items-center justify-center py-6 rounded-md border border-dashed border-border/30">
+                <p className="text-sm text-muted-foreground/50">
+                  No drivers done for the day
+                </p>
+              </div>
             ) : (
-              <div className="grid grid-cols-3 gap-1">
+              <div className="grid grid-cols-3 gap-1.5">
                 {drivers.map((driver) => (
                   <DriverWorkbookCard
                     key={driver.id}
