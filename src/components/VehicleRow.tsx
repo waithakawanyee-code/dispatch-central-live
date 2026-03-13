@@ -117,34 +117,45 @@ export function VehicleRow({
     }
   };
   return <>
-      <div className={cn("flex items-center gap-1.5 rounded border border-border bg-card px-1.5 py-1 transition-all duration-200", "hover:border-primary/30", getBorderClass(), isUpdated && "animate-row-flash")}>
-        <div className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded", getStatusBgClass())}>
-          <Truck className={cn("h-2.5 w-2.5", getIconColor())} />
+      <div className={cn(
+        "group relative flex items-center gap-2.5 rounded-md border border-border/60 bg-card px-2.5 py-2 transition-all duration-200",
+        "border-l-[3px]",
+        vehicle.status === "out-of-service" ? "border-l-status-out-of-service opacity-60" : 
+          vehicle.clean_status === "clean" ? "border-l-status-active" :
+          vehicle.clean_status === "dirty" ? "border-l-amber-500" : "border-l-border",
+        "hover:bg-accent/30 hover:border-border",
+        isUpdated && "animate-row-flash"
+      )}>
+        {/* Status icon */}
+        <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+          <Truck className={cn("h-3.5 w-3.5", getIconColor())} />
         </div>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1 flex-wrap">
-            <p className="font-mono text-sm font-medium text-foreground flex items-center gap-0.5">
+        {/* Vehicle info - unit is focal point */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono text-[13px] font-semibold leading-tight text-foreground">
               {vehicle.unit}
-              {(vehicle as any).has_car_wash_subscription && <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="text-cyan-500">
-                        <Droplets className="h-3 w-3" />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <span className="text-xs">Car Wash Subscription</span>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>}
-            </p>
-            {/* Classification badges */}
-            {/* Released as Fleet indicator */}
-            {vehicle.classification === "take_home" && vehicle.released_as_fleet_until && new Date(vehicle.released_as_fleet_until) > new Date() && <TooltipProvider delayDuration={300}>
+            </span>
+            {(vehicle as any).has_car_wash_subscription && (
+              <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="inline-flex items-center gap-0.5 px-1 py-0 rounded text-[9px] font-medium bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                    <span className="text-cyan-500">
+                      <Droplets className="h-3 w-3" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <span className="text-xs">Car Wash Subscription</span>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {vehicle.classification === "take_home" && vehicle.released_as_fleet_until && new Date(vehicle.released_as_fleet_until) > new Date() && (
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/20">
                       <Unlock className="h-2 w-2" />
                       Fleet
                     </span>
@@ -153,13 +164,19 @@ export function VehicleRow({
                     <span className="text-xs">Released as Fleet until end of day</span>
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>}
+              </TooltipProvider>
+            )}
           </div>
-          {vehicle.vehicle_type && <p className="text-[9px] text-muted-foreground leading-tight">{VEHICLE_TYPE_LABELS[vehicle.vehicle_type]}</p>}
+          {vehicle.vehicle_type && (
+            <span className="text-[10px] text-muted-foreground/70 leading-tight">
+              {VEHICLE_TYPE_LABELS[vehicle.vehicle_type]}
+            </span>
+          )}
         </div>
 
-        {/* Right side: Clean indicator + Driver code */}
-        <div className="flex flex-col items-center gap-0">
+        {/* Right metadata cluster */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Clean status indicator */}
           {canEdit ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -228,16 +245,16 @@ export function VehicleRow({
             </TooltipProvider>
           )}
           
-          {/* Driver code below clean indicator */}
+          {/* Driver code */}
           {assignedDriver?.code && (
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="font-mono text-[9px] text-muted-foreground cursor-default hover:text-foreground transition-colors leading-tight">
+                  <span className="font-mono text-[10px] text-muted-foreground/80 cursor-default hover:text-foreground transition-colors">
                     {assignedDriver.code}
                   </span>
                 </TooltipTrigger>
-                <TooltipContent side="left" className="p-2">
+                <TooltipContent side="left" className="p-2 bg-popover border border-border">
                   <div className="flex flex-col gap-1 text-xs">
                     <span className="font-semibold">{vehicle.driver}</span>
                     {assignedDriver.phone && (
@@ -251,7 +268,6 @@ export function VehicleRow({
               </Tooltip>
             </TooltipProvider>
           )}
-          
         </div>
       </div>
 

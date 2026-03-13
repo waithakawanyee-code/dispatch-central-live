@@ -252,38 +252,38 @@ const Vehicles = () => {
         </section>
 
         {/* Specialty Section */}
-        <section className="rounded border border-border bg-card/50 p-2">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+        <section className="rounded-lg border border-border/50 bg-card/60 p-3">
+          <div className="flex items-center justify-between pb-2 mb-3 border-b border-border/40">
+            <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-foreground">
               <Bus className="h-3.5 w-3.5 text-accent" />
               Specialty
             </h2>
-            <span className="rounded bg-secondary px-1 py-0.5 font-mono text-[9px] text-muted-foreground">
+            <span className="rounded-md bg-secondary/80 px-2 py-0.5 font-mono text-xs font-medium text-secondary-foreground border border-border/50">
               {groupedVehicles.specialtyVehicles.length}
             </span>
           </div>
           {groupedVehicles.specialtyVehicles.length > 0 ? (
             renderVehicleColumns(groupedVehicles.specialtyVehicles)
           ) : (
-            <p className="text-xs text-muted-foreground italic py-1">No specialty vehicles</p>
+            <p className="text-[11px] text-muted-foreground/60 py-3 text-center">No specialty vehicles</p>
           )}
         </section>
 
         {/* Out of Service Vehicles */}
-        <section className="rounded border border-border bg-card/50 p-2">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-              <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+        <section className="rounded-lg border border-border/50 bg-card/60 p-3">
+          <div className="flex items-center justify-between pb-2 mb-3 border-b border-border/40">
+            <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-destructive">
+              <AlertTriangle className="h-3.5 w-3.5" />
               Out of Service
             </h2>
-            <span className="rounded bg-secondary px-1 py-0.5 font-mono text-[9px] text-muted-foreground">
+            <span className="rounded-md bg-destructive/15 px-2 py-0.5 font-mono text-xs font-medium text-destructive border border-destructive/20">
               {groupedVehicles.outOfServiceVehicles.length}
             </span>
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             {groupedVehicles.outOfServiceVehicles.map(renderVehicleRow)}
             {groupedVehicles.outOfServiceVehicles.length === 0 && (
-              <p className="text-xs text-muted-foreground italic py-1 col-span-2">No out of service vehicles</p>
+              <p className="text-[11px] text-muted-foreground/60 py-3 col-span-2 text-center">No out of service vehicles</p>
             )}
           </div>
         </section>
