@@ -142,7 +142,7 @@ export function CarwashQueueWidget() {
             {/* Specialty section */}
             {specialtyItems.length > 0 && (
               <div>
-                <div className="text-[10px] uppercase text-purple-400 mb-1 tracking-wider">
+                <div className="text-[10px] uppercase text-purple-400 mb-1.5 tracking-widest font-semibold">
                   Specialty ({specialtyItems.length})
                 </div>
                 <div className="space-y-0.5">
