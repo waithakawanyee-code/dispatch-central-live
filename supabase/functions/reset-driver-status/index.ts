@@ -2,13 +2,25 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Authenticate: require CRON_SECRET header
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  const providedSecret = req.headers.get("x-cron-secret");
+
+  if (!cronSecret || providedSecret !== cronSecret) {
+    return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -38,7 +50,6 @@ Deno.serve(async (req) => {
       console.log(`Found ${staleShifts.length} stale open shift(s) from 2+ days ago`);
 
       for (const shift of staleShifts) {
-        // Close at midnight of the day after the shift's workday_date
         const shiftDate = new Date(shift.workday_date);
         shiftDate.setDate(shiftDate.getDate() + 1);
         shiftDate.setHours(0, 0, 0, 0);
@@ -85,7 +96,6 @@ Deno.serve(async (req) => {
 
     // ============================================
     // PHASE 1B: Identify currently OPEN (active) shifts
-    // Exclude these drivers from reset so you don't break live shifts
     // ============================================
     const { data: openShiftsNow, error: openShiftsNowError } = await supabase
       .from("shifts")
@@ -106,7 +116,7 @@ Deno.serve(async (req) => {
     }
 
     // ============================================
-    // PHASE 2: Reset driver statuses (fixed logic)
+    // PHASE 2: Reset driver statuses
     // ============================================
 
     const todayDayOfWeek = new Date().getDay();
@@ -271,8 +281,6 @@ Deno.serve(async (req) => {
     console.log(
       `Reset complete: ${totalUnassigned} → unassigned, ${totalAssigned} take-home working → assigned, ${totalStaleClosed} stale shifts auto-closed`,
     );
-
-    console.log("Sample take-home assignments:", Array.from(takeHomeWorkingVehicleById.entries()).slice(0, 5));
 
     return new Response(
       JSON.stringify({
