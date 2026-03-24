@@ -163,10 +163,12 @@ Deno.serve(async (req) => {
     });
 
     // 3) Get all drivers that are not status=off (and we will exclude active-shift drivers)
+    // Get all active drivers not already in "unconfirmed" status
     const { data: allDrivers, error: allDriversError } = await supabase
       .from("drivers")
       .select("id, name, status, default_vehicle, vehicle")
-      .neq("status", "off");
+      .eq("is_active", true)
+      .neq("status", "done");
 
     if (allDriversError) {
       console.error("Error fetching drivers:", allDriversError);
@@ -205,7 +207,7 @@ Deno.serve(async (req) => {
     if (toUnassignIds.length > 0) {
       const { data: unassignedDrivers, error: unassignError } = await supabase
         .from("drivers")
-        .update({ status: "unassigned", vehicle: null })
+        .update({ status: "unconfirmed", vehicle: null })
         .in("id", toUnassignIds)
         .select("id, name");
 
@@ -225,7 +227,7 @@ Deno.serve(async (req) => {
             entity_name: driver.name,
             field_changed: "status",
             old_value: "various",
-            new_value: "unassigned",
+            new_value: "unconfirmed",
           })),
         );
       }
@@ -237,7 +239,7 @@ Deno.serve(async (req) => {
     if (takeHomeWorkingIds.length > 0) {
       const { data, error: assignedError } = await supabase
         .from("drivers")
-        .update({ status: "assigned" })
+        .update({ status: "confirmed" })
         .in("id", takeHomeWorkingIds)
         .select("id, name");
 
@@ -270,7 +272,7 @@ Deno.serve(async (req) => {
             entity_name: driver.name,
             field_changed: "status",
             old_value: "various",
-            new_value: "assigned",
+            new_value: "confirmed",
           })),
         );
       }
