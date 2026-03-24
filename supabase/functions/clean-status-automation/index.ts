@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-lovable-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -21,17 +21,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Skip secret check for cron jobs - they're authenticated via JWT Authorization header
-    // Only require secret for external/manual calls without proper auth
-    const authHeader = req.headers.get("authorization");
-    const expectedSecret = Deno.env.get("WASH_EVENTS_SECRET");
-    const providedSecret = req.headers.get("x-lovable-secret");
-    
-    // Allow if: has valid auth header (from cron), OR has correct secret (for external calls)
-    const hasValidAuth = authHeader && authHeader.startsWith("Bearer ");
-    const hasValidSecret = expectedSecret && providedSecret === expectedSecret;
-    
-    if (!hasValidAuth && !hasValidSecret) {
+    // Authenticate: require CRON_SECRET header
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    const providedSecret = req.headers.get("x-cron-secret");
+
+    if (!cronSecret || providedSecret !== cronSecret) {
       return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
