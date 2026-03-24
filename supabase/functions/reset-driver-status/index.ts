@@ -207,7 +207,7 @@ Deno.serve(async (req) => {
     if (toUnassignIds.length > 0) {
       const { data: unassignedDrivers, error: unassignError } = await supabase
         .from("drivers")
-        .update({ status: "unassigned", vehicle: null })
+        .update({ status: "unconfirmed", vehicle: null })
         .in("id", toUnassignIds)
         .select("id, name");
 
