@@ -239,7 +239,7 @@ Deno.serve(async (req) => {
     if (takeHomeWorkingIds.length > 0) {
       const { data, error: assignedError } = await supabase
         .from("drivers")
-        .update({ status: "assigned" })
+        .update({ status: "confirmed" })
         .in("id", takeHomeWorkingIds)
         .select("id, name");
 
