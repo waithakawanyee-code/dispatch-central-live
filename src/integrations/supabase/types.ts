@@ -63,10 +63,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "admin_assignment_overrides_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "admin_assignment_overrides_owner_driver_id_fkey"
             columns: ["owner_driver_id"]
             isOneToOne: false
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_assignment_overrides_owner_driver_id_fkey"
+            columns: ["owner_driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_public"
             referencedColumns: ["id"]
           },
           {
@@ -355,6 +369,13 @@ export type Database = {
             referencedRelation: "drivers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "driver_schedules_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       driver_time_off: {
@@ -403,6 +424,13 @@ export type Database = {
             columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_time_off_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_public"
             referencedColumns: ["id"]
           },
         ]
@@ -534,6 +562,13 @@ export type Database = {
             columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "future_assignments_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_public"
             referencedColumns: ["id"]
           },
         ]
@@ -809,6 +844,13 @@ export type Database = {
             referencedRelation: "drivers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "shifts_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       shuttle_schedules: {
@@ -851,6 +893,13 @@ export type Database = {
             columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shuttle_schedules_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_public"
             referencedColumns: ["id"]
           },
         ]
@@ -927,6 +976,13 @@ export type Database = {
             referencedRelation: "drivers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "time_punches_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -990,6 +1046,13 @@ export type Database = {
             columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_assignment_history_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_public"
             referencedColumns: ["id"]
           },
           {
@@ -1265,6 +1328,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vehicles_assigned_driver_id_fkey"
+            columns: ["assigned_driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "vehicles_current_maintenance_event_id_fkey"
             columns: ["current_maintenance_event_id"]
             isOneToOne: false
@@ -1302,7 +1372,60 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      drivers_public: {
+        Row: {
+          amtrak_primary: boolean | null
+          amtrak_trained: boolean | null
+          bph_primary: boolean | null
+          bph_trained: boolean | null
+          code: string | null
+          created_at: string | null
+          default_vehicle: string | null
+          has_cdl: boolean | null
+          id: string | null
+          is_active: boolean | null
+          name: string | null
+          report_time: string | null
+          status: Database["public"]["Enums"]["driver_status"] | null
+          updated_at: string | null
+          vehicle: string | null
+        }
+        Insert: {
+          amtrak_primary?: boolean | null
+          amtrak_trained?: boolean | null
+          bph_primary?: boolean | null
+          bph_trained?: boolean | null
+          code?: string | null
+          created_at?: string | null
+          default_vehicle?: string | null
+          has_cdl?: boolean | null
+          id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          report_time?: string | null
+          status?: Database["public"]["Enums"]["driver_status"] | null
+          updated_at?: string | null
+          vehicle?: string | null
+        }
+        Update: {
+          amtrak_primary?: boolean | null
+          amtrak_trained?: boolean | null
+          bph_primary?: boolean | null
+          bph_trained?: boolean | null
+          code?: string | null
+          created_at?: string | null
+          default_vehicle?: string | null
+          has_cdl?: boolean | null
+          id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          report_time?: string | null
+          status?: Database["public"]["Enums"]["driver_status"] | null
+          updated_at?: string | null
+          vehicle?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       current_ny_date: { Args: never; Returns: string }
