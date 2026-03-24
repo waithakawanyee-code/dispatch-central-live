@@ -272,7 +272,7 @@ Deno.serve(async (req) => {
             entity_name: driver.name,
             field_changed: "status",
             old_value: "various",
-            new_value: "assigned",
+            new_value: "confirmed",
           })),
         );
       }
