@@ -163,10 +163,12 @@ Deno.serve(async (req) => {
     });
 
     // 3) Get all drivers that are not status=off (and we will exclude active-shift drivers)
+    // Get all active drivers not already in "unconfirmed" status
     const { data: allDrivers, error: allDriversError } = await supabase
       .from("drivers")
       .select("id, name, status, default_vehicle, vehicle")
-      .neq("status", "off");
+      .eq("is_active", true)
+      .neq("status", "done");
 
     if (allDriversError) {
       console.error("Error fetching drivers:", allDriversError);
