@@ -451,6 +451,61 @@ export function useDispatchData() {
     console.log(`[Manual] ${vehicle.unit} clean status changed from ${oldStatus} to ${newCleanStatus}`);
   };
 
+  // Confirm a driver in-place (without clearing vehicle/report_time)
+  // Used when clicking confirm on unconfirmed_with_vehicle drivers
+  const confirmDriverNow = async (driverId: string): Promise<{ error: any }> => {
+    const driver = allDrivers.find(d => d.id === driverId);
+    if (!driver) return { error: new Error("Driver not found") };
+    const { error } = await supabase.from("drivers").update({ status: "confirmed" }).eq("id", driverId);
+    if (!error) {
+      await logStatusChange("driver", driverId, driver.name, "status", driver.status, "confirmed");
+    }
+    return { error };
+  };
+
+  // Assign driver today: set vehicle + report_time, optionally confirm
+  // Used in handleAssignDriver for today (not future dates)
+  const assignDriverToday = async (
+    driverId: string,
+    vehicleValue: string | null,
+    reportTimeValue: string | null,
+    shouldConfirm: boolean
+  ): Promise<{ error: any }> => {
+    const updateData: Record<string, unknown> = {
+      vehicle: vehicleValue,
+      report_time: reportTimeValue,
+    };
+    if (shouldConfirm) updateData.status = "confirmed";
+    const { error } = await supabase.from("drivers").update(updateData).eq("id", driverId);
+    return { error };
+  };
+
+  // Sync vehicle fields after a vehicle switch (driver's vehicle col + vehicles.driver col)
+  const syncVehicleAfterSwitch = async (
+    driverId: string,
+    driverName: string,
+    newVehicle: string,
+    oldVehicle: string | null
+  ): Promise<{ error: any }> => {
+    const { error } = await supabase.from("drivers").update({ vehicle: newVehicle }).eq("id", driverId);
+    if (error) return { error };
+    if (oldVehicle) {
+      await supabase.from("vehicles").update({ driver: null }).eq("unit", oldVehicle);
+    }
+    await supabase.from("vehicles").update({ driver: driverName }).eq("unit", newVehicle);
+    return { error: null };
+  };
+
+  // Reset all active drivers to unconfirmed (testing utility)
+  const resetAllDrivers = async (driverIds: string[]): Promise<{ error: any }> => {
+    for (const id of driverIds) {
+      await supabase.from("drivers").update({
+        status: "unconfirmed", vehicle: null, report_time: null, updated_at: new Date().toISOString()
+      }).eq("id", id);
+    }
+    return { error: null };
+  };
+
   return {
     drivers, // Active drivers only (for dispatch views)
     allDrivers, // All drivers including inactive (for admin)
@@ -462,5 +517,9 @@ export function useDispatchData() {
     updateVehicleStatus,
     updateVehicleCleanStatus,
     refetch,
+    confirmDriverNow,
+    assignDriverToday,
+    syncVehicleAfterSwitch,
+    resetAllDrivers,
   };
 }

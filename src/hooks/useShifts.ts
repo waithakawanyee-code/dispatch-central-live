@@ -736,6 +736,21 @@ export function useShifts(selectedWorkday: Date = new Date()) {
     return false;
   };
 
+  // Fetch shifts for multiple drivers over a date range (for PDF print/download)
+  const fetchWeekShifts = async (
+    driverIds: string[],
+    fromDateStr: string,
+    toDateStr: string
+  ): Promise<{ driver_id: string; punch_in_at: string; punch_out_at: string | null; workday_date: string }[]> => {
+    const { data } = await supabase
+      .from("shifts")
+      .select("driver_id, punch_in_at, punch_out_at, workday_date")
+      .in("driver_id", driverIds)
+      .gte("workday_date", fromDateStr)
+      .lt("workday_date", toDateStr);
+    return data || [];
+  };
+
   return {
     shifts,
     vehicleSegments,
@@ -752,5 +767,6 @@ export function useShifts(selectedWorkday: Date = new Date()) {
     closeOutWorkday,
     getSegmentsForShift,
     isPunchTimeAfter10PM,
+    fetchWeekShifts,
   };
 }
