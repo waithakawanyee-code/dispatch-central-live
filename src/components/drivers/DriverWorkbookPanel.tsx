@@ -41,6 +41,7 @@ interface DriverWorkbookPanelProps {
   recentlyUpdatedDrivers: Set<string>;
   onDriverSelect: (driverId: string) => void;
   onConfirmDriver?: (driverId: string) => void;
+  onContextAction?: (driverId: string, action: DriverContextAction) => void;
   cdlFilter: "all" | "cdl" | "non-cdl";
   isAdmin?: boolean;
 }
@@ -51,6 +52,7 @@ export function DriverWorkbookPanel({
   recentlyUpdatedDrivers,
   onDriverSelect,
   onConfirmDriver,
+  onContextAction,
   cdlFilter,
   isAdmin,
 }: DriverWorkbookPanelProps) {
