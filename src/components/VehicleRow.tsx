@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Truck, Wrench, Droplets, User, Phone, Home, Unlock, Building2, Sparkles, CircleAlert, CircleHelp } from "lucide-react";
+import { Truck, Wrench, Droplets, User, Phone, Home, Unlock, Building2, Sparkles, CircleAlert, CircleHelp, FileText, ShieldAlert } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { ServiceTicketDialog } from "./ServiceTicketDialog";
 import { VehicleTicketsSheet } from "./VehicleTicketsSheet";
@@ -8,6 +8,13 @@ import { MaintenanceEventSheet } from "./MaintenanceEventSheet";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import type { Database } from "@/integrations/supabase/types";
 import { useOpenMaintenanceEvent } from "@/hooks/useMaintenanceEvents";
 type CleanStatus = Database["public"]["Enums"]["clean_status"];
