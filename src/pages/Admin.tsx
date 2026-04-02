@@ -7,7 +7,7 @@ import { VehicleAssignmentHistory } from "@/components/admin/VehicleAssignmentHi
 import { HistoryLog } from "@/components/admin/HistoryLog";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { ScheduleManagement } from "@/components/admin/ScheduleManagement";
-import { TimePunchReport } from "@/components/admin/TimePunchReport";
+
 import { TimeOffManagement } from "@/components/admin/TimeOffManagement";
 import { SettingsManagement } from "@/components/admin/SettingsManagement";
 import { IssueCatalogManagement } from "@/components/admin/IssueCatalogManagement";
