@@ -131,6 +131,7 @@ export function DriverWorkbookPanel({
                       isSelected={selectedDriverId === driver.id}
                       isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                       onClick={() => onDriverSelect(driver.id)}
+                      onContextAction={onContextAction}
                       onConfirm={onConfirmDriver}
                       subcategory="has_vehicle"
                       showPhoneTooltip
@@ -150,6 +151,7 @@ export function DriverWorkbookPanel({
                       isSelected={selectedDriverId === driver.id}
                       isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                       onClick={() => onDriverSelect(driver.id)}
+                      onContextAction={onContextAction}
                       showPhoneTooltip
                     />
                   ))}
@@ -191,6 +193,7 @@ export function DriverWorkbookPanel({
                       isSelected={selectedDriverId === driver.id}
                       isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                       onClick={() => onDriverSelect(driver.id)}
+                      onContextAction={onContextAction}
                       subcategory="report_time"
                     />
                   ))}
@@ -211,6 +214,7 @@ export function DriverWorkbookPanel({
                       isSelected={selectedDriverId === driver.id}
                       isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                       onClick={() => onDriverSelect(driver.id)}
+                      onContextAction={onContextAction}
                       subcategory="dispatched"
                     />
                   ))}
@@ -243,6 +247,7 @@ export function DriverWorkbookPanel({
                   isSelected={selectedDriverId === driver.id}
                   isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                   onClick={() => onDriverSelect(driver.id)}
+                      onContextAction={onContextAction}
                 />
               ))}
             </div>
@@ -315,6 +320,7 @@ function DoneSection({
                     isSelected={selectedDriverId === driver.id}
                     isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                     onClick={() => onDriverSelect(driver.id)}
+                      onContextAction={onContextAction}
                   />
                 ))}
               </div>
