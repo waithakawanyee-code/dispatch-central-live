@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock, PhoneOff, Truck, X, Undo2, Search, UserPlus, Printer, Download } from "lucide-react";
-import { printHoursPdf, downloadHoursPdf } from "@/lib/printHoursPdf";
-import { format, addDays, isSameDay, startOfDay, getDay, startOfWeek, parseISO, differenceInMinutes } from "date-fns";
+import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock, PhoneOff, Truck, X, Undo2, Search, UserPlus } from "lucide-react";
+import { format, addDays, isSameDay, startOfDay, getDay, startOfWeek, parseISO } from "date-fns";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
 import { DriverRow } from "@/components/DriverRow";
