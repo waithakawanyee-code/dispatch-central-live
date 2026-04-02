@@ -1,9 +1,27 @@
-import { Clock, Home, User, Truck, Phone } from "lucide-react";
+import { Clock, Home, User, Truck, Phone, CheckCircle, LogOut, Power, Undo2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriverStatus = Database["public"]["Enums"]["driver_status"];
+
+export type DriverContextAction = 
+  | "confirm"
+  | "punch-in"
+  | "quick-punch-in"
+  | "punch-out"
+  | "switch-vehicle"
+  | "start-new-shift"
+  | "mark-off"
+  | "unconfirm"
+  | "reset";
 
 interface DriverWorkbookCardProps {
   driver: {
@@ -26,6 +44,7 @@ interface DriverWorkbookCardProps {
   isUpdated?: boolean;
   onClick?: () => void;
   onConfirm?: (driverId: string) => void;
+  onContextAction?: (driverId: string, action: DriverContextAction) => void;
   subcategory?: "has_vehicle" | "dispatched" | "report_time";
   showPhoneTooltip?: boolean;
 }
@@ -37,6 +56,7 @@ export function DriverWorkbookCard({
   isUpdated,
   onClick,
   onConfirm,
+  onContextAction,
   subcategory,
   showPhoneTooltip = false,
 }: DriverWorkbookCardProps) {
@@ -87,6 +107,46 @@ export function DriverWorkbookCard({
         return "text-muted-foreground";
     }
   };
+
+  const getContextMenuItems = () => {
+    if (!onContextAction) return null;
+    
+    const items: { label: string; icon: typeof CheckCircle; action: DriverContextAction; variant?: string }[] = [];
+    
+    switch (driver.status) {
+      case "unconfirmed":
+        items.push(
+          { label: "Confirm", icon: CheckCircle, action: "confirm" },
+          { label: "Punch In", icon: Clock, action: "punch-in" },
+          { label: "Mark OFF", icon: Power, action: "mark-off", variant: "muted" },
+        );
+        break;
+      case "confirmed":
+        items.push(
+          { label: "Punch In", icon: Clock, action: "punch-in" },
+          { label: "Quick Punch In", icon: Clock, action: "quick-punch-in" },
+          { label: "Mark OFF", icon: Power, action: "mark-off", variant: "muted" },
+          { label: "Unconfirm", icon: Undo2, action: "unconfirm", variant: "muted" },
+        );
+        break;
+      case "on_the_clock":
+        items.push(
+          { label: "Punch Out", icon: LogOut, action: "punch-out" },
+          { label: "Switch Vehicle", icon: Truck, action: "switch-vehicle" },
+        );
+        break;
+      case "done":
+        items.push(
+          { label: "Start New Shift", icon: RefreshCw, action: "start-new-shift" },
+          { label: "Reset", icon: Undo2, action: "reset", variant: "muted" },
+        );
+        break;
+    }
+    
+    return items;
+  };
+
+  const contextItems = getContextMenuItems();
 
   const cardContent = (
     <div
@@ -161,21 +221,48 @@ export function DriverWorkbookCard({
     </div>
   );
 
-  if (showPhoneTooltip && driver.phone) {
+  const wrappedCardContent = showPhoneTooltip && driver.phone ? (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {cardContent}
+        </TooltipTrigger>
+        <TooltipContent side="top" className="flex items-center gap-2 bg-popover border border-border">
+          <Phone className="h-3 w-3 text-primary" />
+          <span className="font-mono text-sm">{driver.phone}</span>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  ) : cardContent;
+
+  // If we have context menu items, wrap with ContextMenu
+  if (contextItems && contextItems.length > 0) {
     return (
-      <TooltipProvider delayDuration={200}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            {cardContent}
-          </TooltipTrigger>
-          <TooltipContent side="top" className="flex items-center gap-2 bg-popover border border-border">
-            <Phone className="h-3 w-3 text-primary" />
-            <span className="font-mono text-sm">{driver.phone}</span>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          {wrappedCardContent}
+        </ContextMenuTrigger>
+        <ContextMenuContent className="min-w-[180px]">
+          <div className="px-2 py-1.5 text-[11px] font-mono text-muted-foreground border-b border-border/50 mb-1">
+            {driver.code || driver.name}
+          </div>
+          {contextItems.map((item, index) => (
+            <ContextMenuItem
+              key={item.action}
+              onClick={() => onContextAction!(driver.id, item.action)}
+              className={cn(
+                "gap-2 text-xs cursor-pointer",
+                item.variant === "muted" && "text-muted-foreground"
+              )}
+            >
+              <item.icon className="h-3.5 w-3.5" />
+              <span>{item.label}</span>
+            </ContextMenuItem>
+          ))}
+        </ContextMenuContent>
+      </ContextMenu>
     );
   }
 
-  return cardContent;
+  return wrappedCardContent;
 }
