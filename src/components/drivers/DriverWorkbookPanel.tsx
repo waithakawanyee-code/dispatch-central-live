@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Users, Clock, CheckCircle2, ChevronDown } from "lucide-react";
-import { DriverWorkbookCard } from "./DriverWorkbookCard";
+import { DriverWorkbookCard, type DriverContextAction } from "./DriverWorkbookCard";
 import { DriverStatusSection } from "./DriverStatusSection";
 import { DriverSubcategoryGroup } from "./DriverSubcategoryGroup";
 import { cn } from "@/lib/utils";
