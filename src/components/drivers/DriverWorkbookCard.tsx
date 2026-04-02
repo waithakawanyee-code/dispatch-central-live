@@ -148,7 +148,7 @@ export function DriverWorkbookCard({
 
   const contextItems = getContextMenuItems();
 
-  const cardContent = (
+  const cardDiv = (
     <div
       data-driver-id={driver.id}
       onClick={onClick}
@@ -156,17 +156,12 @@ export function DriverWorkbookCard({
         "group relative flex items-center gap-2.5 rounded-md border border-border/60 bg-card px-2.5 py-2 transition-all duration-200 cursor-pointer",
         "border-l-[3px]",
         getStatusAccent(),
-        // Hover
         "hover:bg-accent/30 hover:border-border",
-        // Selected
         isSelected && "ring-1 ring-primary/50 bg-accent/20 border-border shadow-[0_0_8px_hsl(var(--primary)/0.15)]",
-        // Updated flash
         isUpdated && "animate-row-flash",
-        // Done state
         driver.status === "done" && "opacity-50"
       )}
     >
-      {/* Status icon */}
       <div className="flex h-5 w-5 shrink-0 items-center justify-center">
         {hasTakeHome ? (
           <Home className={cn("h-3.5 w-3.5", getIconColor())} />
@@ -175,7 +170,6 @@ export function DriverWorkbookCard({
         )}
       </div>
 
-      {/* Driver info - name is focal point */}
       <div className="flex-1 min-w-0">
         <span className={cn(
           "block font-mono text-[13px] font-semibold leading-tight truncate",
@@ -185,32 +179,24 @@ export function DriverWorkbookCard({
         </span>
       </div>
 
-      {/* Right metadata cluster */}
       <div className="flex items-center gap-1.5 shrink-0">
-        {/* CDL Badge */}
         {driver.has_cdl && (
           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-primary/15 text-primary border border-primary/20">
             CDL
           </span>
         )}
-
-        {/* Report time */}
         {driver.status === "confirmed" && formattedReportTime && (
           <span className="flex items-center gap-0.5 text-[10px] text-amber-500/90 font-mono tabular-nums">
             <Clock className="h-2.5 w-2.5" />
             {formattedReportTime}
           </span>
         )}
-
-        {/* Vehicle */}
         {vehicleUnit && (driver.status === "on_the_clock" || driver.status === "confirmed" || subcategory === "has_vehicle") && (
           <span className="flex items-center gap-0.5 text-[10px] text-primary/80 font-mono tabular-nums">
             <Truck className="h-2.5 w-2.5" />
             {vehicleUnit}
           </span>
         )}
-
-        {/* Take-home vehicle when no active vehicle */}
         {hasTakeHome && !vehicleUnit && (
           <span className="flex items-center gap-0.5 text-[10px] text-blue-400/80 font-mono tabular-nums">
             <Home className="h-2.5 w-2.5" />
@@ -221,32 +207,34 @@ export function DriverWorkbookCard({
     </div>
   );
 
-  const wrappedCardContent = showPhoneTooltip && driver.phone ? (
-    <TooltipProvider delayDuration={200}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          {cardContent}
-        </TooltipTrigger>
-        <TooltipContent side="top" className="flex items-center gap-2 bg-popover border border-border">
-          <Phone className="h-3 w-3 text-primary" />
-          <span className="font-mono text-sm">{driver.phone}</span>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  ) : cardContent;
+  const wrapWithTooltip = (content: React.ReactNode) => {
+    if (!showPhoneTooltip || !driver.phone) return content;
+    return (
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {content}
+          </TooltipTrigger>
+          <TooltipContent side="top" className="flex items-center gap-2 bg-popover border border-border">
+            <Phone className="h-3 w-3 text-primary" />
+            <span className="font-mono text-sm">{driver.phone}</span>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
 
-  // If we have context menu items, wrap with ContextMenu
   if (contextItems && contextItems.length > 0) {
     return (
       <ContextMenu>
         <ContextMenuTrigger asChild>
-          {wrappedCardContent}
+          {wrapWithTooltip(cardDiv)}
         </ContextMenuTrigger>
         <ContextMenuContent className="min-w-[180px]">
           <div className="px-2 py-1.5 text-[11px] font-mono text-muted-foreground border-b border-border/50 mb-1">
             {driver.code || driver.name}
           </div>
-          {contextItems.map((item, index) => (
+          {contextItems.map((item) => (
             <ContextMenuItem
               key={item.action}
               onClick={() => onContextAction!(driver.id, item.action)}
@@ -264,5 +252,5 @@ export function DriverWorkbookCard({
     );
   }
 
-  return wrappedCardContent;
+  return wrapWithTooltip(cardDiv) as React.ReactElement;
 }
