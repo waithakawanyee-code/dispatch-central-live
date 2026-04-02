@@ -7,7 +7,7 @@ import { DriverRow } from "@/components/DriverRow";
 import { DriverDetailsPanel } from "@/components/DriverDetailsPanel";
 import { DriverPicker } from "@/components/DriverPicker";
 import { DriverActionToolbar } from "@/components/DriverActionToolbar";
-import { DriverWorkbookPanel, OffDriversSection } from "@/components/drivers";
+import { DriverWorkbookPanel, OffDriversSection, type DriverContextAction } from "@/components/drivers";
 import { QuickVehiclePickerDialog } from "@/components/QuickVehiclePickerDialog";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -1243,6 +1243,42 @@ const Drivers = () => {
     });
   }, [drivers, updateDriverStatus, toast]);
 
+  // Context menu action dispatcher
+  const handleContextAction = useCallback((driverId: string, action: DriverContextAction) => {
+    // Select the driver first so toolbar stays in sync
+    setSelectedDriverId(driverId);
+    
+    switch (action) {
+      case "confirm":
+        executeAssign(driverId);
+        break;
+      case "punch-in":
+        executePunchIn(driverId);
+        break;
+      case "quick-punch-in":
+        executeQuickPunchIn(driverId);
+        break;
+      case "punch-out":
+        executePunchOut(driverId);
+        break;
+      case "switch-vehicle":
+        executeSwitchVehicle(driverId);
+        break;
+      case "start-new-shift":
+        executeStartNewShift(driverId);
+        break;
+      case "mark-off":
+        executeOff(driverId);
+        break;
+      case "unconfirm":
+        executeUnassign(driverId);
+        break;
+      case "reset":
+        executeReset(driverId);
+        break;
+    }
+  }, [executeAssign, executePunchIn, executeQuickPunchIn, executePunchOut, executeSwitchVehicle, executeStartNewShift, executeOff, executeUnassign, executeReset]);
+
   // Reset all drivers to unconfirmed (testing utility)
   const executeResetAll = useCallback(async () => {
     const activeDrivers = drivers.filter(d => d.is_active && d.status !== "unconfirmed");
@@ -2107,7 +2143,7 @@ const Drivers = () => {
             ...d,
             shiftData: (d as any).shiftData || null,
             phone: (d as any).phone || null,
-          }))} selectedDriverId={selectedDriverId} recentlyUpdatedDrivers={recentlyUpdatedDrivers} onDriverSelect={handleDriverSelect} onConfirmDriver={handleConfirmDriver} cdlFilter={globalCdlFilter} isAdmin={isAdmin} />
+          }))} selectedDriverId={selectedDriverId} recentlyUpdatedDrivers={recentlyUpdatedDrivers} onDriverSelect={handleDriverSelect} onConfirmDriver={handleConfirmDriver} onContextAction={isToday ? handleContextAction : undefined} cdlFilter={globalCdlFilter} isAdmin={isAdmin} />
 
               {/* OFF Drivers - Compact Tabbed Section */}
               <OffDriversSection
