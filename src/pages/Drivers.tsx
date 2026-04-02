@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock, PhoneOff, Truck, X, Undo2, Search, UserPlus, Printer, Download } from "lucide-react";
-import { printHoursPdf, downloadHoursPdf } from "@/lib/printHoursPdf";
-import { format, addDays, isSameDay, startOfDay, getDay, startOfWeek, parseISO, differenceInMinutes } from "date-fns";
+import { Users, BarChart3, ChevronDown, ChevronLeft, ChevronRight, CalendarIcon, Clock, PhoneOff, Truck, X, Undo2, Search, UserPlus } from "lucide-react";
+import { format, addDays, isSameDay, startOfDay, getDay, startOfWeek, parseISO } from "date-fns";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
 import { DriverRow } from "@/components/DriverRow";
@@ -2086,121 +2085,6 @@ const Drivers = () => {
         <div className="space-y-4">
               {/* Global CDL Filter + Print Hours */}
               <div className="flex items-center justify-between gap-2">
-                {/* Print Hours Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-2 text-xs"
-                  onClick={async () => {
-                    // Format punch times for PDF
-                    const formatPunchTime = (isoString: string | null | undefined) => {
-                      if (!isoString) return null;
-                      try {
-                        const date = new Date(isoString);
-                        return format(date, "h:mm a");
-                      } catch {
-                        return null;
-                      }
-                    };
-
-                    // Calculate week hours for each driver
-                    // Get Monday of the current week
-                    const monday = startOfWeek(selectedDate, { weekStartsOn: 1 });
-                    const mondayStr = format(monday, "yyyy-MM-dd");
-                    const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
-
-                    // Fetch all shifts for this week up to selected date for all displayed drivers
-                    const driverIds = displayDrivers.map(d => d.id);
-                    const { data: weekShifts } = await supabase
-                      .from("shifts")
-                      .select("driver_id, punch_in_at, punch_out_at, workday_date")
-                      .in("driver_id", driverIds)
-                      .gte("workday_date", mondayStr)
-                      .lt("workday_date", selectedDateStr); // Only include days before selected date
-
-                    // Calculate week hours per driver (excluding today)
-                    const weekHoursMap = new Map<string, number>();
-                    (weekShifts || []).forEach(shift => {
-                      if (shift.punch_in_at && shift.punch_out_at) {
-                        const punchIn = parseISO(shift.punch_in_at);
-                        const punchOut = parseISO(shift.punch_out_at);
-                        const minutes = differenceInMinutes(punchOut, punchIn);
-                        const hours = minutes / 60;
-                        const current = weekHoursMap.get(shift.driver_id) || 0;
-                        weekHoursMap.set(shift.driver_id, current + hours);
-                      }
-                    });
-
-                    const hoursData = displayDrivers.map(d => ({
-                      driverName: d.name,
-                      driverCode: d.code || null,
-                      vehicleId: d.vehicle || (d as any).shiftData?.vehicle_unit || null,
-                      startTime: formatPunchTime((d as any).shiftData?.punch_in_at),
-                      endTime: formatPunchTime((d as any).shiftData?.punch_out_at),
-                      weekHours: weekHoursMap.get(d.id) || null,
-                    }));
-                    printHoursPdf(hoursData, selectedDate);
-                  }}
-                >
-                  <Printer className="h-3.5 w-3.5" />
-                  Print
-                </Button>
-
-                {/* Download Hours Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-2 text-xs"
-                  onClick={async () => {
-                    const formatPunchTime = (isoString: string | null | undefined) => {
-                      if (!isoString) return null;
-                      try {
-                        const date = new Date(isoString);
-                        return format(date, "h:mm a");
-                      } catch {
-                        return null;
-                      }
-                    };
-
-                    const monday = startOfWeek(selectedDate, { weekStartsOn: 1 });
-                    const mondayStr = format(monday, "yyyy-MM-dd");
-                    const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
-
-                    const driverIds = displayDrivers.map(d => d.id);
-                    const { data: weekShifts } = await supabase
-                      .from("shifts")
-                      .select("driver_id, punch_in_at, punch_out_at, workday_date")
-                      .in("driver_id", driverIds)
-                      .gte("workday_date", mondayStr)
-                      .lt("workday_date", selectedDateStr);
-
-                    const weekHoursMap = new Map<string, number>();
-                    (weekShifts || []).forEach(shift => {
-                      if (shift.punch_in_at && shift.punch_out_at) {
-                        const punchIn = parseISO(shift.punch_in_at);
-                        const punchOut = parseISO(shift.punch_out_at);
-                        const minutes = differenceInMinutes(punchOut, punchIn);
-                        const hours = minutes / 60;
-                        const current = weekHoursMap.get(shift.driver_id) || 0;
-                        weekHoursMap.set(shift.driver_id, current + hours);
-                      }
-                    });
-
-                    const hoursData = displayDrivers.map(d => ({
-                      driverName: d.name,
-                      driverCode: d.code || null,
-                      vehicleId: d.vehicle || (d as any).shiftData?.vehicle_unit || null,
-                      startTime: formatPunchTime((d as any).shiftData?.punch_in_at),
-                      endTime: formatPunchTime((d as any).shiftData?.punch_out_at),
-                      weekHours: weekHoursMap.get(d.id) || null,
-                    }));
-                    downloadHoursPdf(hoursData, selectedDate);
-                  }}
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  Download
-                </Button>
-
                 {/* CDL Filter */}
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground uppercase tracking-wide">CDL Filter:</span>

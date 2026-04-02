@@ -201,15 +201,8 @@ export function useDispatchData() {
         await closeVehicleAssignment(driverId);
       }
       
-      // Record punch in when status changes to on_the_clock
-      if (newStatus === "on_the_clock" && oldStatus !== "on_the_clock") {
-        await recordTimePunch(driverId, driver.name, "in", punchTime);
-      } else if (newStatus === "done" && oldStatus !== "done" && oldStatus !== "unconfirmed") {
-        // Record punch out when status changes to done (not from unconfirmed)
-        await recordTimePunch(driverId, driver.name, "out", punchTime);
-        
-        // Rule B: Mark vehicle dirty on punch-out for non-take-home vehicles
-        // This also clears the driver field on the vehicle
+      // Rule B: Mark vehicle dirty on punch-out for non-take-home vehicles
+      if (newStatus === "done" && oldStatus !== "done" && oldStatus !== "unconfirmed") {
         if (oldVehicle) {
           await markVehicleDirtyOnPunchOut(oldVehicle);
         }
@@ -256,32 +249,6 @@ export function useDispatchData() {
     }
   };
 
-  const recordTimePunch = async (driverId: string, driverName: string, punchType: "in" | "out", punchTime?: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    // Build punch time: if provided as HH:MM, create today's date with that time
-    let punchTimestamp: string | undefined;
-    if (punchTime && /^\d{2}:\d{2}$/.test(punchTime)) {
-      const today = new Date();
-      const [hours, minutes] = punchTime.split(":").map(Number);
-      today.setHours(hours, minutes, 0, 0);
-      punchTimestamp = today.toISOString();
-    }
-    
-    const { error } = await supabase
-      .from("time_punches")
-      .insert({
-        driver_id: driverId,
-        driver_name: driverName,
-        punch_type: punchType,
-        punched_by: user?.id,
-        ...(punchTimestamp && { punch_time: punchTimestamp }),
-      });
-
-    if (error) {
-      console.error(`Failed to record punch ${punchType}:`, error);
-    }
-  };
 
   // Rule B: Mark vehicle dirty on punch-out for non-take-home vehicles
   // Also clears the driver field for fleet vehicles
