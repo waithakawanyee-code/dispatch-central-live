@@ -7,7 +7,7 @@ import { DriverRow } from "@/components/DriverRow";
 import { DriverDetailsPanel } from "@/components/DriverDetailsPanel";
 import { DriverPicker } from "@/components/DriverPicker";
 import { DriverActionToolbar } from "@/components/DriverActionToolbar";
-import { DriverWorkbookPanel, OffDriversSection } from "@/components/drivers";
+import { DriverWorkbookPanel, OffDriversSection, type DriverContextAction } from "@/components/drivers";
 import { QuickVehiclePickerDialog } from "@/components/QuickVehiclePickerDialog";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { useUserRole } from "@/hooks/useUserRole";
