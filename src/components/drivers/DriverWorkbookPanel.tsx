@@ -260,6 +260,7 @@ export function DriverWorkbookPanel({
           selectedDriverId={selectedDriverId}
           recentlyUpdatedDrivers={recentlyUpdatedDrivers}
           onDriverSelect={onDriverSelect}
+          onContextAction={onContextAction}
         />
       </div>
     </div>
