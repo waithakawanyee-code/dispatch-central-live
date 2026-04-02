@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, Phone, Clock, Truck, Pencil, Trash2, Check, X, Plus, Award, Home } from "lucide-react";
+import { User, Phone, Clock, Truck, Award, Home } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { AssignDriverDialog } from "./AssignDriverDialog";
 import { cn } from "@/lib/utils";
