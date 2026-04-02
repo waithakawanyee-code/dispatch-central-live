@@ -201,15 +201,8 @@ export function useDispatchData() {
         await closeVehicleAssignment(driverId);
       }
       
-      // Record punch in when status changes to on_the_clock
-      if (newStatus === "on_the_clock" && oldStatus !== "on_the_clock") {
-        await recordTimePunch(driverId, driver.name, "in", punchTime);
-      } else if (newStatus === "done" && oldStatus !== "done" && oldStatus !== "unconfirmed") {
-        // Record punch out when status changes to done (not from unconfirmed)
-        await recordTimePunch(driverId, driver.name, "out", punchTime);
-        
-        // Rule B: Mark vehicle dirty on punch-out for non-take-home vehicles
-        // This also clears the driver field on the vehicle
+      // Rule B: Mark vehicle dirty on punch-out for non-take-home vehicles
+      if (newStatus === "done" && oldStatus !== "done" && oldStatus !== "unconfirmed") {
         if (oldVehicle) {
           await markVehicleDirtyOnPunchOut(oldVehicle);
         }
