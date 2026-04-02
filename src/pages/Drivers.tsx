@@ -2143,7 +2143,7 @@ const Drivers = () => {
             ...d,
             shiftData: (d as any).shiftData || null,
             phone: (d as any).phone || null,
-          }))} selectedDriverId={selectedDriverId} recentlyUpdatedDrivers={recentlyUpdatedDrivers} onDriverSelect={handleDriverSelect} onConfirmDriver={handleConfirmDriver} cdlFilter={globalCdlFilter} isAdmin={isAdmin} />
+          }))} selectedDriverId={selectedDriverId} recentlyUpdatedDrivers={recentlyUpdatedDrivers} onDriverSelect={handleDriverSelect} onConfirmDriver={handleConfirmDriver} onContextAction={isToday ? handleContextAction : undefined} cdlFilter={globalCdlFilter} isAdmin={isAdmin} />
 
               {/* OFF Drivers - Compact Tabbed Section */}
               <OffDriversSection
