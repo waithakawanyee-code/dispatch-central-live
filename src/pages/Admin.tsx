@@ -38,7 +38,6 @@ const NAVIGATION_GROUPS = [
     items: [
       { id: "drivers" as AdminSection, label: "Manage Drivers", icon: Users },
       { id: "schedules" as AdminSection, label: "Schedules", icon: Calendar },
-      { id: "timeclock" as AdminSection, label: "Time Clock", icon: Clock },
       { id: "timeoff" as AdminSection, label: "Time Off", icon: CalendarOff },
     ],
   },
