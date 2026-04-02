@@ -396,15 +396,6 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
               </button>
             </ContextMenuTrigger>
             <ContextMenuContent className="min-w-[140px]">
-              {driver.status === "done" && (
-                <ContextMenuItem
-                  onClick={handleDoneClick}
-                  className="cursor-pointer text-sm"
-                >
-                  <Clock className="h-4 w-4 mr-2" />
-                  <span>View Times</span>
-                </ContextMenuItem>
-              )}
               {getStatusOptions().map((option) => (
                 <ContextMenuItem
                   key={option.value}
