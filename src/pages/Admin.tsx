@@ -126,8 +126,6 @@ const Admin = () => {
         return <DriverManagement />;
       case "schedules":
         return <ScheduleManagement />;
-      case "timeclock":
-        return <TimePunchReport />;
       case "timeoff":
         return <TimeOffManagement />;
       case "vehicles":
