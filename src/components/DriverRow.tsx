@@ -111,11 +111,6 @@ export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = 
     }
   };
 
-  const handleDoneClick = () => {
-    if (driver.status === "done") {
-      fetchPunchTimes();
-    }
-  };
 
   const handleAssign = (assignReportTime: string | undefined, assignVehicle: string | undefined) => {
     onStatusChange?.("confirmed", assignReportTime, assignVehicle);
