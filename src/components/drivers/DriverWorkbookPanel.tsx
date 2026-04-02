@@ -273,11 +273,13 @@ function DoneSection({
   selectedDriverId,
   recentlyUpdatedDrivers,
   onDriverSelect,
+  onContextAction,
 }: {
   drivers: DisplayDriver[];
   selectedDriverId: string | null;
   recentlyUpdatedDrivers: Set<string>;
   onDriverSelect: (driverId: string) => void;
+  onContextAction?: (driverId: string, action: DriverContextAction) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
