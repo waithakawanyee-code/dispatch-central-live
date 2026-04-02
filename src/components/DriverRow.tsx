@@ -86,23 +86,8 @@ const compactDoneOptions: { value: DriverStatus; label: string }[] = [
   { value: "unconfirmed", label: "Reset" },
 ];
 
-interface TimePunch {
-  id: string;
-  punch_type: string;
-  punch_time: string;
-}
-
 export function DriverRow({ driver, onStatusChange, canEdit = true, isUpdated = false, compact = false, mini = false, availableVehicles = [], isSelected = false, onSelect, isAnyHours = false }: DriverRowProps) {
-  const { toast } = useToast();
   const [showAssignDialog, setShowAssignDialog] = useState(false);
-  const [showPunchTimesDialog, setShowPunchTimesDialog] = useState(false);
-  const [punchTimes, setPunchTimes] = useState<TimePunch[]>([]);
-  const [loadingPunches, setLoadingPunches] = useState(false);
-  const [editingPunchId, setEditingPunchId] = useState<string | null>(null);
-  const [editPunchTime, setEditPunchTime] = useState("");
-  const [showAddPunch, setShowAddPunch] = useState(false);
-  const [newPunchType, setNewPunchType] = useState<"in" | "out">("in");
-  const [newPunchTime, setNewPunchTime] = useState("");
   const [reportTime, setReportTime] = useState(driver.report_time?.slice(0, 5) || "");
   const [selectedVehicle, setSelectedVehicle] = useState(driver.vehicle || "__none__");
 
