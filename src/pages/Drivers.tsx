@@ -1243,6 +1243,42 @@ const Drivers = () => {
     });
   }, [drivers, updateDriverStatus, toast]);
 
+  // Context menu action dispatcher
+  const handleContextAction = useCallback((driverId: string, action: DriverContextAction) => {
+    // Select the driver first so toolbar stays in sync
+    setSelectedDriverId(driverId);
+    
+    switch (action) {
+      case "confirm":
+        executeAssign(driverId);
+        break;
+      case "punch-in":
+        executePunchIn(driverId);
+        break;
+      case "quick-punch-in":
+        executeQuickPunchIn(driverId);
+        break;
+      case "punch-out":
+        executePunchOut(driverId);
+        break;
+      case "switch-vehicle":
+        executeSwitchVehicle(driverId);
+        break;
+      case "start-new-shift":
+        executeStartNewShift(driverId);
+        break;
+      case "mark-off":
+        executeOff(driverId);
+        break;
+      case "unconfirm":
+        executeUnassign(driverId);
+        break;
+      case "reset":
+        executeReset(driverId);
+        break;
+    }
+  }, [executeAssign, executePunchIn, executeQuickPunchIn, executePunchOut, executeSwitchVehicle, executeStartNewShift, executeOff, executeUnassign, executeReset]);
+
   // Reset all drivers to unconfirmed (testing utility)
   const executeResetAll = useCallback(async () => {
     const activeDrivers = drivers.filter(d => d.is_active && d.status !== "unconfirmed");
