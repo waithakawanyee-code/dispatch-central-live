@@ -25,7 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type AdminSection = 
-  | "drivers" | "schedules" | "timeclock" | "timeoff"
+  | "drivers" | "schedules" | "timeoff"
   | "vehicles" | "issues" | "tickets"
   | "cleanlog" | "assignments" | "history"
   | "settings" | "users" | "issue-catalog" | "integrations";
