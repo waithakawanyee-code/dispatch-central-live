@@ -1,9 +1,17 @@
-import { Clock, Home, User, Truck, Phone } from "lucide-react";
+import { Clock, Home, User, Truck, Phone, CheckCircle, Power, LogOut, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriverStatus = Database["public"]["Enums"]["driver_status"];
+export type DriverWorkbookAction = "confirm" | "punchIn" | "punchOut" | "markOff" | "unconfirm" | "switchVehicle";
 
 interface DriverWorkbookCardProps {
   driver: {
@@ -28,6 +36,7 @@ interface DriverWorkbookCardProps {
   onConfirm?: (driverId: string) => void;
   subcategory?: "has_vehicle" | "dispatched" | "report_time";
   showPhoneTooltip?: boolean;
+  onAction?: (driverId: string, action: DriverWorkbookAction) => void;
 }
 
 export function DriverWorkbookCard({
@@ -39,6 +48,7 @@ export function DriverWorkbookCard({
   onConfirm,
   subcategory,
   showPhoneTooltip = false,
+  onAction,
 }: DriverWorkbookCardProps) {
   const hasVehicle = !!driver.vehicle || !!shiftData?.vehicle_unit;
   const hasTakeHome = !!driver.default_vehicle;
@@ -161,19 +171,91 @@ export function DriverWorkbookCard({
     </div>
   );
 
+  const getMenuItems = () => {
+    switch (driver.status) {
+      case "unconfirmed":
+        return [
+          { label: "Confirm", icon: CheckCircle, action: "confirm" as const },
+          { label: "Mark OFF", icon: Power, action: "markOff" as const, destructive: true },
+        ];
+      case "confirmed":
+        return [
+          { label: "Punch In", icon: Clock, action: "punchIn" as const },
+          { label: "Mark OFF", icon: Power, action: "markOff" as const, destructive: true },
+          { label: "Unconfirm", icon: Undo2, action: "unconfirm" as const },
+        ];
+      case "on_the_clock":
+        return [
+          { label: "Punch Out", icon: LogOut, action: "punchOut" as const },
+          { label: "Switch Vehicle", icon: Truck, action: "switchVehicle" as const },
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const menuItems = onAction ? getMenuItems() : [];
+
+  const tooltipContent = (
+    <TooltipContent side="top" className="flex items-center gap-2 bg-popover border border-border">
+      <Phone className="h-3 w-3 text-primary" />
+      <span className="font-mono text-sm">{driver.phone}</span>
+    </TooltipContent>
+  );
+
+  const contextMenuContent = menuItems.length > 0 && (
+    <ContextMenuContent className="min-w-[160px]">
+      {menuItems.map(({ label, icon: Icon, action, destructive }) => (
+        <ContextMenuItem
+          key={action}
+          onClick={() => onAction!(driver.id, action)}
+          className={cn("cursor-pointer text-sm gap-2", destructive && "text-destructive focus:text-destructive")}
+        >
+          <Icon className="h-4 w-4" />
+          {label}
+        </ContextMenuItem>
+      ))}
+    </ContextMenuContent>
+  );
+
   if (showPhoneTooltip && driver.phone) {
+    if (menuItems.length > 0) {
+      return (
+        <ContextMenu>
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <ContextMenuTrigger asChild>
+                <TooltipTrigger asChild>
+                  {cardContent}
+                </TooltipTrigger>
+              </ContextMenuTrigger>
+              {tooltipContent}
+            </Tooltip>
+          </TooltipProvider>
+          {contextMenuContent}
+        </ContextMenu>
+      );
+    }
     return (
       <TooltipProvider delayDuration={200}>
         <Tooltip>
           <TooltipTrigger asChild>
             {cardContent}
           </TooltipTrigger>
-          <TooltipContent side="top" className="flex items-center gap-2 bg-popover border border-border">
-            <Phone className="h-3 w-3 text-primary" />
-            <span className="font-mono text-sm">{driver.phone}</span>
-          </TooltipContent>
+          {tooltipContent}
         </Tooltip>
       </TooltipProvider>
+    );
+  }
+
+  if (menuItems.length > 0) {
+    return (
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          {cardContent}
+        </ContextMenuTrigger>
+        {contextMenuContent}
+      </ContextMenu>
     );
   }
 

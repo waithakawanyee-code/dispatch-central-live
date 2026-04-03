@@ -9,6 +9,7 @@ import { DriverDetailsPanel } from "@/components/DriverDetailsPanel";
 import { DriverPicker } from "@/components/DriverPicker";
 import { DriverActionToolbar } from "@/components/DriverActionToolbar";
 import { DriverWorkbookPanel, OffDriversSection } from "@/components/drivers";
+import type { DriverWorkbookAction } from "@/components/drivers/DriverWorkbookCard";
 import { QuickVehiclePickerDialog } from "@/components/QuickVehiclePickerDialog";
 import { useDispatchData } from "@/hooks/useDispatchData";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -1381,6 +1382,17 @@ const Drivers = () => {
   }, [lastAction, updateDriverStatus, toast]);
 
   // Handle driver picker selection (only used for assign and off actions now)
+  const handleDriverAction = useCallback((driverId: string, action: DriverWorkbookAction) => {
+    switch (action) {
+      case "confirm": executeAssign(driverId); break;
+      case "punchIn": executePunchIn(driverId); break;
+      case "punchOut": executePunchOut(driverId); break;
+      case "markOff": executeOff(driverId); break;
+      case "unconfirm": executeUnassign(driverId); break;
+      case "switchVehicle": executeSwitchVehicle(driverId); break;
+    }
+  }, [executeAssign, executePunchIn, executePunchOut, executeOff, executeUnassign, executeSwitchVehicle]);
+
   const handleDriverPickerSelect = useCallback((driver: typeof drivers[0]) => {
     setSelectedDriverId(driver.id);
     setShowDriverPicker(false);
@@ -2223,7 +2235,7 @@ const Drivers = () => {
             ...d,
             shiftData: (d as any).shiftData || null,
             phone: (d as any).phone || null,
-          }))} selectedDriverId={selectedDriverId} recentlyUpdatedDrivers={recentlyUpdatedDrivers} onDriverSelect={handleDriverSelect} onConfirmDriver={handleConfirmDriver} cdlFilter={globalCdlFilter} isAdmin={isAdmin} />
+          }))} selectedDriverId={selectedDriverId} recentlyUpdatedDrivers={recentlyUpdatedDrivers} onDriverSelect={handleDriverSelect} onConfirmDriver={handleConfirmDriver} onDriverAction={isToday ? handleDriverAction : undefined} cdlFilter={globalCdlFilter} isAdmin={isAdmin} />
 
               {/* OFF Drivers - Compact Tabbed Section */}
               <OffDriversSection
