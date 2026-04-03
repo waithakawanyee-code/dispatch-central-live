@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Users, Clock, CheckCircle2, ChevronDown } from "lucide-react";
 import { DriverWorkbookCard, type DriverWorkbookAction } from "./DriverWorkbookCard";
+import { DriverWorkbookCard, type DriverContextAction } from "./DriverWorkbookCard";
 import { DriverStatusSection } from "./DriverStatusSection";
 import { DriverSubcategoryGroup } from "./DriverSubcategoryGroup";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,7 @@ interface DriverWorkbookPanelProps {
   onDriverSelect: (driverId: string) => void;
   onConfirmDriver?: (driverId: string) => void;
   onDriverAction?: (driverId: string, action: DriverWorkbookAction) => void;
+  onContextAction?: (driverId: string, action: DriverContextAction) => void;
   cdlFilter: "all" | "cdl" | "non-cdl";
   isAdmin?: boolean;
 }
@@ -53,6 +55,7 @@ export function DriverWorkbookPanel({
   onDriverSelect,
   onConfirmDriver,
   onDriverAction,
+  onContextAction,
   cdlFilter,
   isAdmin,
 }: DriverWorkbookPanelProps) {
@@ -131,6 +134,7 @@ export function DriverWorkbookPanel({
                       isSelected={selectedDriverId === driver.id}
                       isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                       onClick={() => onDriverSelect(driver.id)}
+                      onContextAction={onContextAction}
                       onConfirm={onConfirmDriver}
                       subcategory="has_vehicle"
                       showPhoneTooltip
@@ -151,6 +155,7 @@ export function DriverWorkbookPanel({
                       isSelected={selectedDriverId === driver.id}
                       isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                       onClick={() => onDriverSelect(driver.id)}
+                      onContextAction={onContextAction}
                       showPhoneTooltip
                       onAction={onDriverAction}
                     />
@@ -193,6 +198,7 @@ export function DriverWorkbookPanel({
                       isSelected={selectedDriverId === driver.id}
                       isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                       onClick={() => onDriverSelect(driver.id)}
+                      onContextAction={onContextAction}
                       subcategory="report_time"
                       onAction={onDriverAction}
                     />
@@ -214,6 +220,7 @@ export function DriverWorkbookPanel({
                       isSelected={selectedDriverId === driver.id}
                       isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                       onClick={() => onDriverSelect(driver.id)}
+                      onContextAction={onContextAction}
                       subcategory="dispatched"
                       onAction={onDriverAction}
                     />
@@ -248,6 +255,7 @@ export function DriverWorkbookPanel({
                   isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                   onClick={() => onDriverSelect(driver.id)}
                   onAction={onDriverAction}
+                      onContextAction={onContextAction}
                 />
               ))}
             </div>
@@ -260,6 +268,7 @@ export function DriverWorkbookPanel({
           selectedDriverId={selectedDriverId}
           recentlyUpdatedDrivers={recentlyUpdatedDrivers}
           onDriverSelect={onDriverSelect}
+          onContextAction={onContextAction}
         />
       </div>
     </div>
@@ -272,11 +281,13 @@ function DoneSection({
   selectedDriverId,
   recentlyUpdatedDrivers,
   onDriverSelect,
+  onContextAction,
 }: {
   drivers: DisplayDriver[];
   selectedDriverId: string | null;
   recentlyUpdatedDrivers: Set<string>;
   onDriverSelect: (driverId: string) => void;
+  onContextAction?: (driverId: string, action: DriverContextAction) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -320,6 +331,7 @@ function DoneSection({
                     isSelected={selectedDriverId === driver.id}
                     isUpdated={recentlyUpdatedDrivers.has(driver.id)}
                     onClick={() => onDriverSelect(driver.id)}
+                      onContextAction={onContextAction}
                   />
                 ))}
               </div>

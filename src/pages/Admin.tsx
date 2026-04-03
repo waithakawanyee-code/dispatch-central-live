@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Users, Truck, History, ShieldAlert, UserCog, Calendar, Clock, Car, Settings, Wrench, Droplets, Plug, FileText, ChevronDown, CalendarOff } from "lucide-react";
+import { ArrowLeft, Users, Truck, History, ShieldAlert, UserCog, Calendar, Car, Settings, Wrench, Droplets, Plug, FileText, ChevronDown, CalendarOff } from "lucide-react";
 import { DriverManagement } from "@/components/admin/DriverManagement";
 import { VehicleManagement } from "@/components/admin/VehicleManagement";
 import { VehicleAssignmentHistory } from "@/components/admin/VehicleAssignmentHistory";
 import { HistoryLog } from "@/components/admin/HistoryLog";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { ScheduleManagement } from "@/components/admin/ScheduleManagement";
-import { TimePunchReport } from "@/components/admin/TimePunchReport";
+
 import { TimeOffManagement } from "@/components/admin/TimeOffManagement";
 import { SettingsManagement } from "@/components/admin/SettingsManagement";
 import { IssueCatalogManagement } from "@/components/admin/IssueCatalogManagement";
@@ -25,7 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type AdminSection = 
-  | "drivers" | "schedules" | "timeclock" | "timeoff"
+  | "drivers" | "schedules" | "timeoff"
   | "vehicles" | "issues" | "tickets"
   | "cleanlog" | "assignments" | "history"
   | "settings" | "users" | "issue-catalog" | "integrations";
@@ -38,7 +38,6 @@ const NAVIGATION_GROUPS = [
     items: [
       { id: "drivers" as AdminSection, label: "Manage Drivers", icon: Users },
       { id: "schedules" as AdminSection, label: "Schedules", icon: Calendar },
-      { id: "timeclock" as AdminSection, label: "Time Clock", icon: Clock },
       { id: "timeoff" as AdminSection, label: "Time Off", icon: CalendarOff },
     ],
   },
@@ -127,8 +126,6 @@ const Admin = () => {
         return <DriverManagement />;
       case "schedules":
         return <ScheduleManagement />;
-      case "timeclock":
-        return <TimePunchReport />;
       case "timeoff":
         return <TimeOffManagement />;
       case "vehicles":

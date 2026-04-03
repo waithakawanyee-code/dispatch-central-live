@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Truck, Wrench, Droplets, User, Phone, Home, Unlock, Building2, Sparkles, CircleAlert, CircleHelp } from "lucide-react";
+import { Truck, Wrench, Droplets, User, Phone, Home, Unlock, Building2, Sparkles, CircleAlert, CircleHelp, FileText, ShieldAlert } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { ServiceTicketDialog } from "./ServiceTicketDialog";
 import { VehicleTicketsSheet } from "./VehicleTicketsSheet";
@@ -10,6 +10,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger, ContextMenuLabel } from "@/components/ui/context-menu";
 import { FileText, List, History } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import type { Database } from "@/integrations/supabase/types";
 import { useOpenMaintenanceEvent } from "@/hooks/useMaintenanceEvents";
 type CleanStatus = Database["public"]["Enums"]["clean_status"];
@@ -130,6 +137,16 @@ export function VehicleRow({
             "hover:bg-accent/30 hover:border-border",
             isUpdated && "animate-row-flash"
           )}>
+  const vehicleCardContent = (
+      <div className={cn(
+        "group relative flex items-center gap-2.5 rounded-md border border-border/60 bg-card px-2.5 py-2 transition-all duration-200",
+        "border-l-[3px]",
+        vehicle.status === "out-of-service" ? "border-l-status-out-of-service opacity-60" : 
+          vehicle.clean_status === "clean" ? "border-l-status-active" :
+          vehicle.clean_status === "dirty" ? "border-l-amber-500" : "border-l-border",
+        "hover:bg-accent/30 hover:border-border",
+        isUpdated && "animate-row-flash"
+      )}>
         {/* Status icon */}
         <div className="flex h-5 w-5 shrink-0 items-center justify-center">
           <Truck className={cn("h-3.5 w-3.5", getIconColor())} />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Phone, Truck, Clock, Award, Home, User, Timer, Calendar } from "lucide-react";
+import { X, Phone, Truck, Clock, Award, Home, User, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,19 +10,12 @@ type DriverRowType = Database["public"]["Tables"]["drivers"]["Row"];
 type VehicleRowType = Database["public"]["Tables"]["vehicles"]["Row"];
 type ShiftRowType = Database["public"]["Tables"]["shifts"]["Row"];
 
-interface TimePunch {
-  id: string;
-  punch_type: string;
-  punch_time: string;
-}
-
 interface DriverDetailsPanelProps {
   driver: DriverRowType | null;
   onClose: () => void;
 }
 
 export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps) {
-  const [todayPunches, setTodayPunches] = useState<TimePunch[]>([]);
   const [isAnyHours, setIsAnyHours] = useState(false);
   const [assignedVehicle, setAssignedVehicle] = useState<VehicleRowType | null>(null);
   const [currentShift, setCurrentShift] = useState<ShiftRowType | null>(null);
@@ -31,24 +24,11 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
     if (!driver) return;
 
     const fetchDriverData = async () => {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todayEnd = new Date();
-      todayEnd.setHours(23, 59, 59, 999);
       const todayDate = format(new Date(), "yyyy-MM-dd");
-
-      // Fetch punches, today's schedule, vehicle info, and current shift in parallel
       const dayOfWeek = getDay(new Date());
       const vehicleUnit = driver.vehicle || driver.default_vehicle;
       
-      const [punchesRes, scheduleRes, vehicleRes, shiftRes] = await Promise.all([
-        supabase
-          .from("time_punches")
-          .select("id, punch_type, punch_time")
-          .eq("driver_id", driver.id)
-          .gte("punch_time", todayStart.toISOString())
-          .lte("punch_time", todayEnd.toISOString())
-          .order("punch_time", { ascending: true }),
+      const [scheduleRes, vehicleRes, shiftRes] = await Promise.all([
         supabase
           .from("driver_schedules")
           .select("is_any_hours")
@@ -71,10 +51,6 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
           .limit(1)
           .maybeSingle(),
       ]);
-
-      if (punchesRes.data) {
-        setTodayPunches(punchesRes.data);
-      }
       
       if (scheduleRes.data) {
         setIsAnyHours((scheduleRes.data as any).is_any_hours || false);
@@ -118,43 +94,6 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
     return `${h12}:${m} ${ampm}`;
   };
 
-  // Calculate total hours worked from punches
-  const calculateTotalHours = () => {
-    let totalMs = 0;
-    let punchInTime: Date | null = null;
-
-    for (const punch of todayPunches) {
-      if (punch.punch_type === "in") {
-        punchInTime = new Date(punch.punch_time);
-      } else if (punch.punch_type === "out" && punchInTime) {
-        totalMs += new Date(punch.punch_time).getTime() - punchInTime.getTime();
-        punchInTime = null;
-      }
-    }
-
-    // If still punched in, calculate time up to now
-    if (punchInTime && driver.status === "on_the_clock") {
-      totalMs += Date.now() - punchInTime.getTime();
-    }
-
-    const hours = Math.floor(totalMs / (1000 * 60 * 60));
-    const minutes = Math.floor((totalMs % (1000 * 60 * 60)) / (1000 * 60));
-    return `${hours}h ${minutes}m`;
-  };
-
-  // Get latest punch-in and punch-out times
-  const getLatestPunchIn = () => {
-    const punchIns = todayPunches.filter(p => p.punch_type === "in");
-    return punchIns.length > 0 ? punchIns[punchIns.length - 1] : null;
-  };
-
-  const getLatestPunchOut = () => {
-    const punchOuts = todayPunches.filter(p => p.punch_type === "out");
-    return punchOuts.length > 0 ? punchOuts[punchOuts.length - 1] : null;
-  };
-
-  const latestPunchIn = getLatestPunchIn();
-  const latestPunchOut = getLatestPunchOut();
   const isOnTheClock = driver.status === "on_the_clock";
   const isDone = driver.status === "done";
 
@@ -241,7 +180,7 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
             {isOnTheClock ? "Currently Working" : isDone ? "Today's Shift" : "Assignment"}
           </h4>
           <div className="space-y-1.5">
-          {/* Vehicle - always show, use default_vehicle for take-home drivers if no current vehicle */}
+          {/* Vehicle */}
           <div className="flex items-center gap-2 text-sm">
             <Truck className="h-4 w-4 text-muted-foreground" />
             <span className="text-foreground">
@@ -249,7 +188,7 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
             </span>
           </div>
 
-          {/* Vehicle phone - show if available */}
+          {/* Vehicle phone */}
           {assignedVehicle?.phone && (
             <a 
               href={`tel:${assignedVehicle.phone}`}
@@ -260,51 +199,31 @@ export function DriverDetailsPanel({ driver, onClose }: DriverDetailsPanelProps)
             </a>
           )}
 
-          {/* Working drivers: Show start time (punch in) */}
-          {isOnTheClock && latestPunchIn && (
+          {/* Shift punch in time from shifts table */}
+          {isOnTheClock && currentShift?.punch_in_at && (
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span className="text-foreground font-mono">
-                  Started: {formatPunchTime(latestPunchIn.punch_time)}
+                  Started: {formatPunchTime(currentShift.punch_in_at)}
                 </span>
               </div>
             )}
 
-            {/* Working drivers: Show current hours */}
-            {isOnTheClock && todayPunches.length > 0 && (
-              <div className="flex items-center gap-2 text-sm">
-                <Timer className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground font-mono">
-                  Elapsed: {calculateTotalHours()}
-                </span>
-              </div>
-            )}
-
-            {/* Done drivers: Show start and end times */}
-            {isDone && latestPunchIn && (
+            {/* Done drivers: Show shift start and end times */}
+            {isDone && currentShift?.punch_in_at && (
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span className="text-foreground font-mono">
-                  Start: {formatPunchTime(latestPunchIn.punch_time)}
+                  Start: {formatPunchTime(currentShift.punch_in_at)}
                 </span>
               </div>
             )}
 
-            {isDone && latestPunchOut && (
+            {isDone && currentShift?.punch_out_at && (
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span className="text-foreground font-mono">
-                  End: {formatPunchTime(latestPunchOut.punch_time)}
-                </span>
-              </div>
-            )}
-
-            {/* Done drivers: Show total hours */}
-            {isDone && todayPunches.length > 0 && (
-              <div className="flex items-center gap-2 text-sm bg-muted/50 rounded px-2 py-1 -mx-2">
-                <Timer className="h-4 w-4 text-primary" />
-                <span className="text-foreground font-semibold">
-                  Total: {calculateTotalHours()}
+                  End: {formatPunchTime(currentShift.punch_out_at)}
                 </span>
               </div>
             )}

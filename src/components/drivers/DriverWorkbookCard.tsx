@@ -1,4 +1,5 @@
 import { Clock, Home, User, Truck, Phone, CheckCircle, Power, LogOut, Undo2 } from "lucide-react";
+import { Clock, Home, User, Truck, Phone, CheckCircle, LogOut, Power, Undo2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -12,6 +13,17 @@ import type { Database } from "@/integrations/supabase/types";
 
 type DriverStatus = Database["public"]["Enums"]["driver_status"];
 export type DriverWorkbookAction = "confirm" | "punchIn" | "punchOut" | "markOff" | "unconfirm" | "switchVehicle";
+
+export type DriverContextAction = 
+  | "confirm"
+  | "punch-in"
+  | "quick-punch-in"
+  | "punch-out"
+  | "switch-vehicle"
+  | "start-new-shift"
+  | "mark-off"
+  | "unconfirm"
+  | "reset";
 
 interface DriverWorkbookCardProps {
   driver: {
@@ -34,6 +46,7 @@ interface DriverWorkbookCardProps {
   isUpdated?: boolean;
   onClick?: () => void;
   onConfirm?: (driverId: string) => void;
+  onContextAction?: (driverId: string, action: DriverContextAction) => void;
   subcategory?: "has_vehicle" | "dispatched" | "report_time";
   showPhoneTooltip?: boolean;
   onAction?: (driverId: string, action: DriverWorkbookAction) => void;
@@ -46,6 +59,7 @@ export function DriverWorkbookCard({
   isUpdated,
   onClick,
   onConfirm,
+  onContextAction,
   subcategory,
   showPhoneTooltip = false,
   onAction,
@@ -98,7 +112,47 @@ export function DriverWorkbookCard({
     }
   };
 
-  const cardContent = (
+  const getContextMenuItems = () => {
+    if (!onContextAction) return null;
+    
+    const items: { label: string; icon: typeof CheckCircle; action: DriverContextAction; variant?: string }[] = [];
+    
+    switch (driver.status) {
+      case "unconfirmed":
+        items.push(
+          { label: "Confirm", icon: CheckCircle, action: "confirm" },
+          { label: "Punch In", icon: Clock, action: "punch-in" },
+          { label: "Mark OFF", icon: Power, action: "mark-off", variant: "muted" },
+        );
+        break;
+      case "confirmed":
+        items.push(
+          { label: "Punch In", icon: Clock, action: "punch-in" },
+          { label: "Quick Punch In", icon: Clock, action: "quick-punch-in" },
+          { label: "Mark OFF", icon: Power, action: "mark-off", variant: "muted" },
+          { label: "Unconfirm", icon: Undo2, action: "unconfirm", variant: "muted" },
+        );
+        break;
+      case "on_the_clock":
+        items.push(
+          { label: "Punch Out", icon: LogOut, action: "punch-out" },
+          { label: "Switch Vehicle", icon: Truck, action: "switch-vehicle" },
+        );
+        break;
+      case "done":
+        items.push(
+          { label: "Start New Shift", icon: RefreshCw, action: "start-new-shift" },
+          { label: "Reset", icon: Undo2, action: "reset", variant: "muted" },
+        );
+        break;
+    }
+    
+    return items;
+  };
+
+  const contextItems = getContextMenuItems();
+
+  const cardDiv = (
     <div
       data-driver-id={driver.id}
       onClick={onClick}
@@ -106,17 +160,12 @@ export function DriverWorkbookCard({
         "group relative flex items-center gap-2.5 rounded-md border border-border/60 bg-card px-2.5 py-2 transition-all duration-200 cursor-pointer",
         "border-l-[3px]",
         getStatusAccent(),
-        // Hover
         "hover:bg-accent/30 hover:border-border",
-        // Selected
         isSelected && "ring-1 ring-primary/50 bg-accent/20 border-border shadow-[0_0_8px_hsl(var(--primary)/0.15)]",
-        // Updated flash
         isUpdated && "animate-row-flash",
-        // Done state
         driver.status === "done" && "opacity-50"
       )}
     >
-      {/* Status icon */}
       <div className="flex h-5 w-5 shrink-0 items-center justify-center">
         {hasTakeHome ? (
           <Home className={cn("h-3.5 w-3.5", getIconColor())} />
@@ -125,7 +174,6 @@ export function DriverWorkbookCard({
         )}
       </div>
 
-      {/* Driver info - name is focal point */}
       <div className="flex-1 min-w-0">
         <span className={cn(
           "block font-mono text-[13px] font-semibold leading-tight truncate",
@@ -135,32 +183,24 @@ export function DriverWorkbookCard({
         </span>
       </div>
 
-      {/* Right metadata cluster */}
       <div className="flex items-center gap-1.5 shrink-0">
-        {/* CDL Badge */}
         {driver.has_cdl && (
           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-primary/15 text-primary border border-primary/20">
             CDL
           </span>
         )}
-
-        {/* Report time */}
         {driver.status === "confirmed" && formattedReportTime && (
           <span className="flex items-center gap-0.5 text-[10px] text-amber-500/90 font-mono tabular-nums">
             <Clock className="h-2.5 w-2.5" />
             {formattedReportTime}
           </span>
         )}
-
-        {/* Vehicle */}
         {vehicleUnit && (driver.status === "on_the_clock" || driver.status === "confirmed" || subcategory === "has_vehicle") && (
           <span className="flex items-center gap-0.5 text-[10px] text-primary/80 font-mono tabular-nums">
             <Truck className="h-2.5 w-2.5" />
             {vehicleUnit}
           </span>
         )}
-
-        {/* Take-home vehicle when no active vehicle */}
         {hasTakeHome && !vehicleUnit && (
           <span className="flex items-center gap-0.5 text-[10px] text-blue-400/80 font-mono tabular-nums">
             <Home className="h-2.5 w-2.5" />
@@ -171,80 +211,45 @@ export function DriverWorkbookCard({
     </div>
   );
 
-  const getMenuItems = () => {
-    switch (driver.status) {
-      case "unconfirmed":
-        return [
-          { label: "Confirm", icon: CheckCircle, action: "confirm" as const },
-          { label: "Mark OFF", icon: Power, action: "markOff" as const, destructive: true },
-        ];
-      case "confirmed":
-        return [
-          { label: "Punch In", icon: Clock, action: "punchIn" as const },
-          { label: "Mark OFF", icon: Power, action: "markOff" as const, destructive: true },
-          { label: "Unconfirm", icon: Undo2, action: "unconfirm" as const },
-        ];
-      case "on_the_clock":
-        return [
-          { label: "Punch Out", icon: LogOut, action: "punchOut" as const },
-          { label: "Switch Vehicle", icon: Truck, action: "switchVehicle" as const },
-        ];
-      default:
-        return [];
-    }
-  };
-
-  const menuItems = onAction ? getMenuItems() : [];
-
-  const tooltipContent = (
-    <TooltipContent side="top" className="flex items-center gap-2 bg-popover border border-border">
-      <Phone className="h-3 w-3 text-primary" />
-      <span className="font-mono text-sm">{driver.phone}</span>
-    </TooltipContent>
-  );
-
-  const contextMenuContent = menuItems.length > 0 && (
-    <ContextMenuContent className="min-w-[160px]">
-      {menuItems.map(({ label, icon: Icon, action, destructive }) => (
-        <ContextMenuItem
-          key={action}
-          onClick={() => onAction!(driver.id, action)}
-          className={cn("cursor-pointer text-sm gap-2", destructive && "text-destructive focus:text-destructive")}
-        >
-          <Icon className="h-4 w-4" />
-          {label}
-        </ContextMenuItem>
-      ))}
-    </ContextMenuContent>
-  );
-
-  if (showPhoneTooltip && driver.phone) {
-    if (menuItems.length > 0) {
-      return (
-        <ContextMenu>
-          <TooltipProvider delayDuration={200}>
-            <Tooltip>
-              <ContextMenuTrigger asChild>
-                <TooltipTrigger asChild>
-                  {cardContent}
-                </TooltipTrigger>
-              </ContextMenuTrigger>
-              {tooltipContent}
-            </Tooltip>
-          </TooltipProvider>
-          {contextMenuContent}
-        </ContextMenu>
-      );
-    }
+  const wrapWithTooltip = (content: React.ReactNode) => {
+    if (!showPhoneTooltip || !driver.phone) return content;
     return (
       <TooltipProvider delayDuration={200}>
         <Tooltip>
           <TooltipTrigger asChild>
-            {cardContent}
+            {content}
           </TooltipTrigger>
           {tooltipContent}
         </Tooltip>
       </TooltipProvider>
+    );
+  };
+
+  if (contextItems && contextItems.length > 0) {
+    return (
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          {wrapWithTooltip(cardDiv)}
+        </ContextMenuTrigger>
+        <ContextMenuContent className="min-w-[180px]">
+          <div className="px-2 py-1.5 text-[11px] font-mono text-muted-foreground border-b border-border/50 mb-1">
+            {driver.code || driver.name}
+          </div>
+          {contextItems.map((item) => (
+            <ContextMenuItem
+              key={item.action}
+              onClick={() => onContextAction!(driver.id, item.action)}
+              className={cn(
+                "gap-2 text-xs cursor-pointer",
+                item.variant === "muted" && "text-muted-foreground"
+              )}
+            >
+              <item.icon className="h-3.5 w-3.5" />
+              <span>{item.label}</span>
+            </ContextMenuItem>
+          ))}
+        </ContextMenuContent>
+      </ContextMenu>
     );
   }
 
@@ -260,4 +265,5 @@ export function DriverWorkbookCard({
   }
 
   return cardContent;
+  return wrapWithTooltip(cardDiv) as React.ReactElement;
 }
