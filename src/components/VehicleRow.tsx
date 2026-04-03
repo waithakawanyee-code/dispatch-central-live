@@ -7,8 +7,6 @@ import { MarkOOSDialog } from "./MarkOOSDialog";
 import { MaintenanceEventSheet } from "./MaintenanceEventSheet";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger, ContextMenuLabel } from "@/components/ui/context-menu";
-import { FileText, List, History } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   ContextMenu,
@@ -125,18 +123,6 @@ export function VehicleRow({
         return "";
     }
   };
-  return <>
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          <div className={cn(
-            "group relative flex items-center gap-2.5 rounded-md border border-border/60 bg-card px-2.5 py-2 transition-all duration-200",
-            "border-l-[3px]",
-            vehicle.status === "out-of-service" ? "border-l-status-out-of-service opacity-60" :
-              vehicle.clean_status === "clean" ? "border-l-status-active" :
-              vehicle.clean_status === "dirty" ? "border-l-amber-500" : "border-l-border",
-            "hover:bg-accent/30 hover:border-border",
-            isUpdated && "animate-row-flash"
-          )}>
   const vehicleCardContent = (
       <div className={cn(
         "group relative flex items-center gap-2.5 rounded-md border border-border/60 bg-card px-2.5 py-2 transition-all duration-200",
@@ -289,71 +275,87 @@ export function VehicleRow({
               </Tooltip>
             </TooltipProvider>
           )}
-          </div>
-          </div>
-        </ContextMenuTrigger>
-        <ContextMenuContent className="min-w-[180px]">
-          <ContextMenuLabel className="text-xs text-muted-foreground">{vehicle.unit}</ContextMenuLabel>
-          <ContextMenuSeparator />
-          {canEdit && (
-            <>
-              {cleanStatusOptions.map((option) => (
-                <ContextMenuItem
-                  key={option.value}
-                  onClick={() => onCleanStatusChange?.(option.value)}
-                  className={cn(
-                    "cursor-pointer text-sm gap-2",
-                    vehicle.clean_status === option.value && "bg-secondary"
-                  )}
-                >
-                  {option.value === "clean" && <Sparkles className="h-4 w-4 text-status-clean" />}
-                  {option.value === "dirty" && <CircleAlert className="h-4 w-4 text-status-dirty" />}
-                  {option.value === "unknown" && <CircleHelp className="h-4 w-4 text-muted-foreground" />}
-                  {option.label}
-                </ContextMenuItem>
-              ))}
-              <ContextMenuSeparator />
+        </div>
+      </div>
+  );
+
+  return <>
+      {canEdit ? (
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            {vehicleCardContent}
+          </ContextMenuTrigger>
+          <ContextMenuContent className="min-w-[180px]">
+            <div className="px-2 py-1.5 text-[11px] font-mono text-muted-foreground border-b border-border/50 mb-1">
+              {vehicle.unit}
+            </div>
+            
+            {/* Clean status options */}
+            {cleanStatusOptions.map(option => (
               <ContextMenuItem
-                onClick={() => setTicketDialogOpen(true)}
-                className="cursor-pointer text-sm gap-2"
+                key={option.value}
+                onClick={() => onCleanStatusChange?.(option.value)}
+                className={cn(
+                  "gap-2 text-xs cursor-pointer",
+                  vehicle.clean_status === option.value && "bg-secondary"
+                )}
               >
-                <FileText className="h-4 w-4" />
-                New Service Ticket
+                <span className={cn(
+                  option.value === "clean" && "text-status-clean",
+                  option.value === "dirty" && "text-status-dirty",
+                  option.value === "unknown" && "text-muted-foreground"
+                )}>
+                  {option.value === "clean" && <Sparkles className="h-3.5 w-3.5" />}
+                  {option.value === "dirty" && <CircleAlert className="h-3.5 w-3.5" />}
+                  {option.value === "unknown" && <CircleHelp className="h-3.5 w-3.5" />}
+                </span>
+                <span>Mark {option.label}</span>
               </ContextMenuItem>
-              {hasAnyTickets && (
-                <ContextMenuItem
-                  onClick={() => setTicketsSheetOpen(true)}
-                  className="cursor-pointer text-sm gap-2"
-                >
-                  <List className="h-4 w-4" />
-                  View Tickets
-                  {openTicketCount > 0 && (
-                    <span className="ml-auto text-xs font-mono text-destructive">{openTicketCount} open</span>
-                  )}
-                </ContextMenuItem>
-              )}
-              {vehicle.status === "active" && (
-                <ContextMenuItem
-                  onClick={() => setMarkOOSDialogOpen(true)}
-                  className="cursor-pointer text-sm gap-2 text-destructive focus:text-destructive"
-                >
-                  <Wrench className="h-4 w-4" />
-                  Mark Out of Service
-                </ContextMenuItem>
-              )}
-              {openEvent && (
-                <ContextMenuItem
-                  onClick={() => setMaintenanceSheetOpen(true)}
-                  className="cursor-pointer text-sm gap-2"
-                >
-                  <History className="h-4 w-4" />
-                  View Maintenance
-                </ContextMenuItem>
-              )}
-            </>
-          )}
-        </ContextMenuContent>
-      </ContextMenu>
+            ))}
+            
+            <ContextMenuSeparator />
+            
+            {/* Service & Maintenance */}
+            {vehicle.status === "active" && (
+              <ContextMenuItem
+                onClick={() => setMarkOOSDialogOpen(true)}
+                className="gap-2 text-xs cursor-pointer"
+              >
+                <Wrench className="h-3.5 w-3.5" />
+                <span>Mark Out of Service</span>
+              </ContextMenuItem>
+            )}
+            
+            {vehicle.status === "out-of-service" && openEvent && (
+              <ContextMenuItem
+                onClick={() => setMaintenanceSheetOpen(true)}
+                className="gap-2 text-xs cursor-pointer"
+              >
+                <ShieldAlert className="h-3.5 w-3.5" />
+                <span>View Maintenance Event</span>
+              </ContextMenuItem>
+            )}
+            
+            <ContextMenuItem
+              onClick={() => setTicketDialogOpen(true)}
+              className="gap-2 text-xs cursor-pointer"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              <span>Create Service Ticket</span>
+            </ContextMenuItem>
+            
+            {hasAnyTickets && (
+              <ContextMenuItem
+                onClick={() => setTicketsSheetOpen(true)}
+                className="gap-2 text-xs cursor-pointer"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                <span>View Tickets{openTicketCount > 0 ? ` (${openTicketCount})` : ''}</span>
+              </ContextMenuItem>
+            )}
+          </ContextMenuContent>
+        </ContextMenu>
+      ) : vehicleCardContent}
 
       {/* Dialogs */}
       <ServiceTicketDialog open={ticketDialogOpen} onOpenChange={setTicketDialogOpen} vehicleId={vehicle.id} vehicleUnit={vehicle.unit} />

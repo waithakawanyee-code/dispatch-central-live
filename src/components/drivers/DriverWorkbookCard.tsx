@@ -1,4 +1,3 @@
-import { Clock, Home, User, Truck, Phone, CheckCircle, Power, LogOut, Undo2 } from "lucide-react";
 import { Clock, Home, User, Truck, Phone, CheckCircle, LogOut, Power, Undo2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -12,7 +11,6 @@ import {
 import type { Database } from "@/integrations/supabase/types";
 
 type DriverStatus = Database["public"]["Enums"]["driver_status"];
-export type DriverWorkbookAction = "confirm" | "punchIn" | "punchOut" | "markOff" | "unconfirm" | "switchVehicle";
 
 export type DriverContextAction = 
   | "confirm"
@@ -49,7 +47,6 @@ interface DriverWorkbookCardProps {
   onContextAction?: (driverId: string, action: DriverContextAction) => void;
   subcategory?: "has_vehicle" | "dispatched" | "report_time";
   showPhoneTooltip?: boolean;
-  onAction?: (driverId: string, action: DriverWorkbookAction) => void;
 }
 
 export function DriverWorkbookCard({
@@ -62,7 +59,6 @@ export function DriverWorkbookCard({
   onContextAction,
   subcategory,
   showPhoneTooltip = false,
-  onAction,
 }: DriverWorkbookCardProps) {
   const hasVehicle = !!driver.vehicle || !!shiftData?.vehicle_unit;
   const hasTakeHome = !!driver.default_vehicle;
@@ -219,7 +215,10 @@ export function DriverWorkbookCard({
           <TooltipTrigger asChild>
             {content}
           </TooltipTrigger>
-          {tooltipContent}
+          <TooltipContent side="top" className="flex items-center gap-2 bg-popover border border-border">
+            <Phone className="h-3 w-3 text-primary" />
+            <span className="font-mono text-sm">{driver.phone}</span>
+          </TooltipContent>
         </Tooltip>
       </TooltipProvider>
     );
@@ -253,17 +252,5 @@ export function DriverWorkbookCard({
     );
   }
 
-  if (menuItems.length > 0) {
-    return (
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          {cardContent}
-        </ContextMenuTrigger>
-        {contextMenuContent}
-      </ContextMenu>
-    );
-  }
-
-  return cardContent;
   return wrapWithTooltip(cardDiv) as React.ReactElement;
 }

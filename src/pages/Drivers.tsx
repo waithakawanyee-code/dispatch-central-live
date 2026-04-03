@@ -7,8 +7,6 @@ import { DriverRow } from "@/components/DriverRow";
 import { DriverDetailsPanel } from "@/components/DriverDetailsPanel";
 import { DriverPicker } from "@/components/DriverPicker";
 import { DriverActionToolbar } from "@/components/DriverActionToolbar";
-import { DriverWorkbookPanel, OffDriversSection } from "@/components/drivers";
-import type { DriverWorkbookAction } from "@/components/drivers/DriverWorkbookCard";
 import { DriverWorkbookPanel, OffDriversSection, type DriverContextAction } from "@/components/drivers";
 import { QuickVehiclePickerDialog } from "@/components/QuickVehiclePickerDialog";
 import { useDispatchData } from "@/hooks/useDispatchData";
@@ -1418,17 +1416,6 @@ const Drivers = () => {
   }, [lastAction, updateDriverStatus, toast]);
 
   // Handle driver picker selection (only used for assign and off actions now)
-  const handleDriverAction = useCallback((driverId: string, action: DriverWorkbookAction) => {
-    switch (action) {
-      case "confirm": executeAssign(driverId); break;
-      case "punchIn": executePunchIn(driverId); break;
-      case "punchOut": executePunchOut(driverId); break;
-      case "markOff": executeOff(driverId); break;
-      case "unconfirm": executeUnassign(driverId); break;
-      case "switchVehicle": executeSwitchVehicle(driverId); break;
-    }
-  }, [executeAssign, executePunchIn, executePunchOut, executeOff, executeUnassign, executeSwitchVehicle]);
-
   const handleDriverPickerSelect = useCallback((driver: typeof drivers[0]) => {
     setSelectedDriverId(driver.id);
     setShowDriverPicker(false);
