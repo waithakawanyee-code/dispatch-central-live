@@ -19,7 +19,8 @@ import WasherDashboard from "./pages/WasherDashboard";
 import NotFound from "./pages/NotFound";
 import DriverProfile from "./pages/DriverProfile";
 
-const queryClient = new QueryClient();\n
+const queryClient = new QueryClient();
+
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
