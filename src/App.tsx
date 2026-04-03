@@ -21,7 +21,6 @@ import DriverProfile from "./pages/DriverProfile";
 
 const queryClient = new QueryClient();
 
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
