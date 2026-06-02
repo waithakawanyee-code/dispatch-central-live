@@ -24,21 +24,26 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    const loginPath = allowedRoles?.length === 1 && allowedRoles[0] === 'DRIVER' ? '/tablet' : '/auth';
+    return <Navigate to={loginPath} replace />;
+  }
+
+  const isDriver = profile?.role === 'DRIVER';
+
+  // Drivers are confined to /portal
+  if (isDriver && location.pathname !== '/portal' && !allowedRoles?.includes('DRIVER')) {
+    return <Navigate to="/portal" replace />;
   }
 
   // If user is a WASHER and trying to access a non-washer page, redirect to washer dashboard
-  // Exception: allow access to washer-dashboard itself
   if (isWasher && location.pathname !== '/washer' && !allowedRoles?.includes('WASHER')) {
     return <Navigate to="/washer" replace />;
   }
 
   // Check role restrictions if specified
   if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
-    // Redirect based on role
-    if (isWasher) {
-      return <Navigate to="/washer" replace />;
-    }
+    if (isDriver) return <Navigate to="/portal" replace />;
+    if (isWasher) return <Navigate to="/washer" replace />;
     return <Navigate to="/" replace />;
   }
 
