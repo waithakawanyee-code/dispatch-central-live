@@ -20,6 +20,9 @@ import NotFound from "./pages/NotFound";
 import DriverProfile from "./pages/DriverProfile";
 import TabletLogin from "./pages/TabletLogin";
 import DriverPortal from "./pages/DriverPortal";
+import PortalAvailability from "./pages/PortalAvailability";
+import PortalTimeOff from "./pages/PortalTimeOff";
+import PortalToday from "./pages/PortalToday";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +39,9 @@ const App = () => (
             <Route path="/tablet" element={<TabletLogin />} />
             {/* Driver portal (DRIVER role only) */}
             <Route path="/portal" element={<ProtectedRoute allowedRoles={['DRIVER']}><DriverPortal /></ProtectedRoute>} />
+            <Route path="/portal/availability" element={<PortalAvailability />} />
+            <Route path="/portal/time-off" element={<PortalTimeOff />} />
+            <Route path="/portal/today" element={<PortalToday />} />
             {/* Washer-only route */}
             <Route path="/washer" element={<ProtectedRoute allowedRoles={['WASHER', 'ADMIN']}><WasherDashboard /></ProtectedRoute>} />
             {/* Dispatcher/Admin routes */}
