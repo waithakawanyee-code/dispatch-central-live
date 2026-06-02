@@ -18,6 +18,8 @@ import CleaningQueues from "./pages/CleaningQueues";
 import WasherDashboard from "./pages/WasherDashboard";
 import NotFound from "./pages/NotFound";
 import DriverProfile from "./pages/DriverProfile";
+import TabletLogin from "./pages/TabletLogin";
+import DriverPortal from "./pages/DriverPortal";
 
 const queryClient = new QueryClient();
 
