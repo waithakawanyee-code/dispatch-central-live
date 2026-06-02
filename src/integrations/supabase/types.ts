@@ -418,39 +418,54 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
           driver_id: string
           driver_name: string
           end_date: string
+          hours_requested: number | null
           id: string
           notes: string | null
           start_date: string
           status: Database["public"]["Enums"]["time_off_status"]
+          submitted_at: string
           time_off_type: Database["public"]["Enums"]["time_off_type"]
           updated_at: string
         }
         Insert: {
           created_at?: string
           created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
           driver_id: string
           driver_name: string
           end_date: string
+          hours_requested?: number | null
           id?: string
           notes?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["time_off_status"]
+          submitted_at?: string
           time_off_type: Database["public"]["Enums"]["time_off_type"]
           updated_at?: string
         }
         Update: {
           created_at?: string
           created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
           driver_id?: string
           driver_name?: string
           end_date?: string
+          hours_requested?: number | null
           id?: string
           notes?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["time_off_status"]
+          submitted_at?: string
           time_off_type?: Database["public"]["Enums"]["time_off_type"]
           updated_at?: string
         }
@@ -1482,6 +1497,7 @@ export type Database = {
       }
     }
     Functions: {
+      current_driver_id: { Args: never; Returns: string }
       current_ny_date: { Args: never; Returns: string }
       current_ny_timestamp: { Args: never; Returns: string }
       get_my_role: {
