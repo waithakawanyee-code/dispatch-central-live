@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { DriverPortalAccessSection } from "./DriverPortalAccessSection";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriverRow = Database["public"]["Tables"]["drivers"]["Row"];
