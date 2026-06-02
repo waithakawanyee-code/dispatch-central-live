@@ -1467,7 +1467,7 @@ export type Database = {
     }
     Enums: {
       alert_level: "URGENT"
-      app_role: "admin" | "dispatcher" | "washer"
+      app_role: "admin" | "dispatcher" | "washer" | "driver"
       clean_status: "clean" | "dirty" | "unknown"
       damage_status: "OPEN" | "SUBMITTED" | "CLOSED"
       damage_type: "SCRATCH" | "DENT" | "INTERIOR" | "GLASS" | "OTHER"
@@ -1480,7 +1480,7 @@ export type Database = {
         | "cleaning"
         | "other"
       maintenance_priority: "low" | "medium" | "high" | "critical"
-      profile_role: "ADMIN" | "DISPATCHER" | "WASHER" | "USER"
+      profile_role: "ADMIN" | "DISPATCHER" | "WASHER" | "USER" | "DRIVER"
       queue_item_status: "PENDING" | "CLEAN"
       queue_item_urgency: "NORMAL" | "HIGH" | "CRITICAL"
       queue_type: "SPECIALTY" | "GENERAL"
@@ -1631,7 +1631,7 @@ export const Constants = {
   public: {
     Enums: {
       alert_level: ["URGENT"],
-      app_role: ["admin", "dispatcher", "washer"],
+      app_role: ["admin", "dispatcher", "washer", "driver"],
       clean_status: ["clean", "dirty", "unknown"],
       damage_status: ["OPEN", "SUBMITTED", "CLOSED"],
       damage_type: ["SCRATCH", "DENT", "INTERIOR", "GLASS", "OTHER"],
@@ -1645,7 +1645,7 @@ export const Constants = {
         "other",
       ],
       maintenance_priority: ["low", "medium", "high", "critical"],
-      profile_role: ["ADMIN", "DISPATCHER", "WASHER", "USER"],
+      profile_role: ["ADMIN", "DISPATCHER", "WASHER", "USER", "DRIVER"],
       queue_item_status: ["PENDING", "CLEAN"],
       queue_item_urgency: ["NORMAL", "HIGH", "CRITICAL"],
       queue_type: ["SPECIALTY", "GENERAL"],
