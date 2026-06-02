@@ -324,6 +324,42 @@ export type Database = {
           },
         ]
       }
+      driver_portal_audit: {
+        Row: {
+          created_at: string
+          detail: string | null
+          driver_id: string | null
+          event_type: string
+          id: string
+          initials: string | null
+          ip: string | null
+          success: boolean
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          driver_id?: string | null
+          event_type: string
+          id?: string
+          initials?: string | null
+          ip?: string | null
+          success?: boolean
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          driver_id?: string | null
+          event_type?: string
+          id?: string
+          initials?: string | null
+          ip?: string | null
+          success?: boolean
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       driver_schedules: {
         Row: {
           created_at: string
@@ -441,6 +477,7 @@ export type Database = {
           amtrak_notes: string | null
           amtrak_primary: boolean
           amtrak_trained: boolean
+          auth_user_id: string | null
           bph_notes: string | null
           bph_primary: boolean
           bph_trained: boolean
@@ -457,9 +494,14 @@ export type Database = {
           has_cdl: boolean
           id: string
           is_active: boolean
+          last_portal_login_at: string | null
           name: string
           notes: string | null
           phone: string | null
+          pin_hash: string | null
+          portal_auth_password: string | null
+          portal_failed_attempts: number
+          portal_locked_until: string | null
           report_time: string | null
           status: Database["public"]["Enums"]["driver_status"]
           updated_at: string
@@ -470,6 +512,7 @@ export type Database = {
           amtrak_notes?: string | null
           amtrak_primary?: boolean
           amtrak_trained?: boolean
+          auth_user_id?: string | null
           bph_notes?: string | null
           bph_primary?: boolean
           bph_trained?: boolean
@@ -486,9 +529,14 @@ export type Database = {
           has_cdl?: boolean
           id?: string
           is_active?: boolean
+          last_portal_login_at?: string | null
           name: string
           notes?: string | null
           phone?: string | null
+          pin_hash?: string | null
+          portal_auth_password?: string | null
+          portal_failed_attempts?: number
+          portal_locked_until?: string | null
           report_time?: string | null
           status?: Database["public"]["Enums"]["driver_status"]
           updated_at?: string
@@ -499,6 +547,7 @@ export type Database = {
           amtrak_notes?: string | null
           amtrak_primary?: boolean
           amtrak_trained?: boolean
+          auth_user_id?: string | null
           bph_notes?: string | null
           bph_primary?: boolean
           bph_trained?: boolean
@@ -515,9 +564,14 @@ export type Database = {
           has_cdl?: boolean
           id?: string
           is_active?: boolean
+          last_portal_login_at?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
+          pin_hash?: string | null
+          portal_auth_password?: string | null
+          portal_failed_attempts?: number
+          portal_locked_until?: string | null
           report_time?: string | null
           status?: Database["public"]["Enums"]["driver_status"]
           updated_at?: string
@@ -1463,6 +1517,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_dispatcher_or_admin: { Args: never; Returns: boolean }
+      is_driver: { Args: never; Returns: boolean }
       is_washer: { Args: never; Returns: boolean }
     }
     Enums: {
