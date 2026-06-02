@@ -26,6 +26,21 @@ export default function TabletLogin() {
   const [focus, setFocus] = useState<"initials" | "pin">("initials");
   const [submitting, setSubmitting] = useState(false);
 
+  // Redirect if already signed in as a driver
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profile?.role === "DRIVER") navigate("/portal", { replace: true });
+    })();
+  }, [navigate]);
+
+
   // Auto-advance to PIN when initials are complete
   useEffect(() => {
     if (initials.length === 4 && focus === "initials") setFocus("pin");
