@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { DriverPortalAccessSection } from "./DriverPortalAccessSection";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriverRow = Database["public"]["Tables"]["drivers"]["Row"];
@@ -801,6 +802,18 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
             placeholder="Additional notes about this driver..." rows={3} />
         </div>
       </div>
+
+      {!isAddMode && driver && (
+        <>
+          <Separator />
+          <DriverPortalAccessSection
+            driverId={driver.id}
+            driverName={driver.name}
+            driverCode={driver.code ?? null}
+            isActive={driver.is_active}
+          />
+        </>
+      )}
 
       {/* Actions */}
       <div className="flex gap-3 pt-4">

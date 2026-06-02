@@ -29,6 +29,7 @@ const ROLE_COLORS: Record<ProfileRole, "default" | "secondary" | "destructive" |
   DISPATCHER: "secondary",
   WASHER: "outline",
   USER: "outline",
+  DRIVER: "secondary",
 };
 
 const ROLE_LABELS: Record<ProfileRole, string> = {
@@ -36,6 +37,7 @@ const ROLE_LABELS: Record<ProfileRole, string> = {
   DISPATCHER: "Dispatcher",
   WASHER: "Washer",
   USER: "User",
+  DRIVER: "Driver",
 };
 
 export function UserManagement() {

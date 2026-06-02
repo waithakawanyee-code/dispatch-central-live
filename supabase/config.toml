@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.wash-events]
 verify_jwt = false
+
+[functions.driver-tablet-login]
+verify_jwt = false
+
+[functions.driver-portal-provision]
+verify_jwt = true
