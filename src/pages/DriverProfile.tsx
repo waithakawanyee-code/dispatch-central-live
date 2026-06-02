@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { format, parseISO, differenceInMinutes, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
-import { ArrowLeft, User, Clock, CalendarOff, Calendar, AlertTriangle, Settings, Plus } from "lucide-react";
+import { ArrowLeft, User, Clock, CalendarOff, Calendar, AlertTriangle, Settings, Plus, Folder } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +16,7 @@ import { useDispatchData } from "@/hooks/useDispatchData";
 import { useDriverTimeOff, type DriverTimeOff } from "@/hooks/useDriverTimeOff";
 import { useDriverShifts } from "@/hooks/useDriverShifts";
 import { DriverProfileForm } from "@/components/admin/DriverProfileForm";
+import { DriverFolderTab } from "@/components/admin/DriverFolderTab";
 import { CalendarIcon } from "lucide-react";
 
 const TIME_OFF_LABELS: Record<DriverTimeOff["time_off_type"], string> = {
@@ -146,6 +147,10 @@ const DriverProfile = () => {
                 <TabsTrigger value="timeoff" className="gap-1.5">
                   <CalendarOff className="h-3.5 w-3.5" />
                   Time Off
+                </TabsTrigger>
+                <TabsTrigger value="folder" className="gap-1.5">
+                  <Folder className="h-3.5 w-3.5" />
+                  Folder
                 </TabsTrigger>
               </>
             )}
