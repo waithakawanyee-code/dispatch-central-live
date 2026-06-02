@@ -261,6 +261,11 @@ const DriverProfile = () => {
               )}
             </div>
           </TabsContent>
+
+          {/* Folder Tab */}
+          <TabsContent value="folder">
+            {driver && <DriverFolderTab driverId={driver.id} driverName={driver.name} />}
+          </TabsContent>
         </Tabs>
 
         {/* Add Time Off Dialog */}
