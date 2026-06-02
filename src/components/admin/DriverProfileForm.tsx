@@ -803,6 +803,18 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
         </div>
       </div>
 
+      {!isAddMode && driver && (
+        <>
+          <Separator />
+          <DriverPortalAccessSection
+            driverId={driver.id}
+            driverName={driver.name}
+            driverCode={driver.code ?? null}
+            isActive={driver.is_active}
+          />
+        </>
+      )}
+
       {/* Actions */}
       <div className="flex gap-3 pt-4">
         <Button onClick={handleSave} disabled={saving} className="flex-1">
