@@ -32,6 +32,10 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            {/* Driver kiosk login (public) */}
+            <Route path="/tablet" element={<TabletLogin />} />
+            {/* Driver portal (DRIVER role only) */}
+            <Route path="/portal" element={<ProtectedRoute allowedRoles={['DRIVER']}><DriverPortal /></ProtectedRoute>} />
             {/* Washer-only route */}
             <Route path="/washer" element={<ProtectedRoute allowedRoles={['WASHER', 'ADMIN']}><WasherDashboard /></ProtectedRoute>} />
             {/* Dispatcher/Admin routes */}
