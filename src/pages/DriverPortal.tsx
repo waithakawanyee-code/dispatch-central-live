@@ -13,6 +13,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useIdleTimeout } from "@/hooks/useIdleTimeout";
+import { useCurrentDriver } from "@/hooks/useCurrentDriver";
+import { useEmployeeDocuments, useDocumentAcks } from "@/hooks/useEmployeeDocuments";
+import { Badge } from "@/components/ui/badge";
 
 const LOGIN_TS_KEY = "driver-portal-login-ts";
 const SESSION_MAX_MS = 12 * 60 * 60 * 1000; // 12 hours
@@ -122,7 +125,7 @@ export default function DriverPortal() {
           <PortalCard icon={Calendar} title="My Availability" onClick={() => navigate("/portal/availability")} />
           <PortalCard icon={CalendarOff} title="Time Off" onClick={() => navigate("/portal/time-off")} />
           <PortalCard icon={Flag} title="Flag Something for Today" onClick={() => navigate("/portal/today")} />
-          <PortalCard icon={Folder} title="My Folder" disabled />
+          <MyFolderCard onClick={() => navigate("/portal/folder")} />
         </div>
       </main>
 
