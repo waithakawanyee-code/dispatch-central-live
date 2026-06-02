@@ -1540,7 +1540,14 @@ export type Database = {
       queue_item_urgency: "NORMAL" | "HIGH" | "CRITICAL"
       queue_type: "SPECIALTY" | "GENERAL"
       ticket_status: "open" | "in_progress" | "waiting_parts" | "closed"
-      time_off_status: "scheduled" | "active" | "completed" | "cancelled"
+      time_off_status:
+        | "scheduled"
+        | "active"
+        | "completed"
+        | "cancelled"
+        | "pending"
+        | "approved"
+        | "denied"
       time_off_type: "vacation" | "sick" | "personal" | "fmla"
       vehicle_classification: "house" | "take_home" | "fleet"
       vehicle_primary_category: "above_all" | "specialty"
@@ -1705,7 +1712,15 @@ export const Constants = {
       queue_item_urgency: ["NORMAL", "HIGH", "CRITICAL"],
       queue_type: ["SPECIALTY", "GENERAL"],
       ticket_status: ["open", "in_progress", "waiting_parts", "closed"],
-      time_off_status: ["scheduled", "active", "completed", "cancelled"],
+      time_off_status: [
+        "scheduled",
+        "active",
+        "completed",
+        "cancelled",
+        "pending",
+        "approved",
+        "denied",
+      ],
       time_off_type: ["vacation", "sick", "personal", "fmla"],
       vehicle_classification: ["house", "take_home", "fleet"],
       vehicle_primary_category: ["above_all", "specialty"],
