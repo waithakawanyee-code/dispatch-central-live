@@ -119,10 +119,10 @@ export default function DriverPortal() {
 
       <main className="flex-1 p-8">
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-          <PortalCard icon={Calendar} title="My Availability" />
-          <PortalCard icon={CalendarOff} title="Time Off" />
-          <PortalCard icon={Flag} title="Flag Something for Today" />
-          <PortalCard icon={Folder} title="My Folder" />
+          <PortalCard icon={Calendar} title="My Availability" onClick={() => navigate("/portal/availability")} />
+          <PortalCard icon={CalendarOff} title="Time Off" onClick={() => navigate("/portal/time-off")} />
+          <PortalCard icon={Flag} title="Flag Something for Today" onClick={() => navigate("/portal/today")} />
+          <PortalCard icon={Folder} title="My Folder" disabled />
         </div>
       </main>
 
@@ -152,12 +152,21 @@ export default function DriverPortal() {
 function PortalCard({
   icon: Icon,
   title,
+  onClick,
+  disabled,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
+  onClick?: () => void;
+  disabled?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border-2 border-border bg-card p-8 min-h-[200px] flex flex-col">
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="text-left rounded-2xl border-2 border-border bg-card p-8 min-h-[200px] flex flex-col transition-colors enabled:hover:border-primary enabled:hover:bg-primary/5 enabled:active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
+    >
       <div className="flex items-center gap-4 mb-3">
         <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center">
           <Icon className="h-7 w-7 text-primary" />
@@ -165,8 +174,8 @@ function PortalCard({
         <div className="text-2xl font-bold">{title}</div>
       </div>
       <div className="mt-auto text-sm text-muted-foreground uppercase tracking-widest">
-        Coming soon
+        {disabled ? "Coming soon" : "Open"}
       </div>
-    </div>
+    </button>
   );
 }
