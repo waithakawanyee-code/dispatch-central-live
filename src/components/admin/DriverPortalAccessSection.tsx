@@ -181,5 +181,3 @@ export function DriverPortalAccessSection({ driverId, driverName, driverCode, is
   );
 }
 
-// silence unused import in some builds
-void Lock;
