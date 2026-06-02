@@ -23,6 +23,7 @@ import DriverPortal from "./pages/DriverPortal";
 import PortalAvailability from "./pages/PortalAvailability";
 import PortalTimeOff from "./pages/PortalTimeOff";
 import PortalToday from "./pages/PortalToday";
+import PortalFolder from "./pages/PortalFolder";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/portal/availability" element={<PortalAvailability />} />
             <Route path="/portal/time-off" element={<PortalTimeOff />} />
             <Route path="/portal/today" element={<PortalToday />} />
+            <Route path="/portal/folder" element={<PortalFolder />} />
             {/* Washer-only route */}
             <Route path="/washer" element={<ProtectedRoute allowedRoles={['WASHER', 'ADMIN']}><WasherDashboard /></ProtectedRoute>} />
             {/* Dispatcher/Admin routes */}

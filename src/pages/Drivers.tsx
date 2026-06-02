@@ -29,6 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useDriverTimeOff } from "@/hooks/useDriverTimeOff";
 import { TodayCallOutsBanner } from "@/components/dispatch/TodayCallOutsBanner";
+import { PendingAcknowledgmentsWidget } from "@/components/dispatch/PendingAcknowledgmentsWidget";
 import type { Database } from "@/integrations/supabase/types";
 type DriverSchedule = Database["public"]["Tables"]["driver_schedules"]["Row"];
 interface CallOut {
@@ -1982,6 +1983,7 @@ const Drivers = () => {
 
       <main className="p-4">
         {isToday && <TodayCallOutsBanner />}
+        {isToday && <PendingAcknowledgmentsWidget />}
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold text-foreground flex items-center gap-2">

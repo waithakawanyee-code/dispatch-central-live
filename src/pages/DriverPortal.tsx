@@ -13,6 +13,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useIdleTimeout } from "@/hooks/useIdleTimeout";
+import { useCurrentDriver } from "@/hooks/useCurrentDriver";
+import { useEmployeeDocuments, useDocumentAcks } from "@/hooks/useEmployeeDocuments";
+import { Badge } from "@/components/ui/badge";
 
 const LOGIN_TS_KEY = "driver-portal-login-ts";
 const SESSION_MAX_MS = 12 * 60 * 60 * 1000; // 12 hours
@@ -122,7 +125,7 @@ export default function DriverPortal() {
           <PortalCard icon={Calendar} title="My Availability" onClick={() => navigate("/portal/availability")} />
           <PortalCard icon={CalendarOff} title="Time Off" onClick={() => navigate("/portal/time-off")} />
           <PortalCard icon={Flag} title="Flag Something for Today" onClick={() => navigate("/portal/today")} />
-          <PortalCard icon={Folder} title="My Folder" disabled />
+          <MyFolderCard onClick={() => navigate("/portal/folder")} />
         </div>
       </main>
 
@@ -175,6 +178,37 @@ function PortalCard({
       </div>
       <div className="mt-auto text-sm text-muted-foreground uppercase tracking-widest">
         {disabled ? "Coming soon" : "Open"}
+      </div>
+    </button>
+  );
+}
+
+function MyFolderCard({ onClick }: { onClick: () => void }) {
+  const { driver } = useCurrentDriver();
+  const { data: docs = [] } = useEmployeeDocuments(driver?.id);
+  const { data: acks = [] } = useDocumentAcks(driver?.id);
+  const ackedSet = new Set(acks.map((a) => a.document_id));
+  const pending = docs.filter((d) => d.requires_acknowledgment && !ackedSet.has(d.id)).length;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative text-left rounded-2xl border-2 border-border bg-card p-8 min-h-[200px] flex flex-col transition-colors hover:border-primary hover:bg-primary/5 active:scale-[0.99]"
+    >
+      {pending > 0 && (
+        <Badge className="absolute top-4 right-4 bg-amber-500 text-amber-950 hover:bg-amber-500 text-sm px-2.5 py-1">
+          {pending} to review
+        </Badge>
+      )}
+      <div className="flex items-center gap-4 mb-3">
+        <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center">
+          <Folder className="h-7 w-7 text-primary" />
+        </div>
+        <div className="text-2xl font-bold">My Folder</div>
+      </div>
+      <div className="mt-auto text-sm text-muted-foreground uppercase tracking-widest">
+        {pending > 0 ? "Action needed" : "Open"}
       </div>
     </button>
   );

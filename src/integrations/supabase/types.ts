@@ -594,6 +594,124 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_document_acknowledgements: {
+        Row: {
+          acknowledged_at: string
+          acknowledged_by: string
+          document_id: string
+          driver_id: string
+          id: string
+          typed_signature: string
+        }
+        Insert: {
+          acknowledged_at?: string
+          acknowledged_by: string
+          document_id: string
+          driver_id: string
+          id?: string
+          typed_signature: string
+        }
+        Update: {
+          acknowledged_at?: string
+          acknowledged_by?: string
+          document_id?: string
+          driver_id?: string
+          id?: string
+          typed_signature?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_document_acknowledgements_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "employee_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_document_acknowledgements_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_document_acknowledgements_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_documents: {
+        Row: {
+          archived_at: string | null
+          description: string | null
+          doc_category: string
+          driver_id: string
+          effective_date: string | null
+          file_name: string
+          file_size_bytes: number | null
+          id: string
+          mime_type: string | null
+          requires_acknowledgment: boolean
+          storage_path: string
+          title: string
+          uploaded_at: string
+          uploaded_by: string | null
+          visible_to_driver: boolean
+        }
+        Insert: {
+          archived_at?: string | null
+          description?: string | null
+          doc_category: string
+          driver_id: string
+          effective_date?: string | null
+          file_name: string
+          file_size_bytes?: number | null
+          id?: string
+          mime_type?: string | null
+          requires_acknowledgment?: boolean
+          storage_path?: string
+          title: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          visible_to_driver?: boolean
+        }
+        Update: {
+          archived_at?: string | null
+          description?: string | null
+          doc_category?: string
+          driver_id?: string
+          effective_date?: string | null
+          file_name?: string
+          file_size_bytes?: number | null
+          id?: string
+          mime_type?: string | null
+          requires_acknowledgment?: boolean
+          storage_path?: string
+          title?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          visible_to_driver?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_documents_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_documents_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       future_assignments: {
         Row: {
           assignment_date: string
