@@ -538,6 +538,38 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
 
       <Separator />
 
+      {/* Compliance */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          Compliance
+        </h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="profile-dob">Date of Birth</Label>
+            <Input id="profile-dob" type="date" value={formData.date_of_birth}
+              onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="profile-license-number">Driver's License #</Label>
+            <Input id="profile-license-number" value={formData.license_number}
+              onChange={(e) => setFormData({ ...formData, license_number: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="profile-license-exp">License Expiration</Label>
+            <Input id="profile-license-exp" type="date" value={formData.license_expiration}
+              onChange={(e) => setFormData({ ...formData, license_expiration: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="profile-medcard-exp">DOT Medical Card Expiration</Label>
+            <Input id="profile-medcard-exp" type="date" value={formData.med_card_expiration}
+              onChange={(e) => setFormData({ ...formData, med_card_expiration: e.target.value })} />
+          </div>
+        </div>
+      </div>
+
+      <Separator />
+
+
       {/* Shuttle Programs */}
       <div className="space-y-4">
         <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
