@@ -323,6 +323,10 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
           bph_trained: formData.bph_trained, bph_primary: formData.bph_primary,
           amtrak_notes: formData.amtrak_notes.trim() || null,
           bph_notes: formData.bph_notes.trim() || null,
+          date_of_birth: formData.date_of_birth || null,
+          license_number: formData.license_number.trim() || null,
+          license_expiration: formData.license_expiration || null,
+          med_card_expiration: formData.med_card_expiration || null,
         } as any)
         .select("id").single();
 
@@ -364,6 +368,10 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
           bph_trained: formData.bph_trained, bph_primary: formData.bph_primary,
           amtrak_notes: formData.amtrak_notes.trim() || null,
           bph_notes: formData.bph_notes.trim() || null,
+          date_of_birth: formData.date_of_birth || null,
+          license_number: formData.license_number.trim() || null,
+          license_expiration: formData.license_expiration || null,
+          med_card_expiration: formData.med_card_expiration || null,
           updated_at: new Date().toISOString(),
         } as any)
         .eq("id", driver.id);
