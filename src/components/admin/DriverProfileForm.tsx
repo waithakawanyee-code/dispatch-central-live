@@ -40,6 +40,10 @@ interface DriverProfileFormData {
   bph_primary: boolean;
   amtrak_notes: string;
   bph_notes: string;
+  date_of_birth: string;
+  license_number: string;
+  license_expiration: string;
+  med_card_expiration: string;
 }
 
 interface DaySchedule {
@@ -104,6 +108,7 @@ const initialFormData: DriverProfileFormData = {
   emergency_contact_name_2: "", emergency_contact_phone_2: "", emergency_contact_relationship_2: "",
   amtrak_trained: false, amtrak_primary: false, bph_trained: false, bph_primary: false,
   amtrak_notes: "", bph_notes: "",
+  date_of_birth: "", license_number: "", license_expiration: "", med_card_expiration: "",
 };
 
 interface DriverProfileFormProps {
@@ -196,6 +201,10 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
         bph_primary: (driver as any).bph_primary || false,
         amtrak_notes: (driver as any).amtrak_notes || "",
         bph_notes: (driver as any).bph_notes || "",
+        date_of_birth: (driver as any).date_of_birth || "",
+        license_number: (driver as any).license_number || "",
+        license_expiration: (driver as any).license_expiration || "",
+        med_card_expiration: (driver as any).med_card_expiration || "",
       });
     } else {
       setFormData(initialFormData);
@@ -314,6 +323,10 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
           bph_trained: formData.bph_trained, bph_primary: formData.bph_primary,
           amtrak_notes: formData.amtrak_notes.trim() || null,
           bph_notes: formData.bph_notes.trim() || null,
+          date_of_birth: formData.date_of_birth || null,
+          license_number: formData.license_number.trim() || null,
+          license_expiration: formData.license_expiration || null,
+          med_card_expiration: formData.med_card_expiration || null,
         } as any)
         .select("id").single();
 
@@ -355,6 +368,10 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
           bph_trained: formData.bph_trained, bph_primary: formData.bph_primary,
           amtrak_notes: formData.amtrak_notes.trim() || null,
           bph_notes: formData.bph_notes.trim() || null,
+          date_of_birth: formData.date_of_birth || null,
+          license_number: formData.license_number.trim() || null,
+          license_expiration: formData.license_expiration || null,
+          med_card_expiration: formData.med_card_expiration || null,
           updated_at: new Date().toISOString(),
         } as any)
         .eq("id", driver.id);
@@ -520,6 +537,38 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
       </div>
 
       <Separator />
+
+      {/* Compliance */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          Compliance
+        </h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="profile-dob">Date of Birth</Label>
+            <Input id="profile-dob" type="date" value={formData.date_of_birth}
+              onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="profile-license-number">Driver's License #</Label>
+            <Input id="profile-license-number" value={formData.license_number}
+              onChange={(e) => setFormData({ ...formData, license_number: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="profile-license-exp">License Expiration</Label>
+            <Input id="profile-license-exp" type="date" value={formData.license_expiration}
+              onChange={(e) => setFormData({ ...formData, license_expiration: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="profile-medcard-exp">DOT Medical Card Expiration</Label>
+            <Input id="profile-medcard-exp" type="date" value={formData.med_card_expiration}
+              onChange={(e) => setFormData({ ...formData, med_card_expiration: e.target.value })} />
+          </div>
+        </div>
+      </div>
+
+      <Separator />
+
 
       {/* Shuttle Programs */}
       <div className="space-y-4">

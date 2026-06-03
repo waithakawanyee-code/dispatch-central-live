@@ -24,6 +24,7 @@ import PortalAvailability from "./pages/PortalAvailability";
 import PortalTimeOff from "./pages/PortalTimeOff";
 import PortalToday from "./pages/PortalToday";
 import PortalFolder from "./pages/PortalFolder";
+import AdminApprovals from "./pages/AdminApprovals";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App = () => (
             <Route path="/shuttle-schedules" element={<ProtectedRoute allowedRoles={['ADMIN', 'DISPATCHER', 'USER']}><ShuttleSchedules /></ProtectedRoute>} />
             <Route path="/cleaning-queues" element={<ProtectedRoute allowedRoles={['ADMIN', 'DISPATCHER']}><CleaningQueues /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><Admin /></ProtectedRoute>} />
+            <Route path="/admin/approvals" element={<ProtectedRoute allowedRoles={['ADMIN', 'DISPATCHER']}><AdminApprovals /></ProtectedRoute>} />
             <Route path="/admin/driver/:driverId" element={<ProtectedRoute allowedRoles={['ADMIN']}><DriverProfile /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
