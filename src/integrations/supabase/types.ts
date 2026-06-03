@@ -360,6 +360,73 @@ export type Database = {
         }
         Relationships: []
       }
+      driver_profile_change_requests: {
+        Row: {
+          driver_id: string
+          id: string
+          proposed_changes: Json
+          related_document_id: string | null
+          request_type: string
+          requires_approval: boolean
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string
+          submitted_by: string | null
+        }
+        Insert: {
+          driver_id: string
+          id?: string
+          proposed_changes?: Json
+          related_document_id?: string | null
+          request_type: string
+          requires_approval?: boolean
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string | null
+        }
+        Update: {
+          driver_id?: string
+          id?: string
+          proposed_changes?: Json
+          related_document_id?: string | null
+          request_type?: string
+          requires_approval?: boolean
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_profile_change_requests_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_profile_change_requests_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_profile_change_requests_related_document_id_fkey"
+            columns: ["related_document_id"]
+            isOneToOne: false
+            referencedRelation: "employee_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       driver_schedules: {
         Row: {
           created_at: string
@@ -498,6 +565,7 @@ export type Database = {
           bph_trained: boolean
           code: string | null
           created_at: string
+          date_of_birth: string | null
           default_vehicle: string | null
           email: string | null
           emergency_contact_name: string | null
@@ -510,6 +578,9 @@ export type Database = {
           id: string
           is_active: boolean
           last_portal_login_at: string | null
+          license_expiration: string | null
+          license_number: string | null
+          med_card_expiration: string | null
           name: string
           notes: string | null
           phone: string | null
@@ -533,6 +604,7 @@ export type Database = {
           bph_trained?: boolean
           code?: string | null
           created_at?: string
+          date_of_birth?: string | null
           default_vehicle?: string | null
           email?: string | null
           emergency_contact_name?: string | null
@@ -545,6 +617,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_portal_login_at?: string | null
+          license_expiration?: string | null
+          license_number?: string | null
+          med_card_expiration?: string | null
           name: string
           notes?: string | null
           phone?: string | null
@@ -568,6 +643,7 @@ export type Database = {
           bph_trained?: boolean
           code?: string | null
           created_at?: string
+          date_of_birth?: string | null
           default_vehicle?: string | null
           email?: string | null
           emergency_contact_name?: string | null
@@ -580,6 +656,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_portal_login_at?: string | null
+          license_expiration?: string | null
+          license_number?: string | null
+          med_card_expiration?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
@@ -1653,6 +1732,19 @@ export type Database = {
       is_dispatcher_or_admin: { Args: never; Returns: boolean }
       is_driver: { Args: never; Returns: boolean }
       is_washer: { Args: never; Returns: boolean }
+      review_change_request: {
+        Args: { p_approve: boolean; p_note?: string; p_request_id: string }
+        Returns: undefined
+      }
+      submit_credential_update: {
+        Args: {
+          p_document_id: string
+          p_proposed: Json
+          p_request_type: string
+        }
+        Returns: string
+      }
+      update_my_driver_profile: { Args: { p: Json }; Returns: undefined }
     }
     Enums: {
       alert_level: "URGENT"
