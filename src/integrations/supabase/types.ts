@@ -1697,6 +1697,7 @@ export type Database = {
       current_driver_id: { Args: never; Returns: string }
       current_ny_date: { Args: never; Returns: string }
       current_ny_timestamp: { Args: never; Returns: string }
+      get_my_active: { Args: never; Returns: boolean }
       get_my_role: {
         Args: never
         Returns: Database["public"]["Enums"]["profile_role"]
