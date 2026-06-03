@@ -40,6 +40,10 @@ interface DriverProfileFormData {
   bph_primary: boolean;
   amtrak_notes: string;
   bph_notes: string;
+  date_of_birth: string;
+  license_number: string;
+  license_expiration: string;
+  med_card_expiration: string;
 }
 
 interface DaySchedule {
@@ -104,6 +108,7 @@ const initialFormData: DriverProfileFormData = {
   emergency_contact_name_2: "", emergency_contact_phone_2: "", emergency_contact_relationship_2: "",
   amtrak_trained: false, amtrak_primary: false, bph_trained: false, bph_primary: false,
   amtrak_notes: "", bph_notes: "",
+  date_of_birth: "", license_number: "", license_expiration: "", med_card_expiration: "",
 };
 
 interface DriverProfileFormProps {
@@ -196,6 +201,10 @@ export function DriverProfileForm({ driver, vehicles, onSaved, mode = "edit" }: 
         bph_primary: (driver as any).bph_primary || false,
         amtrak_notes: (driver as any).amtrak_notes || "",
         bph_notes: (driver as any).bph_notes || "",
+        date_of_birth: (driver as any).date_of_birth || "",
+        license_number: (driver as any).license_number || "",
+        license_expiration: (driver as any).license_expiration || "",
+        med_card_expiration: (driver as any).med_card_expiration || "",
       });
     } else {
       setFormData(initialFormData);
